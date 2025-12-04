@@ -1,6 +1,7 @@
 import { h } from 'preact';
+import { PaginationControls } from '../../components/pagination.jsx';
 
-export const InventoryPage = ({ user, products }) => {
+export const InventoryPage = ({ user, products, nextCursor, currentUrl }) => {
   return (
     <div class="inventory-page">
       <div class="page-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
@@ -42,7 +43,7 @@ export const InventoryPage = ({ user, products }) => {
               <td>{product.reservedQuantity || 0}</td>
               <td>{(product.quantity - (product.reservedQuantity || 0))}</td>
               <td>
-                <button class="btn btn-sm btn-secondary">View Locs</button>
+                <a href={`/admin/products/${product.id}`} class="btn-link">View Details</a>
               </td>
             </tr>
           ))}
@@ -53,6 +54,13 @@ export const InventoryPage = ({ user, products }) => {
           )}
         </tbody>
       </table>
+
+      <PaginationControls nextCursor={nextCursor} currentUrl={currentUrl} />
+
+      <style>{`
+        .btn-link { color: #2563eb; text-decoration: none; font-weight: 500; cursor: pointer; }
+        .btn-link:hover { text-decoration: underline; }
+      `}</style>
     </div>
   );
 };

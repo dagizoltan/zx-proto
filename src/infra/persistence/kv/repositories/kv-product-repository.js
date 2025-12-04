@@ -1,27 +1,30 @@
 export const createKVProductRepository = (kvPool) => {
-  const save = async (product) => {
+  const save = async (tenantId, product) => {
     return kvPool.withConnection(async (kv) => {
-      // Index by ID and SKU (if needed, but mainly ID)
-      await kv.set(['products', product.id], product);
+      // Index by ID
+      await kv.set(['tenants', tenantId, 'products', product.id], product);
       return product;
     });
   };
 
-  const findById = async (id) => {
+  const findById = async (tenantId, id) => {
     return kvPool.withConnection(async (kv) => {
-      const res = await kv.get(['products', id]);
+      const res = await kv.get(['tenants', tenantId, 'products', id]);
       return res.value;
     });
   };
 
-  const findAll = async () => {
+  const findAll = async (tenantId, { limit = 10, cursor } = {}) => {
     return kvPool.withConnection(async (kv) => {
-      const iter = kv.list({ prefix: ['products'] });
+      const iter = kv.list({ prefix: ['tenants', tenantId, 'products'] }, { limit, cursor });
       const products = [];
       for await (const res of iter) {
         products.push(res.value);
       }
-      return products;
+      return {
+          items: products,
+          nextCursor: iter.cursor
+      };
     });
   };
 

@@ -23,6 +23,19 @@ export const createKVStockRepository = (kvPool) => {
     });
   };
 
+  // Paginated version for UI
+  const listEntriesForProduct = async (tenantId, productId, { limit = 50, cursor } = {}) => {
+    return kvPool.withConnection(async (kv) => {
+      const iter = kv.list({ prefix: ['tenants', tenantId, 'stock', productId] }, { limit, cursor });
+      const entries = [];
+      for await (const res of iter) {
+        entries.push(res.value);
+      }
+      return { items: entries, nextCursor: iter.cursor };
+    });
+  };
+
+  // Full fetch for Domain Logic (Allocation Service)
   const getEntriesForProduct = async (tenantId, productId) => {
     return kvPool.withConnection(async (kv) => {
       const iter = kv.list({ prefix: ['tenants', tenantId, 'stock', productId] });
@@ -58,5 +71,6 @@ export const createKVStockRepository = (kvPool) => {
       return updated;
   };
 
-  return { save, getEntry, getEntriesForProduct, getStock, updateStock };
+  // Explicitly export all methods including getEntry
+  return { save, getEntry, getEntriesForProduct, listEntriesForProduct, getStock, updateStock };
 };

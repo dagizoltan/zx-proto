@@ -124,7 +124,9 @@ async function bootstrap() {
   // 3. Create Mock Orders
   console.log('🛒 Creating Mock Orders...');
   // Use in-memory list if repository fetch fails or is slow
-  let products = await inventory.useCases.listAllProducts.execute(tenantId);
+  // UPDATE: handling pagination structure { items, nextCursor }
+  const result = await inventory.useCases.listAllProducts.execute(tenantId, { limit: 100 });
+  let products = result.items || result;
 
   if (!products || products.length === 0) {
       console.log('   ⚠️  listAllProducts returned empty, falling back to in-memory list.');

@@ -11,6 +11,9 @@ import { createReserveStock } from './application/use-cases/reserve-stock.js';
 import { createListAllProducts } from './application/use-cases/list-all-products.js';
 import { createReceiveStock } from './application/use-cases/receive-stock.js';
 import { createMoveStock } from './application/use-cases/move-stock.js';
+import { createConfirmStockShipment } from './application/use-cases/confirm-stock-shipment.js';
+import { createCancelStockReservation } from './application/use-cases/cancel-stock-reservation.js';
+import { createListStockMovements } from './application/use-cases/list-stock-movements.js';
 
 export const createInventoryContext = async (deps) => {
   const { persistence, config, obs, messaging, registry } = deps;
@@ -66,6 +69,18 @@ export const createInventoryContext = async (deps) => {
       stockMovementRepository
   });
 
+  const confirmStockShipment = createConfirmStockShipment({
+      stockAllocationService
+  });
+
+  const cancelStockReservation = createCancelStockReservation({
+      stockAllocationService
+  });
+
+  const listStockMovements = createListStockMovements({
+      stockMovementRepository
+  });
+
   // Access other contexts when needed
   const checkUserPermission = async (tenantId, userId, action) => {
     const accessControl = registry.get('domain.accessControl');
@@ -92,7 +107,10 @@ export const createInventoryContext = async (deps) => {
       reserveStock,
       listAllProducts,
       receiveStock,
-      moveStock
+      moveStock,
+      confirmStockShipment,
+      cancelStockReservation,
+      listStockMovements
     },
 
     // Cross-context helpers
