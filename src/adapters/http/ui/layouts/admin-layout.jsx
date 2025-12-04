@@ -26,6 +26,15 @@ export const AdminLayout = ({ children, user }) => {
               <a href="/admin/orders" class="nav-item">
                 <span>Orders</span>
               </a>
+              <a href="/admin/customers" class="nav-item">
+                <span>Customers</span>
+              </a>
+              <a href="/admin/users" class="nav-item">
+                <span>Users</span>
+              </a>
+              <a href="/admin/roles" class="nav-item">
+                <span>Roles</span>
+              </a>
               <a href="/" class="nav-item">
                 <span>Back to Store</span>
               </a>

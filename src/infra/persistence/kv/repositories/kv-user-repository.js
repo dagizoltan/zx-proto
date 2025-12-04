@@ -26,5 +26,39 @@ export const createKVUserRepository = (kvPool) => {
     });
   };
 
-  return { save, findById, findByEmail };
+  const findAll = async (tenantId, { limit = 20, cursor, search } = {}) => {
+    return kvPool.withConnection(async (kv) => {
+      const iter = kv.list({ prefix: ['tenants', tenantId, 'users'] }, { cursor });
+      const users = [];
+      let nextCursor = null;
+
+      const searchTerm = search ? search.toLowerCase() : null;
+
+      for await (const res of iter) {
+        const user = res.value;
+        let match = true;
+
+        if (searchTerm) {
+            const inName = user.name?.toLowerCase().includes(searchTerm);
+            const inEmail = user.email?.toLowerCase().includes(searchTerm);
+            if (!inName && !inEmail) match = false;
+        }
+
+        if (match) {
+            // Remove password hash before returning list
+            const { passwordHash, ...safeUser } = user;
+            users.push(safeUser);
+        }
+
+        if (users.length >= limit) {
+          nextCursor = iter.cursor;
+          break;
+        }
+      }
+
+      return { items: users, nextCursor };
+    });
+  };
+
+  return { save, findById, findByEmail, findAll };
 };

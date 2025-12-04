@@ -12,8 +12,7 @@ import { createInventoryContext } from '../../../ctx/inventory/index.js';
 import { createOrdersContext } from '../../../ctx/orders/index.js';
 import { createCatalogContext } from '../../../ctx/catalog/index.js';
 
-// Simple random helpers (avoiding large faker dependency if possible, but for "realistic" maybe we should use it)
-// I'll implement a mini-faker to keep it self-contained and fast.
+// Simple random helpers
 const faker = {
   internet: {
     email: (name) => `${name.toLowerCase().replace(/\s+/g, '.')}@example.com`,
@@ -49,7 +48,7 @@ async function bootstrap() {
   const config = await createConfigService(environment);
   const ctx = createContextRegistry();
 
-  // Register contexts (copy-paste from main.js logic ideally refactored)
+  // Register contexts
   ctx
     .registerInfra('persistence', createPersistenceContext, [])
     .registerInfra('obs', createObsContext, ['infra.persistence'])
@@ -67,22 +66,80 @@ async function bootstrap() {
   const inventory = ctx.get('domain.inventory');
   const orders = ctx.get('domain.orders');
 
-  // 1. Create Admin User
-  console.log('👤 Creating Admin User...');
+  // --- 1. RBAC (Roles & Users) ---
+  console.log('🛡️  Seeding Roles & Users...');
+
+  // Create Roles
+  const roles = {
+      admin: null,
+      manager: null,
+      customer: null
+  };
+
   try {
-      await accessControl.useCases.registerUser.execute(tenantId, {
-        email: 'admin@imsshop.com',
-        password: 'admin',
-        name: 'Admin User'
+      roles.admin = await accessControl.useCases.createRole.execute(tenantId, {
+          name: 'admin',
+          permissions: [{ resource: '*', action: '*' }]
       });
-      // Assign admin role (mock logic, assume role 'admin' exists or implicit)
-      // await accessControl.services.rbac.assignRole(...)
-      console.log('   ✅ admin@imsshop.com / admin');
-  } catch (e) {
-      console.log('   ℹ️  Admin user likely exists');
+      console.log('   ✅ Role: admin created');
+  } catch(e) { /* existing */ }
+
+  try {
+      roles.manager = await accessControl.useCases.createRole.execute(tenantId, {
+          name: 'manager',
+          permissions: [{ resource: 'products', action: '*' }, { resource: 'orders', action: 'read' }]
+      });
+      console.log('   ✅ Role: manager created');
+  } catch(e) { /* existing */ }
+
+  try {
+      roles.customer = await accessControl.useCases.createRole.execute(tenantId, {
+          name: 'customer',
+          permissions: [{ resource: 'products', action: 'read' }]
+      });
+      console.log('   ✅ Role: customer created');
+  } catch(e) { /* existing */ }
+
+  // Fallback if roles already existed, fetch them (need a findByName ideally, but for now we iterate or just proceed)
+  // To keep seed simple, we rely on them being created now or we can use listRoles to find IDs if needed.
+  // For robustness, let's fetch all roles to get IDs.
+  const allRoles = await accessControl.useCases.listRoles.execute(tenantId);
+  const getRoleId = (name) => allRoles.find(r => r.name === name)?.id;
+
+  const adminRoleId = getRoleId('admin');
+  const managerRoleId = getRoleId('manager');
+  const customerRoleId = getRoleId('customer');
+
+  // Create Users
+  const seedUser = async (email, name, roleId) => {
+      try {
+          const user = await accessControl.useCases.registerUser.execute(tenantId, { email, password: 'password123', name });
+          if (roleId) {
+              await accessControl.useCases.assignRole.execute(tenantId, { userId: user.id, roleIds: [roleId] });
+          }
+          console.log(`   ✅ User: ${email} created`);
+          return user;
+      } catch (e) {
+          console.log(`   ℹ️  User: ${email} exists, skipped`);
+          // If exists, we could try to find and assign role, but let's assume it's set
+          const existing = await accessControl.repositories.user.findByEmail(tenantId, email);
+          if (existing && roleId) {
+             await accessControl.useCases.assignRole.execute(tenantId, { userId: existing.id, roleIds: [roleId] });
+          }
+          return existing;
+      }
+  };
+
+  const adminUser = await seedUser('admin@imsshop.com', 'Super Admin', adminRoleId);
+  await seedUser('manager@imsshop.com', 'Store Manager', managerRoleId);
+  const customerUser = await seedUser('customer@imsshop.com', 'Regular Customer', customerRoleId);
+
+  // Seed a few more random customers
+  for(let i=0; i<5; i++) {
+      await seedUser(faker.internet.email(faker.person.fullName()), faker.person.fullName(), customerRoleId);
   }
 
-  // 2. Create Products & Inventory
+  // --- 2. Products & Inventory ---
   console.log('📦 Creating Products & Inventory...');
   const warehouses = ['WH-US-EAST', 'WH-US-WEST'];
   const locations = warehouses.flatMap(wh => [`${wh}-ZONE-A`, `${wh}-ZONE-B`]);
@@ -97,12 +154,12 @@ async function bootstrap() {
               price: parseFloat(faker.commerce.price()),
               description: `A wonderful product for your daily needs.`,
               category: faker.commerce.department(),
-              quantity: 0 // Initial
+              quantity: 0,
+              status: Math.random() > 0.1 ? 'ACTIVE' : 'INACTIVE'
           });
 
           createdProducts.push(product);
 
-          // Receive stock in random locations
           const loc = locations[Math.floor(Math.random() * locations.length)];
           const qty = Math.floor(Math.random() * 50) + 10;
 
@@ -111,50 +168,43 @@ async function bootstrap() {
               locationId: loc,
               quantity: qty,
               reason: 'Initial Seed',
-              userId: 'system-seed'
+              userId: adminUser?.id || 'system'
           });
 
           process.stdout.write('.');
-      } catch (e) {
-          // ignore duplicates or errors
-      }
+      } catch (e) { }
   }
-  console.log(`\n   ✅ ${createdProducts.length} products created with stock.`);
+  console.log(`\n   ✅ ${createdProducts.length} products created.`);
 
-  // 3. Create Mock Orders
+  // --- 3. Mock Orders ---
   console.log('🛒 Creating Mock Orders...');
-  // Use in-memory list if repository fetch fails or is slow
-  // UPDATE: handling pagination structure { items, nextCursor }
   const result = await inventory.useCases.listAllProducts.execute(tenantId, { limit: 100 });
-  let products = result.items || result;
+  let productList = result.items || result;
 
-  if (!products || products.length === 0) {
-      console.log('   ⚠️  listAllProducts returned empty, falling back to in-memory list.');
-      products = createdProducts;
-  }
+  if (productList && productList.length > 0) {
+      // Get some customers
+      const { items: customers } = await accessControl.useCases.listUsers.execute(tenantId, { limit: 50 });
+      // Filter those who are just customers if possible, or use all
+      const customerUsers = customers.filter(c => c.email !== 'admin@imsshop.com' && c.email !== 'manager@imsshop.com');
 
-  if (!products || products.length === 0) {
-      console.log('   ⚠️  No products found, skipping order creation.');
-  } else {
-      const user = { id: 'mock-customer-1' }; // Mock ID
+      if (customerUsers.length > 0) {
+          for (let i = 0; i < 15; i++) {
+              const buyer = customerUsers[Math.floor(Math.random() * customerUsers.length)];
+              const items = [];
+              const numItems = Math.floor(Math.random() * 3) + 1;
 
-      for (let i = 0; i < 5; i++) {
-      const items = [];
-      const numItems = Math.floor(Math.random() * 3) + 1;
+              for (let j = 0; j < numItems; j++) {
+                  const p = productList[Math.floor(Math.random() * productList.length)];
+                  items.push({ productId: p.id, quantity: Math.floor(Math.random() * 2) + 1 });
+              }
 
-      for (let j = 0; j < numItems; j++) {
-          const p = products[Math.floor(Math.random() * products.length)];
-          items.push({ productId: p.id, quantity: Math.floor(Math.random() * 2) + 1 });
+              try {
+                await orders.useCases.createOrder.execute(tenantId, buyer.id, items);
+                process.stdout.write('.');
+              } catch (e) { }
+          }
+          console.log('\n   ✅ Mock orders created.');
       }
-
-      try {
-        await orders.useCases.createOrder.execute(tenantId, user.id, items);
-        process.stdout.write('.');
-      } catch (e) {
-          // ignore stock errors
-      }
-    }
-    console.log('\n   ✅ 5 mock orders created.');
   }
 
   console.log('🎉 Seeding complete!');
