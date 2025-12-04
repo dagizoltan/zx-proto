@@ -291,3 +291,9 @@ dialog::backdrop {
     border: 1px solid var(--color-border);
   }
 }
+
+.admin-nav .nav-item.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}

@@ -17,14 +17,39 @@ export const AdminLayout = ({ children, user }) => {
               <h2>Admin Panel</h2>
             </div>
             <nav class="admin-nav">
+              {/* General */}
               <a href="/admin/dashboard" class="nav-item">
                 <span>Dashboard</span>
               </a>
+
+              {/* Catalog */}
+              <div class="nav-divider">Catalog</div>
               <a href="/admin/catalog" class="nav-item">
-                <span>Catalog</span>
+                <span>Products</span>
               </a>
+              <span class="nav-item disabled">
+                <span>Categories (F)</span>
+              </span>
+              <span class="nav-item disabled">
+                <span>Price Lists (F)</span>
+              </span>
+
+              {/* Sales */}
+              <div class="nav-divider">Sales</div>
+              <a href="/admin/orders" class="nav-item">
+                <span>Orders</span>
+              </a>
+              <span class="nav-item disabled">
+                <span>Shipments (F)</span>
+              </span>
+              <span class="nav-item disabled">
+                <span>Returns / RMAs (F)</span>
+              </span>
+
+              {/* Inventory */}
+              <div class="nav-divider">Inventory</div>
               <a href="/admin/inventory" class="nav-item">
-                <span>Inventory</span>
+                <span>Stock Levels</span>
               </a>
               <a href="/admin/warehouses" class="nav-item">
                 <span>Warehouses</span>
@@ -32,10 +57,11 @@ export const AdminLayout = ({ children, user }) => {
               <a href="/admin/locations" class="nav-item">
                 <span>Locations</span>
               </a>
-              <a href="/admin/orders" class="nav-item">
-                <span>Orders</span>
-              </a>
+              <span class="nav-item disabled">
+                <span>Stock Movements (F)</span>
+              </span>
 
+              {/* Procurement */}
               <div class="nav-divider">Procurement</div>
               <a href="/admin/suppliers" class="nav-item">
                 <span>Suppliers</span>
@@ -44,6 +70,7 @@ export const AdminLayout = ({ children, user }) => {
                 <span>Purchase Orders</span>
               </a>
 
+              {/* Manufacturing */}
               <div class="nav-divider">Manufacturing</div>
               <a href="/admin/boms" class="nav-item">
                 <span>Bill of Materials</span>
@@ -52,16 +79,38 @@ export const AdminLayout = ({ children, user }) => {
                 <span>Work Orders</span>
               </a>
 
-              <div class="nav-divider">System</div>
+              {/* CRM */}
+              <div class="nav-divider">CRM</div>
               <a href="/admin/customers" class="nav-item">
                 <span>Customers</span>
               </a>
+              <span class="nav-item disabled">
+                <span>Customer Groups (F)</span>
+              </span>
+
+              {/* Reports */}
+              <div class="nav-divider">Reports</div>
+              <span class="nav-item disabled">
+                <span>Sales Report (F)</span>
+              </span>
+              <span class="nav-item disabled">
+                <span>Inventory Valuation (F)</span>
+              </span>
+
+              {/* System */}
+              <div class="nav-divider">System</div>
               <a href="/admin/users" class="nav-item">
                 <span>Users</span>
               </a>
               <a href="/admin/roles" class="nav-item">
                 <span>Roles</span>
               </a>
+              <span class="nav-item disabled">
+                <span>Settings (F)</span>
+              </span>
+              <span class="nav-item disabled">
+                <span>Audit Log (F)</span>
+              </span>
               <a href="/" class="nav-item">
                 <span>Back to Store</span>
               </a>
