@@ -1,4 +1,4 @@
-export const createProduct = ({ id, sku, name, price, quantity, description, category }) => ({
+export const createProduct = ({ id, sku, name, price, quantity, description, category, status }) => ({
   id,
   sku,
   name,
@@ -6,6 +6,7 @@ export const createProduct = ({ id, sku, name, price, quantity, description, cat
   quantity,
   description,
   category,
+  status: status || 'ACTIVE',
   updatedAt: new Date().toISOString(),
 });
 

@@ -14,5 +14,16 @@ export const createKVRoleRepository = (kvPool) => {
     });
   };
 
-  return { save, findById };
+  const findAll = async (tenantId) => {
+      return kvPool.withConnection(async (kv) => {
+          const iter = kv.list({ prefix: ['tenants', tenantId, 'roles'] });
+          const roles = [];
+          for await (const res of iter) {
+              roles.push(res.value);
+          }
+          return roles;
+      });
+  };
+
+  return { save, findById, findAll };
 };
