@@ -11,7 +11,8 @@
     "preact-render-to-string": "https://esm.sh/preact-render-to-string@6.3.1",
     "hono": "https://deno.land/x/hono@v3.11.7/mod.ts",
     "hono/": "https://deno.land/x/hono@v3.11.7/",
-    "std/": "https://deno.land/std@0.208.0/"
+    "std/": "https://deno.land/std@0.208.0/",
+    "zod": "npm:zod@^4.1.13"
   },
   "compilerOptions": {
     "jsx": "react-jsx",
