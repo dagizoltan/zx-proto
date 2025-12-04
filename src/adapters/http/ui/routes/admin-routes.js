@@ -9,6 +9,19 @@ import { UsersPage } from '../pages/admin/users-page.jsx';
 import { RolesPage } from '../pages/admin/roles-page.jsx';
 import { CustomersPage } from '../pages/admin/customers-page.jsx';
 import { CustomerDetailPage } from '../pages/admin/customer-detail-page.jsx';
+import { SuppliersPage } from '../pages/admin/procurement/suppliers-page.jsx';
+import { SupplierDetailPage } from '../pages/admin/procurement/supplier-detail-page.jsx';
+import { PurchaseOrdersPage } from '../pages/admin/procurement/purchase-orders-page.jsx';
+import { PurchaseOrderDetailPage } from '../pages/admin/procurement/po-detail-page.jsx';
+import { CreatePurchaseOrderPage } from '../pages/admin/procurement/create-po-page.jsx';
+import { ReceivePurchaseOrderPage } from '../pages/admin/procurement/receive-po-page.jsx';
+import { BOMsPage } from '../pages/admin/manufacturing/boms-page.jsx';
+import { BOMDetailPage } from '../pages/admin/manufacturing/bom-detail-page.jsx';
+import { CreateBOMPage } from '../pages/admin/manufacturing/create-bom-page.jsx';
+import { WorkOrdersPage } from '../pages/admin/manufacturing/work-orders-page.jsx';
+import { WorkOrderDetailPage } from '../pages/admin/manufacturing/wo-detail-page.jsx';
+import { CreateWorkOrderPage } from '../pages/admin/manufacturing/create-wo-page.jsx';
+import { CompleteWorkOrderPage } from '../pages/admin/manufacturing/complete-wo-page.jsx';
 import { CatalogPage } from '../pages/admin/catalog/catalog-page.jsx';
 import { WarehousesPage } from '../pages/admin/inventory/warehouses-page.jsx';
 import { LocationsPage } from '../pages/admin/inventory/locations-page.jsx';
@@ -65,6 +78,492 @@ adminRoutes.get('/catalog', async (c) => {
         title: 'Catalog - IMS Admin'
     });
     return c.html(html);
+});
+
+// --- Procurement Routes ---
+
+adminRoutes.get('/suppliers', async (c) => {
+    const user = c.get('user');
+    const tenantId = c.get('tenantId');
+    const procurement = c.ctx.get('domain.procurement');
+
+    const { items: suppliers } = await procurement.useCases.listSuppliers.execute(tenantId);
+
+    const html = await renderPage(SuppliersPage, {
+        user,
+        suppliers,
+        activePage: 'suppliers',
+        layout: AdminLayout,
+        title: 'Suppliers - IMS Admin'
+    });
+    return c.html(html);
+});
+
+adminRoutes.post('/suppliers', async (c) => {
+    const tenantId = c.get('tenantId');
+    const procurement = c.ctx.get('domain.procurement');
+    const body = await c.req.parseBody();
+
+    try {
+        await procurement.useCases.createSupplier.execute(tenantId, body);
+        return c.redirect('/admin/suppliers');
+    } catch (e) {
+        return c.text(e.message, 400);
+    }
+});
+
+adminRoutes.get('/suppliers/:id', async (c) => {
+    const user = c.get('user');
+    const tenantId = c.get('tenantId');
+    const supplierId = c.req.param('id');
+    const procurement = c.ctx.get('domain.procurement');
+
+    const supplier = await procurement.repositories.supplier.findById(tenantId, supplierId);
+    if (!supplier) return c.text('Supplier not found', 404);
+
+    // Get POs for this supplier
+    // This is naive filtering in memory as repo doesn't support findBySupplierId yet
+    // In a real app we'd add an index
+    const { items: allPOs } = await procurement.useCases.listPurchaseOrders.execute(tenantId);
+    const supplierPOs = allPOs.filter(po => po.supplierId === supplierId);
+
+    const html = await renderPage(SupplierDetailPage, {
+        user,
+        supplier,
+        purchaseOrders: supplierPOs,
+        activePage: 'suppliers',
+        layout: AdminLayout,
+        title: `${supplier.name} - IMS Admin`
+    });
+    return c.html(html);
+});
+
+adminRoutes.get('/purchase-orders', async (c) => {
+    const user = c.get('user');
+    const tenantId = c.get('tenantId');
+    const procurement = c.ctx.get('domain.procurement');
+
+    const { items: purchaseOrders } = await procurement.useCases.listPurchaseOrders.execute(tenantId);
+
+    // Enrich with supplier names
+    // Note: In real app, might want to join or cache this
+    for (const po of purchaseOrders) {
+        const supplier = await procurement.repositories.supplier.findById(tenantId, po.supplierId);
+        po.supplierName = supplier ? supplier.name : 'Unknown';
+    }
+
+    const html = await renderPage(PurchaseOrdersPage, {
+        user,
+        purchaseOrders,
+        activePage: 'purchase-orders',
+        layout: AdminLayout,
+        title: 'Purchase Orders - IMS Admin'
+    });
+    return c.html(html);
+});
+
+adminRoutes.get('/purchase-orders/new', async (c) => {
+    const user = c.get('user');
+    const tenantId = c.get('tenantId');
+    const procurement = c.ctx.get('domain.procurement');
+    const catalog = c.ctx.get('domain.catalog');
+
+    const { items: suppliers } = await procurement.useCases.listSuppliers.execute(tenantId);
+    const { items: products } = await catalog.useCases.listProducts.execute(tenantId, 1, 100);
+
+    const html = await renderPage(CreatePurchaseOrderPage, {
+        user,
+        suppliers,
+        products,
+        activePage: 'purchase-orders',
+        layout: AdminLayout,
+        title: 'New Purchase Order - IMS Admin'
+    });
+    return c.html(html);
+});
+
+adminRoutes.post('/purchase-orders', async (c) => {
+    const tenantId = c.get('tenantId');
+    const procurement = c.ctx.get('domain.procurement');
+    const body = await c.req.parseBody();
+
+    // Parse nested items from form (e.g. items[0][productId])
+    const items = [];
+    const itemKeys = Object.keys(body).filter(k => k.startsWith('items['));
+    // Naive parsing for limited nesting
+    const indices = new Set(itemKeys.map(k => k.match(/items\[(\d+)\]/)[1]));
+
+    for (const i of indices) {
+        items.push({
+            productId: body[`items[${i}][productId]`],
+            quantity: parseInt(body[`items[${i}][quantity]`]),
+            unitCost: parseFloat(body[`items[${i}][unitCost]`])
+        });
+    }
+
+    try {
+        await procurement.useCases.createPurchaseOrder.execute(tenantId, {
+            supplierId: body.supplierId,
+            expectedDate: body.expectedDate ? new Date(body.expectedDate).toISOString() : undefined,
+            items
+        });
+        return c.redirect('/admin/purchase-orders');
+    } catch (e) {
+        return c.text(e.message, 400);
+    }
+});
+
+adminRoutes.get('/purchase-orders/:id', async (c) => {
+    const user = c.get('user');
+    const tenantId = c.get('tenantId');
+    const poId = c.req.param('id');
+    const procurement = c.ctx.get('domain.procurement');
+    const catalog = c.ctx.get('domain.catalog');
+
+    const po = await procurement.useCases.getPurchaseOrder.execute(tenantId, poId);
+    if (!po) return c.text('PO not found', 404);
+
+    // Enrich items
+    for (const item of po.items) {
+        const product = await catalog.useCases.getProduct(tenantId, item.productId).catch(() => null);
+        item.productName = product ? product.name : 'Unknown';
+        item.sku = product ? product.sku : '';
+    }
+
+    // Enrich Supplier
+    const supplier = await procurement.repositories.supplier.findById(tenantId, po.supplierId);
+    po.supplierName = supplier ? supplier.name : 'Unknown';
+
+    const html = await renderPage(PurchaseOrderDetailPage, {
+        user,
+        po,
+        activePage: 'purchase-orders',
+        layout: AdminLayout,
+        title: `PO ${po.code} - IMS Admin`
+    });
+    return c.html(html);
+});
+
+adminRoutes.get('/purchase-orders/:id/receive', async (c) => {
+    const user = c.get('user');
+    const tenantId = c.get('tenantId');
+    const poId = c.req.param('id');
+    const procurement = c.ctx.get('domain.procurement');
+    const inventory = c.ctx.get('domain.inventory');
+    const catalog = c.ctx.get('domain.catalog');
+
+    const po = await procurement.useCases.getPurchaseOrder.execute(tenantId, poId);
+    if (!po) return c.text('PO not found', 404);
+
+    // Enrich items
+    for (const item of po.items) {
+        const product = await catalog.useCases.getProduct(tenantId, item.productId).catch(() => null); // Re-fetch
+        if (!product) {
+            // Fallback for simple listProducts call if getProduct not directly available in some versions
+            // but we added it earlier.
+             item.productName = 'Unknown';
+        } else {
+             item.productName = product.name;
+             item.sku = product.sku;
+        }
+    }
+
+    // Get Locations
+    const warehouses = await inventory.repositories.warehouse.findAll(tenantId);
+    let allLocations = [];
+    for (const w of warehouses) {
+        const locs = await inventory.repositories.location.findByWarehouseId(tenantId, w.id);
+        allLocations = allLocations.concat(locs);
+    }
+
+    const html = await renderPage(ReceivePurchaseOrderPage, {
+        user,
+        po,
+        locations: allLocations,
+        activePage: 'purchase-orders',
+        layout: AdminLayout,
+        title: 'Receive PO - IMS Admin'
+    });
+    return c.html(html);
+});
+
+adminRoutes.post('/purchase-orders/:id/receive', async (c) => {
+    const tenantId = c.get('tenantId');
+    const poId = c.req.param('id');
+    const procurement = c.ctx.get('domain.procurement');
+    const body = await c.req.parseBody();
+
+    const items = [];
+    const indices = new Set(Object.keys(body).filter(k => k.startsWith('items[')).map(k => k.match(/items\[(\d+)\]/)[1]));
+
+    for (const i of indices) {
+        const qty = parseInt(body[`items[${i}][quantity]`]);
+        if (qty > 0) {
+            items.push({
+                productId: body[`items[${i}][productId]`],
+                quantity: qty
+            });
+        }
+    }
+
+    try {
+        await procurement.useCases.receivePurchaseOrder.execute(tenantId, poId, {
+            locationId: body.locationId,
+            items
+        });
+        return c.redirect('/admin/purchase-orders');
+    } catch (e) {
+        return c.text(e.message, 400);
+    }
+});
+
+// --- Manufacturing Routes ---
+
+adminRoutes.get('/boms', async (c) => {
+    const user = c.get('user');
+    const tenantId = c.get('tenantId');
+    const manufacturing = c.ctx.get('domain.manufacturing');
+    const catalog = c.ctx.get('domain.catalog'); // To get product names
+
+    const { items: boms } = await manufacturing.useCases.listBOMs.execute(tenantId);
+
+    // Enrich product names
+    for (const bom of boms) {
+        const product = await catalog.useCases.getProduct(tenantId, bom.productId).catch(() => null); // getProduct might not be directly exposed in useCases list?
+        // Wait, catalog.useCases.listProducts returns list. getProduct?
+        // Let's check catalog use cases.
+        // Assuming we can fetch product details. If not, we skip.
+        bom.productName = product ? product.name : 'Unknown Product';
+    }
+
+    const html = await renderPage(BOMsPage, {
+        user,
+        boms,
+        activePage: 'boms',
+        layout: AdminLayout,
+        title: 'Bill of Materials - IMS Admin'
+    });
+    return c.html(html);
+});
+
+adminRoutes.get('/boms/:id', async (c) => {
+    const user = c.get('user');
+    const tenantId = c.get('tenantId');
+    const bomId = c.req.param('id');
+    const manufacturing = c.ctx.get('domain.manufacturing');
+    const catalog = c.ctx.get('domain.catalog');
+
+    const bom = await manufacturing.repositories.bom.findById(tenantId, bomId);
+    if (!bom) return c.text('BOM not found', 404);
+
+    // Enrich Finished Product
+    const product = await catalog.useCases.getProduct(tenantId, bom.productId).catch(() => null);
+    bom.productName = product ? product.name : 'Unknown';
+
+    // Enrich Components
+    for (const comp of bom.components) {
+        const p = await catalog.useCases.getProduct(tenantId, comp.productId).catch(() => null);
+        comp.productName = p ? p.name : 'Unknown';
+        comp.sku = p ? p.sku : '';
+    }
+
+    const html = await renderPage(BOMDetailPage, {
+        user,
+        bom,
+        activePage: 'boms',
+        layout: AdminLayout,
+        title: `${bom.name} - IMS Admin`
+    });
+    return c.html(html);
+});
+
+adminRoutes.get('/boms/new', async (c) => {
+    const user = c.get('user');
+    const tenantId = c.get('tenantId');
+    const catalog = c.ctx.get('domain.catalog');
+
+    const { items: products } = await catalog.useCases.listProducts.execute(tenantId, 1, 100);
+
+    const html = await renderPage(CreateBOMPage, {
+        user,
+        products,
+        activePage: 'boms',
+        layout: AdminLayout,
+        title: 'New BOM - IMS Admin'
+    });
+    return c.html(html);
+});
+
+adminRoutes.post('/boms', async (c) => {
+    const tenantId = c.get('tenantId');
+    const manufacturing = c.ctx.get('domain.manufacturing');
+    const body = await c.req.parseBody();
+
+    const components = [];
+    const indices = new Set(Object.keys(body).filter(k => k.startsWith('components[')).map(k => k.match(/components\[(\d+)\]/)[1]));
+
+    for (const i of indices) {
+        components.push({
+            productId: body[`components[${i}][productId]`],
+            quantity: parseInt(body[`components[${i}][quantity]`])
+        });
+    }
+
+    try {
+        await manufacturing.useCases.createBOM.execute(tenantId, {
+            name: body.name,
+            productId: body.productId,
+            laborCost: parseFloat(body.laborCost || 0),
+            components
+        });
+        return c.redirect('/admin/boms');
+    } catch (e) {
+        return c.text(e.message, 400);
+    }
+});
+
+adminRoutes.get('/work-orders', async (c) => {
+    const user = c.get('user');
+    const tenantId = c.get('tenantId');
+    const manufacturing = c.ctx.get('domain.manufacturing');
+    const catalog = c.ctx.get('domain.catalog');
+
+    const { items: workOrders } = await manufacturing.useCases.listWorkOrders.execute(tenantId);
+
+    // Enrich
+    for (const wo of workOrders) {
+        // Need to get BOM to get Product Name
+        const bom = await manufacturing.repositories.bom.findById(tenantId, wo.bomId);
+        if (bom) {
+             // const product = ...
+             wo.productName = 'Product from BOM ' + bom.name;
+        }
+    }
+
+    const html = await renderPage(WorkOrdersPage, {
+        user,
+        workOrders,
+        activePage: 'work-orders',
+        layout: AdminLayout,
+        title: 'Work Orders - IMS Admin'
+    });
+    return c.html(html);
+});
+
+adminRoutes.get('/work-orders/:id', async (c) => {
+    const user = c.get('user');
+    const tenantId = c.get('tenantId');
+    const woId = c.req.param('id');
+    const manufacturing = c.ctx.get('domain.manufacturing');
+    const catalog = c.ctx.get('domain.catalog');
+
+    const wo = await manufacturing.repositories.workOrder.findById(tenantId, woId);
+    if (!wo) return c.text('Work Order not found', 404);
+
+    const bom = await manufacturing.repositories.bom.findById(tenantId, wo.bomId);
+
+    // Enrich Product Name (from BOM)
+    if (bom) {
+        const product = await catalog.useCases.getProduct(tenantId, bom.productId).catch(() => null);
+        wo.productName = product ? product.name : 'Unknown';
+    } else {
+        wo.productName = 'Unknown Product';
+    }
+
+    const html = await renderPage(WorkOrderDetailPage, {
+        user,
+        wo,
+        bom,
+        activePage: 'work-orders',
+        layout: AdminLayout,
+        title: `${wo.code} - IMS Admin`
+    });
+    return c.html(html);
+});
+
+adminRoutes.get('/work-orders/new', async (c) => {
+    const user = c.get('user');
+    const tenantId = c.get('tenantId');
+    const manufacturing = c.ctx.get('domain.manufacturing');
+
+    const { items: boms } = await manufacturing.useCases.listBOMs.execute(tenantId);
+
+    const html = await renderPage(CreateWorkOrderPage, {
+        user,
+        boms,
+        activePage: 'work-orders',
+        layout: AdminLayout,
+        title: 'New Work Order - IMS Admin'
+    });
+    return c.html(html);
+});
+
+adminRoutes.post('/work-orders', async (c) => {
+    const tenantId = c.get('tenantId');
+    const manufacturing = c.ctx.get('domain.manufacturing');
+    const body = await c.req.parseBody();
+
+    try {
+        await manufacturing.useCases.createWorkOrder.execute(tenantId, {
+            bomId: body.bomId,
+            quantity: parseInt(body.quantity),
+            startDate: body.startDate ? new Date(body.startDate).toISOString() : undefined,
+            code: body.code || undefined
+        });
+        return c.redirect('/admin/work-orders');
+    } catch (e) {
+        return c.text(e.message, 400);
+    }
+});
+
+adminRoutes.post('/work-orders/:id/complete', async (c) => {
+    // This route is called from the modal/form
+    const tenantId = c.get('tenantId');
+    const woId = c.req.param('id');
+    const manufacturing = c.ctx.get('domain.manufacturing');
+    const body = await c.req.parseBody();
+
+    // If request comes from the list page button (which we changed to form), it might be missing locationId
+    // But we need to redirect to the selection page if locationId is missing?
+    // Actually, we should change the list page button to be a link to /complete page.
+
+    if (body.locationId) {
+        try {
+            await manufacturing.useCases.completeWorkOrder.execute(tenantId, woId, {
+                locationId: body.locationId
+            });
+            return c.redirect('/admin/work-orders');
+        } catch (e) {
+            return c.text(e.message, 400);
+        }
+    } else {
+        // Render the completion selection page
+        const user = c.get('user');
+        const inventory = c.ctx.get('domain.inventory');
+        const wo = await manufacturing.repositories.workOrder.findById(tenantId, woId);
+
+        // Enrich
+        const bom = await manufacturing.repositories.bom.findById(tenantId, wo.bomId);
+        // We'd need to fetch product name...
+        wo.productName = 'Product from ' + (bom ? bom.name : 'Unknown BOM');
+
+        const warehouses = await inventory.repositories.warehouse.findAll(tenantId);
+        let allLocations = [];
+        for (const w of warehouses) {
+            const locs = await inventory.repositories.location.findByWarehouseId(tenantId, w.id);
+            allLocations = allLocations.concat(locs);
+        }
+
+        const html = await renderPage(CompleteWorkOrderPage, {
+            user,
+            wo,
+            locations: allLocations,
+            activePage: 'work-orders',
+            layout: AdminLayout,
+            title: 'Complete Work Order - IMS Admin'
+        });
+        return c.html(html);
+    }
 });
 
 adminRoutes.get('/locations', async (c) => {
