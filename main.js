@@ -16,6 +16,8 @@ import { createAccessControlContext } from './src/ctx/access-control/index.js';
 import { createInventoryContext } from './src/ctx/inventory/index.js';
 import { createOrdersContext } from './src/ctx/orders/index.js';
 import { createCatalogContext } from './src/ctx/catalog/index.js';
+import { createProcurementContext } from './src/ctx/procurement/index.js';
+import { createManufacturingContext } from './src/ctx/manufacturing/index.js';
 
 async function bootstrap() {
   console.log('🚀 IMS Shopfront - Starting...\n');
@@ -63,6 +65,14 @@ async function bootstrap() {
       'infra.persistence',
       'infra.obs',
       'domain.inventory',
+    ])
+    .registerDomain('procurement', createProcurementContext, [
+        'infra.persistence',
+        'domain.inventory'
+    ])
+    .registerDomain('manufacturing', createManufacturingContext, [
+        'infra.persistence',
+        'domain.inventory'
     ]);
 
   // 5. Initialize all contexts (resolves dependency graph)
