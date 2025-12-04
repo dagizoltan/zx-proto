@@ -1,7 +1,11 @@
 import { createOrder } from '../../domain/entities/order.js';
+import { createOrderSchema } from '../schema.js';
 
 export const createCreateOrder = ({ orderRepository, obs, registry, eventBus }) => {
   const execute = async (tenantId, userId, items) => {
+    // Validate input
+    createOrderSchema.parse({ items });
+
     // Access other domains through registry
     const inventory = registry.get('domain.inventory');
 

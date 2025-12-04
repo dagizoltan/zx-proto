@@ -30,16 +30,56 @@ export const createKVOrderRepository = (kvPool) => {
     });
   };
 
-  const findAll = async (tenantId, { limit = 10, cursor } = {}) => {
+  const findAll = async (tenantId, { limit = 10, cursor, status, search, minTotal, maxTotal } = {}) => {
     return kvPool.withConnection(async (kv) => {
-      const iter = kv.list({ prefix: ['tenants', tenantId, 'orders'] }, { limit, cursor });
+      const iter = kv.list({ prefix: ['tenants', tenantId, 'orders'] }, { cursor });
       const orders = [];
+      let nextCursor = null;
+
+      const searchTerm = search ? search.toLowerCase() : null;
+
       for await (const res of iter) {
-        orders.push(res.value);
+        const order = res.value;
+        let match = true;
+
+        if (status && order.status !== status) {
+          match = false;
+        }
+
+        if (match && minTotal !== undefined && order.total < minTotal) {
+          match = false;
+        }
+
+        if (match && maxTotal !== undefined && order.total > maxTotal) {
+          match = false;
+        }
+
+        if (match && searchTerm) {
+            const inId = order.id?.toLowerCase().includes(searchTerm);
+            // Search in items (optional, but good for "fuzzy search all data")
+            const inItems = order.items?.some(item =>
+                item.name?.toLowerCase().includes(searchTerm) ||
+                item.productId?.toLowerCase().includes(searchTerm)
+            );
+
+            if (!inId && !inItems) {
+                match = false;
+            }
+        }
+
+        if (match) {
+          orders.push(order);
+        }
+
+        if (orders.length >= limit) {
+          nextCursor = iter.cursor;
+          break;
+        }
       }
+
       return {
           items: orders,
-          nextCursor: iter.cursor
+          nextCursor
       };
     });
   };
