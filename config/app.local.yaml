@@ -1,0 +1,36 @@
+app:
+  environment: local
+
+server:
+  port: 8000
+
+database:
+  kv:
+    poolSize: 3
+
+security:
+  jwt:
+    secret: local-dev-secret
+    expiresIn: 30d
+  password:
+    saltRounds: 10
+  cors:
+    origin: http://localhost:8000
+
+observability:
+  logLevel: TRACE
+  enableTracing: true
+
+cache:
+  defaultTTL: 60000
+
+features:
+  realtime: true
+  notifications: true
+  search: true
+
+limits:
+  maxUploadSize: 10485760
+  rateLimit:
+    windowMs: 900000
+    max: 100

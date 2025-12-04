@@ -1,0 +1,24 @@
+app:
+  environment: production
+
+server:
+  port: 8080
+
+database:
+  kv:
+    poolSize: 10
+
+security:
+  jwt:
+    secret: ${JWT_SECRET}
+    expiresIn: 7d
+  password:
+    saltRounds: 12
+  cors:
+    origin: ${CORS_ORIGIN}
+
+observability:
+  logLevel: INFO
+
+cache:
+  defaultTTL: 3600000
