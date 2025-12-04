@@ -65,6 +65,15 @@ export const OrderDetailPage = ({ user, order }) => {
             <button type="submit" class="btn btn-danger">Cancel Order</button>
           </form>
         )}
+
+        <div class="ml-auto flex gap-4">
+            <a href={`/admin/orders/${order.id}/pick-list`} target="_blank" class="btn btn-secondary">
+                <span class="icon">📋</span> Pick List
+            </a>
+            <a href={`/admin/orders/${order.id}/packing-slip`} target="_blank" class="btn btn-secondary">
+                <span class="icon">📦</span> Packing Slip
+            </a>
+        </div>
       </div>
     </div>
   );

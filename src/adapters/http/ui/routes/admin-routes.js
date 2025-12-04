@@ -12,6 +12,8 @@ import { CustomerDetailPage } from '../pages/admin/customer-detail-page.jsx';
 import { CatalogPage } from '../pages/admin/catalog/catalog-page.jsx';
 import { WarehousesPage } from '../pages/admin/inventory/warehouses-page.jsx';
 import { LocationsPage } from '../pages/admin/inventory/locations-page.jsx';
+import { PickListPage } from '../pages/admin/pick-list-page.jsx';
+import { PackingSlipPage } from '../pages/admin/packing-slip-page.jsx';
 import { AdminLayout } from '../layouts/admin-layout.jsx';
 import { authMiddleware } from '../middleware/auth-middleware.js';
 
@@ -69,14 +71,6 @@ adminRoutes.get('/locations', async (c) => {
     const user = c.get('user');
     const tenantId = c.get('tenantId');
     const inventory = c.ctx.get('domain.inventory');
-
-    // We need to fetch all locations. Repo doesn't have findAll?
-    // kv-location-repository has findByWarehouseId.
-    // I'll assume I need to fetch all warehouses then all their locations?
-    // Or I should add findAll to location repo.
-    // checking kv-location-repository.js...
-    // It does NOT have findAll. I'll add it or iterate warehouses.
-    // Iterating warehouses is safer.
 
     const warehouses = await inventory.repositories.warehouse.findAll(tenantId);
     let allLocations = [];
@@ -202,6 +196,70 @@ adminRoutes.get('/orders/:id', async (c) => {
   });
 
   return c.html(html);
+});
+
+// Pick List
+adminRoutes.get('/orders/:id/pick-list', async (c) => {
+    const user = c.get('user');
+    const tenantId = c.get('tenantId');
+    const orderId = c.req.param('id');
+    const orders = c.ctx.get('domain.orders');
+    const inventory = c.ctx.get('domain.inventory');
+
+    const order = await orders.useCases.getOrder.execute(tenantId, orderId);
+    if (!order) return c.text('Order not found', 404);
+
+    // Get Allocated Movements
+    const movements = await inventory.repositories.stockMovement.getByReference(tenantId, orderId);
+    const allocated = movements.filter(m => m.type === 'allocated');
+
+    // Enrich with location, product, batch
+    const pickItems = await Promise.all(allocated.map(async (item) => {
+        const [product, location, batch] = await Promise.all([
+            inventory.useCases.getProduct.execute(tenantId, item.productId),
+            inventory.repositories.location.findById(tenantId, item.fromLocationId),
+            item.batchId ? inventory.repositories.batch.findById(tenantId, item.batchId) : null
+        ]);
+        return {
+            ...item,
+            productName: product?.name || 'Unknown',
+            sku: product?.sku || 'UNKNOWN',
+            locationCode: location?.code || 'Unknown Loc',
+            batchNumber: batch?.batchNumber,
+            expiryDate: batch?.expiryDate
+        };
+    }));
+
+    // Sort by location code
+    pickItems.sort((a, b) => a.locationCode.localeCompare(b.locationCode));
+
+    const html = await renderPage(PickListPage, {
+        user,
+        order,
+        pickItems,
+        layout: AdminLayout, // Or simplified layout?
+        title: `Pick List #${order.id} - IMS Admin`
+    });
+    return c.html(html);
+});
+
+// Packing Slip
+adminRoutes.get('/orders/:id/packing-slip', async (c) => {
+    const user = c.get('user');
+    const tenantId = c.get('tenantId');
+    const orderId = c.req.param('id');
+    const orders = c.ctx.get('domain.orders');
+
+    const order = await orders.useCases.getOrder.execute(tenantId, orderId);
+    if (!order) return c.text('Order not found', 404);
+
+    const html = await renderPage(PackingSlipPage, {
+        user,
+        order,
+        layout: AdminLayout,
+        title: `Packing Slip #${order.id} - IMS Admin`
+    });
+    return c.html(html);
 });
 
 adminRoutes.post('/orders/:id/status', async (c) => {

@@ -1,25 +1,42 @@
 // Replacing the simple stock repo with a multi-location capable one
 // We will index stock by:
-// ['tenants', tenantId, 'stock', productId, locationId]
-// ['tenants', tenantId, 'stock_by_loc', locationId, productId]
+// ['tenants', tenantId, 'stock', productId, locationId, batchId]
+// ['tenants', tenantId, 'stock_by_loc', locationId, productId, batchId]
 
 export const createKVStockRepository = (kvPool) => {
   const save = async (tenantId, stockEntry) => {
     return kvPool.withConnection(async (kv) => {
+      const batchId = stockEntry.batchId || 'default';
       const op = kv.atomic();
-      const key = ['tenants', tenantId, 'stock', stockEntry.productId, stockEntry.locationId];
+      const key = ['tenants', tenantId, 'stock', stockEntry.productId, stockEntry.locationId, batchId];
       op.set(key, stockEntry);
+
       // Secondary index for location lookup
-      op.set(['tenants', tenantId, 'stock_by_loc', stockEntry.locationId, stockEntry.productId], stockEntry.id);
+      op.set(['tenants', tenantId, 'stock_by_loc', stockEntry.locationId, stockEntry.productId, batchId], stockEntry.id);
+
       await op.commit();
       return stockEntry;
     });
   };
 
-  const getEntry = async (tenantId, productId, locationId) => {
+  const getEntryByBatch = async (tenantId, productId, locationId, batchId) => {
     return kvPool.withConnection(async (kv) => {
-      const res = await kv.get(['tenants', tenantId, 'stock', productId, locationId]);
+      const finalBatchId = batchId || 'default';
+      const res = await kv.get(['tenants', tenantId, 'stock', productId, locationId, finalBatchId]);
       return res.value;
+    });
+  };
+
+  const getEntriesAtLocation = async (tenantId, productId, locationId) => {
+    return kvPool.withConnection(async (kv) => {
+      // New Key: ['tenants', tenantId, 'stock', productId, locationId, batchId]
+      // Prefix matching ['tenants', tenantId, 'stock', productId, locationId] captures all batches at this location.
+      const iter = kv.list({ prefix: ['tenants', tenantId, 'stock', productId, locationId] });
+      const entries = [];
+      for await (const res of iter) {
+        entries.push(res.value);
+      }
+      return entries;
     });
   };
 
@@ -53,17 +70,17 @@ export const createKVStockRepository = (kvPool) => {
     return entries.reduce((sum, entry) => sum + (entry.quantity - entry.reservedQuantity), 0);
   };
 
-  // Deprecated direct update, use specific movement logic in services
+  // Deprecated direct update shim
   const updateStock = async (tenantId, productId, quantity) => {
-      // Compatibility shim: update a 'default' location
       const defaultLocId = 'default-loc';
-      const entry = await getEntry(tenantId, productId, defaultLocId) || {
+      const entry = await getEntryByBatch(tenantId, productId, defaultLocId, null) || {
           id: crypto.randomUUID(),
           tenantId,
           productId,
           locationId: defaultLocId,
           quantity: 0,
-          reservedQuantity: 0
+          reservedQuantity: 0,
+          batchId: 'default'
       };
 
       const updated = { ...entry, quantity, updatedAt: new Date().toISOString() };
@@ -71,6 +88,5 @@ export const createKVStockRepository = (kvPool) => {
       return updated;
   };
 
-  // Explicitly export all methods including getEntry
-  return { save, getEntry, getEntriesForProduct, listEntriesForProduct, getStock, updateStock };
+  return { save, getEntryByBatch, getEntriesAtLocation, getEntriesForProduct, listEntriesForProduct, getStock, updateStock };
 };

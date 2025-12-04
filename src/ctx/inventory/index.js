@@ -36,7 +36,7 @@ export const createInventoryContext = async (deps) => {
   const batchRepository = createKVBatchRepository(persistence.kvPool);
 
   // Domain Services
-  const stockAllocationService = createStockAllocationService(stockRepository, stockMovementRepository);
+  const stockAllocationService = createStockAllocationService(stockRepository, stockMovementRepository, batchRepository);
   const inventoryAdjustmentService = createInventoryAdjustmentService(stockRepository, stockMovementRepository, batchRepository);
 
   // Use Cases
@@ -115,6 +115,7 @@ export const createInventoryContext = async (deps) => {
       warehouse: warehouseRepository,
       location: locationRepository,
       batch: batchRepository,
+      stockMovement: stockMovementRepository,
     },
 
     services: {

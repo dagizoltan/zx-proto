@@ -24,14 +24,10 @@ export const createInventoryAdjustmentService = (stockRepository, stockMovementR
             }
         }
 
-        // Find existing entry or create new
-        // Note: Stock Entry should be unique by Product + Location + Batch?
-        // If we track batches, we need separate entries for each batch in each location?
-        // Or we mix them? Enterprise usually separates them.
-        // For now, I'll stick to Product+Location uniqueness but this is a limitation.
-        // TO DO: Update StockRepository to support Batch granularity.
+        // Use 'default' if no batch specified
+        if (!finalBatchId) finalBatchId = 'default';
 
-        let entry = await stockRepository.getEntry(tenantId, productId, locationId);
+        let entry = await stockRepository.getEntryByBatch(tenantId, productId, locationId, finalBatchId);
 
         if (!entry) {
             entry = {
@@ -43,10 +39,6 @@ export const createInventoryAdjustmentService = (stockRepository, stockMovementR
                 reservedQuantity: 0,
                 batchId: finalBatchId
             };
-        } else {
-             // If entry exists, we might be mixing batches?
-             // If entry.batchId !== finalBatchId, we have a problem if we want strict separation.
-             // For this iteration, assuming single batch per location or mixed.
         }
 
         const updated = {
@@ -74,9 +66,15 @@ export const createInventoryAdjustmentService = (stockRepository, stockMovementR
         return updated;
     };
 
-    const adjustStock = async (tenantId, { productId, locationId, newQuantity, reason, userId }) => {
-        const entry = await stockRepository.getEntry(tenantId, productId, locationId);
-        if (!entry) throw new Error('Stock entry not found');
+    const adjustStock = async (tenantId, { productId, locationId, newQuantity, reason, userId, batchId }) => {
+        // Adjustment should ideally specify batch. If not, we might be in trouble.
+        // For now, default to 'default' or we could try to find ANY entry at location.
+        // Let's assume 'default' if missing for legacy compatibility, but this is weak.
+
+        const targetBatchId = batchId || 'default';
+        const entry = await stockRepository.getEntryByBatch(tenantId, productId, locationId, targetBatchId);
+
+        if (!entry) throw new Error('Stock entry not found for adjustment');
 
         const diff = newQuantity - entry.quantity;
 
@@ -94,7 +92,8 @@ export const createInventoryAdjustmentService = (stockRepository, stockMovementR
             productId,
             quantity: Math.abs(diff),
             type: 'adjusted',
-            fromLocationId: locationId, // Contextual
+            fromLocationId: locationId,
+            batchId: targetBatchId,
             referenceId: reason,
             userId,
             timestamp: new Date().toISOString()
