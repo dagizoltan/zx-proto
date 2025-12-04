@@ -65,6 +65,7 @@ async function bootstrap() {
   const accessControl = ctx.get('domain.accessControl');
   const inventory = ctx.get('domain.inventory');
   const orders = ctx.get('domain.orders');
+  const catalog = ctx.get('domain.catalog');
 
   // --- 1. RBAC (Roles & Users) ---
   console.log('🛡️  Seeding Roles & Users...');
@@ -101,8 +102,6 @@ async function bootstrap() {
   } catch(e) { /* existing */ }
 
   // Fallback if roles already existed, fetch them (need a findByName ideally, but for now we iterate or just proceed)
-  // To keep seed simple, we rely on them being created now or we can use listRoles to find IDs if needed.
-  // For robustness, let's fetch all roles to get IDs.
   const allRoles = await accessControl.useCases.listRoles.execute(tenantId);
   const getRoleId = (name) => allRoles.find(r => r.name === name)?.id;
 
@@ -121,7 +120,6 @@ async function bootstrap() {
           return user;
       } catch (e) {
           console.log(`   ℹ️  User: ${email} exists, skipped`);
-          // If exists, we could try to find and assign role, but let's assume it's set
           const existing = await accessControl.repositories.user.findByEmail(tenantId, email);
           if (existing && roleId) {
              await accessControl.useCases.assignRole.execute(tenantId, { userId: existing.id, roleIds: [roleId] });
@@ -139,28 +137,140 @@ async function bootstrap() {
       await seedUser(faker.internet.email(faker.person.fullName()), faker.person.fullName(), customerRoleId);
   }
 
-  // --- 2. Products & Inventory ---
-  console.log('📦 Creating Products & Inventory...');
-  const warehouses = ['WH-US-EAST', 'WH-US-WEST'];
-  const locations = warehouses.flatMap(wh => [`${wh}-ZONE-A`, `${wh}-ZONE-B`]);
+  // --- 2. Warehouses & Locations ---
+  console.log('🏭 Seeding Warehouses & Locations...');
 
-  const createdProducts = [];
+  const createdLocations = [];
 
-  for (let i = 0; i < 20; i++) {
+  // Seed Warehouses
+  const warehouses = [
+      { name: 'Main Warehouse', code: 'WH-01' },
+      { name: 'East Coast Distribution', code: 'WH-02' }
+  ];
+
+  for (const wData of warehouses) {
+      let warehouse;
       try {
-          const product = await inventory.useCases.createProduct.execute(tenantId, {
+          // Naive check via repository if findByName exists, else create
+          // For seed, just create and ignore error? Or better, implement findByName in repo?
+          // Repository findAll works.
+          const allWh = await inventory.repositories.warehouse.findAll(tenantId);
+          warehouse = allWh.find(w => w.code === wData.code);
+
+          if (!warehouse) {
+              warehouse = await inventory.useCases.createWarehouse.execute(tenantId, wData);
+              console.log(`   ✅ Warehouse: ${wData.name} created`);
+          } else {
+              console.log(`   ℹ️  Warehouse: ${wData.name} exists`);
+          }
+
+          // Create Locations (Zones)
+          const zones = ['Zone A', 'Zone B'];
+          for (const zName of zones) {
+              const allLocs = await inventory.repositories.location.findByWarehouseId(tenantId, warehouse.id);
+              let zone = allLocs.find(l => l.code === zName && l.type === 'ZONE');
+
+              if (!zone) {
+                  zone = await inventory.useCases.createLocation.execute(tenantId, {
+                      warehouseId: warehouse.id,
+                      code: zName,
+                      type: 'ZONE'
+                  });
+              }
+              createdLocations.push(zone.id);
+
+              // Create Aisles
+              for (let i = 1; i <= 3; i++) {
+                  const aisleCode = `${zName}-Aisle-${i}`;
+                  let aisle = allLocs.find(l => l.code === aisleCode);
+                  if (!aisle) {
+                      aisle = await inventory.useCases.createLocation.execute(tenantId, {
+                          warehouseId: warehouse.id,
+                          parentId: zone.id,
+                          code: aisleCode,
+                          type: 'AISLE'
+                      });
+                  }
+                  createdLocations.push(aisle.id);
+              }
+          }
+
+      } catch (e) { console.error(e); }
+  }
+
+  // --- 3. Products & Variants (Catalog) ---
+  console.log('📦 Creating Products & Variants...');
+
+  // Create Configurable Product (T-Shirt)
+  let tshirtParent;
+  try {
+      // Force creation of new V2 to ensure updated schema
+      tshirtParent = await catalog.useCases.createProduct.execute(tenantId, {
+          sku: 'TSHIRT-CLASSIC-V2',
+          name: 'Classic Cotton T-Shirt V2',
+          description: 'A comfortable classic t-shirt in various colors.',
+          price: 20.00,
+          type: 'CONFIGURABLE',
+          configurableAttributes: ['color', 'size'],
+          category: 'Clothing'
+      });
+      console.log('   ✅ Product: Classic T-Shirt (Configurable) created');
+  } catch (e) {
+      // Need a way to find it if it failed
+      const all = await catalog.useCases.listProducts.execute(tenantId);
+      tshirtParent = all.find(p => p.sku === 'TSHIRT-CLASSIC-V2');
+      console.log('   ℹ️  Product: Classic T-Shirt V2 exists');
+  }
+
+  if (tshirtParent) {
+      const variants = [
+          { color: 'Red', size: 'M', sku: 'TSHIRT-RED-M' },
+          { color: 'Blue', size: 'L', sku: 'TSHIRT-BLUE-L' },
+          { color: 'Green', size: 'S', sku: 'TSHIRT-GREEN-S' }
+      ];
+
+      for (const v of variants) {
+          try {
+              const vProduct = await catalog.useCases.createProduct.execute(tenantId, {
+                  sku: v.sku,
+                  name: `Classic T-Shirt - ${v.color} (${v.size})`,
+                  price: 20.00,
+                  type: 'VARIANT',
+                  parentId: tshirtParent.id,
+                  variantAttributes: { color: v.color, size: v.size },
+                  category: 'Clothing'
+              });
+              console.log(`   ✅ Variant: ${v.sku} created`);
+
+              // Seed Stock for Variant
+              if (createdLocations.length > 0) {
+                  const loc = createdLocations[Math.floor(Math.random() * createdLocations.length)];
+                  await inventory.useCases.receiveStock.execute(tenantId, {
+                      productId: vProduct.id,
+                      locationId: loc,
+                      quantity: 50,
+                      reason: 'Initial Seed',
+                      userId: adminUser?.id || 'system'
+                  });
+              }
+          } catch (e) { console.error('Failed to create variant:', e); }
+      }
+  }
+
+  // Random Products
+  for (let i = 0; i < 10; i++) {
+      try {
+          const product = await catalog.useCases.createProduct.execute(tenantId, {
               sku: `SKU-${1000 + i}`,
               name: faker.commerce.productName(),
               price: parseFloat(faker.commerce.price()),
               description: `A wonderful product for your daily needs.`,
               category: faker.commerce.department(),
-              quantity: 0,
+              type: 'SIMPLE',
               status: Math.random() > 0.1 ? 'ACTIVE' : 'INACTIVE'
           });
 
-          createdProducts.push(product);
-
-          const loc = locations[Math.floor(Math.random() * locations.length)];
+          const loc = createdLocations[Math.floor(Math.random() * createdLocations.length)];
           const qty = Math.floor(Math.random() * 50) + 10;
 
           await inventory.useCases.receiveStock.execute(tenantId, {
@@ -174,17 +284,16 @@ async function bootstrap() {
           process.stdout.write('.');
       } catch (e) { }
   }
-  console.log(`\n   ✅ ${createdProducts.length} products created.`);
+  console.log(`\n   ✅ Random products created.`);
 
-  // --- 3. Mock Orders ---
+  // --- 4. Mock Orders ---
   console.log('🛒 Creating Mock Orders...');
-  const result = await inventory.useCases.listAllProducts.execute(tenantId, { limit: 100 });
-  let productList = result.items || result;
+  // Use catalog listing
+  const products = await catalog.useCases.listProducts.execute(tenantId, 1, 100); // Pagination assumed
 
-  if (productList && productList.length > 0) {
+  if (products && products.length > 0) {
       // Get some customers
       const { items: customers } = await accessControl.useCases.listUsers.execute(tenantId, { limit: 50 });
-      // Filter those who are just customers if possible, or use all
       const customerUsers = customers.filter(c => c.email !== 'admin@imsshop.com' && c.email !== 'manager@imsshop.com');
 
       if (customerUsers.length > 0) {
@@ -194,8 +303,9 @@ async function bootstrap() {
               const numItems = Math.floor(Math.random() * 3) + 1;
 
               for (let j = 0; j < numItems; j++) {
-                  const p = productList[Math.floor(Math.random() * productList.length)];
-                  items.push({ productId: p.id, quantity: Math.floor(Math.random() * 2) + 1 });
+                  const p = products[Math.floor(Math.random() * products.length)];
+                  // Ensure stock exists? createOrder checks.
+                  items.push({ productId: p.id, quantity: 1 }); // Simple quantity
               }
 
               try {

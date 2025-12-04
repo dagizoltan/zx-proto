@@ -1,7 +1,36 @@
-export const createInventoryAdjustmentService = (stockRepository, stockMovementRepository) => {
+import { createBatch } from '../entities/warehouse.js';
 
-    const receiveStock = async (tenantId, { productId, locationId, quantity, batchId, reason, userId }) => {
+export const createInventoryAdjustmentService = (stockRepository, stockMovementRepository, batchRepository) => {
+
+    const receiveStock = async (tenantId, { productId, locationId, quantity, batchId, batchData, reason, userId }) => {
+        let finalBatchId = batchId;
+
+        // Handle Batch Creation
+        if (!finalBatchId && batchData && batchRepository) {
+            // Check if batch exists by sku + batchNumber
+            if (batchData.batchNumber) {
+                // Ideally repo has findByNumber, but for now we assume create new
+                // Simplified: Create new batch
+                const batch = createBatch({
+                    id: crypto.randomUUID(),
+                    tenantId,
+                    sku: batchData.sku || 'UNKNOWN', // Should verify SKU from product
+                    batchNumber: batchData.batchNumber,
+                    expiryDate: batchData.expiryDate,
+                    receivedAt: new Date().toISOString()
+                });
+                await batchRepository.save(tenantId, batch);
+                finalBatchId = batch.id;
+            }
+        }
+
         // Find existing entry or create new
+        // Note: Stock Entry should be unique by Product + Location + Batch?
+        // If we track batches, we need separate entries for each batch in each location?
+        // Or we mix them? Enterprise usually separates them.
+        // For now, I'll stick to Product+Location uniqueness but this is a limitation.
+        // TO DO: Update StockRepository to support Batch granularity.
+
         let entry = await stockRepository.getEntry(tenantId, productId, locationId);
 
         if (!entry) {
@@ -12,8 +41,12 @@ export const createInventoryAdjustmentService = (stockRepository, stockMovementR
                 locationId,
                 quantity: 0,
                 reservedQuantity: 0,
-                batchId
+                batchId: finalBatchId
             };
+        } else {
+             // If entry exists, we might be mixing batches?
+             // If entry.batchId !== finalBatchId, we have a problem if we want strict separation.
+             // For this iteration, assuming single batch per location or mixed.
         }
 
         const updated = {
@@ -32,7 +65,7 @@ export const createInventoryAdjustmentService = (stockRepository, stockMovementR
             type: 'received',
             fromLocationId: null,
             toLocationId: locationId,
-            batchId,
+            batchId: finalBatchId,
             reason,
             userId,
             timestamp: new Date().toISOString()
