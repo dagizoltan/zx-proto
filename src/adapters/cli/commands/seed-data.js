@@ -157,9 +157,6 @@ async function bootstrap() {
   for (const wData of warehouses) {
       let warehouse;
       try {
-          // Naive check via repository if findByName exists, else create
-          // For seed, just create and ignore error? Or better, implement findByName in repo?
-          // Repository findAll works.
           const allWh = await inventory.repositories.warehouse.findAll(tenantId);
           warehouse = allWh.find(w => w.code === wData.code);
 
@@ -204,13 +201,74 @@ async function bootstrap() {
       } catch (e) { console.error(e); }
   }
 
-  // --- 3. Products & Variants (Catalog) ---
+  // --- 3. Categories & Price Lists (NEW) ---
+  console.log('🗂️  Seeding Categories & Price Lists...');
+  const categoryNames = ['Electronics', 'Clothing', 'Home & Garden', 'Toys', 'Furniture'];
+  const createdCategories = [];
+
+  for (const name of categoryNames) {
+      try {
+          // Check if exists
+          const { items } = await catalog.useCases.listCategories.execute(tenantId, { limit: 100, search: name });
+          let cat = items.find(c => c.name === name);
+
+          if (!cat) {
+            cat = await catalog.useCases.createCategory.execute(tenantId, {
+              name,
+              description: `All things ${name}`,
+            });
+            console.log(`   ✅ Category: ${name} created`);
+          }
+          createdCategories.push(cat);
+      } catch(e) { console.error(e); }
+  }
+
+  // Seed Subcategories for Clothing
+  const clothingCat = createdCategories.find(c => c.name === 'Clothing');
+  if (clothingCat) {
+      const subs = ['Men', 'Women', 'Kids'];
+      for (const sub of subs) {
+          try {
+             await catalog.useCases.createCategory.execute(tenantId, {
+                 name: sub,
+                 parentId: clothingCat.id
+             });
+             console.log(`   ✅ Subcategory: ${sub} created`);
+          } catch(e) {}
+      }
+  }
+
+  // Seed Price Lists
+  const priceLists = [
+      { name: 'VIP Customers', currency: 'USD' },
+      { name: 'Wholesale', currency: 'USD' }
+  ];
+  const createdPriceLists = [];
+
+  for (const pl of priceLists) {
+      try {
+          const { items } = await catalog.useCases.listPriceLists.execute(tenantId, { limit: 100, search: pl.name });
+          let list = items.find(l => l.name === pl.name);
+
+          if (!list) {
+              list = await catalog.useCases.createPriceList.execute(tenantId, {
+                  name: pl.name,
+                  currency: pl.currency,
+                  description: 'Special pricing tier'
+              });
+              console.log(`   ✅ Price List: ${pl.name} created`);
+          }
+          createdPriceLists.push(list);
+      } catch(e) { console.error(e); }
+  }
+
+
+  // --- 4. Products & Variants (Catalog) ---
   console.log('📦 Creating Products & Variants...');
 
   // Create Configurable Product (T-Shirt)
   let tshirtParent;
   try {
-      // Force creation of new V2 to ensure updated schema
       tshirtParent = await catalog.useCases.createProduct.execute(tenantId, {
           sku: 'TSHIRT-CLASSIC-V2',
           name: 'Classic Cotton T-Shirt V2',
@@ -218,15 +276,18 @@ async function bootstrap() {
           price: 20.00,
           type: 'CONFIGURABLE',
           configurableAttributes: ['color', 'size'],
-          category: 'Clothing'
+          category: 'Clothing' // This is just a string in product schema currently, but could link to ID if schema updated.
+                               // Ideally we should update product schema to store categoryId, but sticking to existing pattern for now.
       });
       console.log('   ✅ Product: Classic T-Shirt (Configurable) created');
   } catch (e) {
-      // Need a way to find it if it failed
       const all = await catalog.useCases.listProducts.execute(tenantId);
       tshirtParent = all.find(p => p.sku === 'TSHIRT-CLASSIC-V2');
       console.log('   ℹ️  Product: Classic T-Shirt V2 exists');
   }
+
+  const allProducts = [];
+  if (tshirtParent) allProducts.push(tshirtParent);
 
   if (tshirtParent) {
       const variants = [
@@ -246,6 +307,7 @@ async function bootstrap() {
                   variantAttributes: { color: v.color, size: v.size },
                   category: 'Clothing'
               });
+              allProducts.push(vProduct);
               console.log(`   ✅ Variant: ${v.sku} created`);
 
               // Seed Stock for Variant
@@ -275,6 +337,7 @@ async function bootstrap() {
               type: 'SIMPLE',
               status: Math.random() > 0.1 ? 'ACTIVE' : 'INACTIVE'
           });
+          allProducts.push(product);
 
           const loc = createdLocations[Math.floor(Math.random() * createdLocations.length)];
           const qty = Math.floor(Math.random() * 50) + 10;
@@ -292,7 +355,37 @@ async function bootstrap() {
   }
   console.log(`\n   ✅ Random products created.`);
 
-  // --- 4. Mock Orders ---
+  // Update Price Lists with random prices for some products
+  console.log('💲 Populating Price Lists...');
+  for (const pl of createdPriceLists) {
+      // We can't update using 'save' directly if we don't have update use case exposed,
+      // but we can re-save via repository if we accessed it, OR use createPriceList which overwrites?
+      // Actually `createPriceList` calls `save`. Repository `save` overwrites.
+      // But we need to keep ID.
+      // Let's modify the PL object and save it.
+      // But we need access to repository or use an update use case.
+      // We didn't create `updatePriceList` use case.
+      // We can use `createPriceList` logic but we need to pass ID? Use Case creates new ID.
+      // Quick fix: Access repository directly via context?
+      // Context exposes repositories!
+
+      const plRepo = catalog.repositories.priceList;
+      if (plRepo && allProducts.length > 0) {
+          const prices = {};
+          // Pick 5 random products
+          for(let i=0; i<5; i++) {
+              const p = allProducts[Math.floor(Math.random() * allProducts.length)];
+              // 10-20% discount
+              prices[p.id] = parseFloat((p.price * (0.8 + Math.random() * 0.1)).toFixed(2));
+          }
+
+          pl.prices = prices;
+          await plRepo.save(tenantId, pl);
+          console.log(`   ✅ Updated ${pl.name} with ${Object.keys(prices).length} prices`);
+      }
+  }
+
+  // --- 5. Mock Orders ---
   console.log('🛒 Creating Mock Orders...');
   // Use catalog listing
   const products = await catalog.useCases.listProducts.execute(tenantId, 1, 100); // Pagination assumed
@@ -323,7 +416,7 @@ async function bootstrap() {
       }
   }
 
-    // --- 5. Procurement & Manufacturing ---
+    // --- 6. Procurement & Manufacturing ---
     console.log('🏭 Seeding Procurement & Manufacturing...');
 
     const suppliersData = [
