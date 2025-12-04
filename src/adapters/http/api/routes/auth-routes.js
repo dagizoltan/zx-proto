@@ -1,0 +1,71 @@
+import { Hono } from 'https://deno.land/x/hono@v3.11.7/mod.ts';
+
+export const authRoutes = new Hono();
+
+authRoutes.post('/login', async (c) => {
+  const { email, password } = await c.req.json();
+
+  // Access domain context through c.ctx
+  const accessControl = c.ctx.get('domain.accessControl');
+  const obs = c.ctx.get('infra.obs');
+
+  try {
+    const result = await accessControl.useCases.loginUser.execute(email, password);
+
+    await obs.audit('User logged in', {
+      userId: result.user.id,
+      email: result.user.email,
+    });
+
+    return c.json({
+      success: true,
+      token: result.token,
+      user: result.user,
+    });
+  } catch (error) {
+    await obs.warn('Login failed', {
+      email,
+      error: error.message,
+    });
+
+    return c.json(
+      { error: 'Invalid credentials' },
+      401
+    );
+  }
+});
+
+authRoutes.post('/register', async (c) => {
+  const { email, password, name } = await c.req.json();
+
+  const accessControl = c.ctx.get('domain.accessControl');
+  const obs = c.ctx.get('infra.obs');
+
+  try {
+    const user = await accessControl.useCases.registerUser.execute({
+      email,
+      password,
+      name,
+    });
+
+    await obs.audit('User registered', {
+      userId: user.id,
+      email: user.email,
+    });
+
+    return c.json({
+      success: true,
+      user,
+    }, 201);
+  } catch (error) {
+    await obs.error('Registration failed', {
+      email,
+      error: error.message,
+    });
+
+    return c.json(
+      { error: error.message },
+      400
+    );
+  }
+});
