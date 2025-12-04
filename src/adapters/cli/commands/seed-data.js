@@ -11,6 +11,8 @@ import { createAccessControlContext } from '../../../ctx/access-control/index.js
 import { createInventoryContext } from '../../../ctx/inventory/index.js';
 import { createOrdersContext } from '../../../ctx/orders/index.js';
 import { createCatalogContext } from '../../../ctx/catalog/index.js';
+import { createProcurementContext } from '../../../ctx/procurement/index.js';
+import { createManufacturingContext } from '../../../ctx/manufacturing/index.js';
 
 // Simple random helpers
 const faker = {
@@ -58,7 +60,9 @@ async function bootstrap() {
     .registerDomain('accessControl', createAccessControlContext, ['infra.persistence', 'infra.obs', 'infra.security'])
     .registerDomain('inventory', createInventoryContext, ['infra.persistence', 'infra.obs', 'infra.messaging', 'domain.accessControl'])
     .registerDomain('orders', createOrdersContext, ['infra.persistence', 'infra.obs', 'infra.messaging', 'domain.inventory', 'domain.accessControl'])
-    .registerDomain('catalog', createCatalogContext, ['infra.persistence', 'infra.obs', 'domain.inventory']);
+    .registerDomain('catalog', createCatalogContext, ['infra.persistence', 'infra.obs', 'domain.inventory'])
+    .registerDomain('procurement', createProcurementContext, ['infra.persistence', 'domain.inventory'])
+    .registerDomain('manufacturing', createManufacturingContext, ['infra.persistence', 'domain.inventory']);
 
   await ctx.initialize(config);
 
@@ -66,6 +70,8 @@ async function bootstrap() {
   const inventory = ctx.get('domain.inventory');
   const orders = ctx.get('domain.orders');
   const catalog = ctx.get('domain.catalog');
+  const procurement = ctx.get('domain.procurement');
+  const manufacturing = ctx.get('domain.manufacturing');
 
   // --- 1. RBAC (Roles & Users) ---
   console.log('🛡️  Seeding Roles & Users...');
@@ -316,6 +322,121 @@ async function bootstrap() {
           console.log('\n   ✅ Mock orders created.');
       }
   }
+
+    // --- 5. Procurement & Manufacturing ---
+    console.log('🏭 Seeding Procurement & Manufacturing...');
+
+    const suppliersData = [
+      { name: 'Global Steel Co', code: 'SUP-STEEL', email: 'orders@globalsteel.com' },
+      { name: 'WoodWorks Inc', code: 'SUP-WOOD', email: 'sales@woodworks.com' },
+      { name: 'FastParts Ltd', code: 'SUP-PARTS', email: 'contact@fastparts.com' }
+    ];
+
+    const suppliers = [];
+    for (const s of suppliersData) {
+        try {
+            // Naive dupe check
+            const existing = (await procurement.useCases.listSuppliers.execute(tenantId)).items.find(x => x.code === s.code);
+            if(!existing) {
+                const created = await procurement.useCases.createSupplier.execute(tenantId, s);
+                suppliers.push(created);
+                console.log(`   ✅ Supplier: ${s.name} created`);
+            } else {
+                suppliers.push(existing);
+            }
+        } catch(e) { console.error(e); }
+    }
+
+    // Raw Materials
+    const rawMaterialsData = [
+        { name: 'Steel Sheet 4x8', sku: 'RM-STEEL-01', price: 50.00 },
+        { name: 'Pine Plank 2x4', sku: 'RM-WOOD-01', price: 8.50 },
+        { name: 'Industrial Screw', sku: 'RM-SCREW-01', price: 0.10 }
+    ];
+
+    const rawMaterials = [];
+    for (const p of rawMaterialsData) {
+        try {
+            const created = await catalog.useCases.createProduct.execute(tenantId, {
+                ...p,
+                type: 'SIMPLE',
+                category: 'Raw Materials'
+            });
+            rawMaterials.push(created);
+            console.log(`   ✅ Raw Material: ${p.name} created`);
+        } catch(e) {
+           // If fails (duplicate SKU), try to fetch
+           const all = await catalog.useCases.listProducts.execute(tenantId, 1, 100);
+           const existing = all.find(x => x.sku === p.sku);
+           if(existing) rawMaterials.push(existing);
+        }
+    }
+
+    // Create PO
+    if (suppliers.length > 0 && rawMaterials.length > 0) {
+        try {
+            const po = await procurement.useCases.createPurchaseOrder.execute(tenantId, {
+                supplierId: suppliers[0].id,
+                items: [
+                    { productId: rawMaterials[0].id, quantity: 100, unitCost: 45.00 }, // Bulk discount
+                    { productId: rawMaterials[2].id, quantity: 1000, unitCost: 0.08 }
+                ],
+                expectedDate: new Date(Date.now() + 86400000 * 7).toISOString()
+            });
+            console.log(`   ✅ PO created: ${po.code}`);
+
+            // Receive it partially
+            const defaultLoc = createdLocations[0];
+            if(defaultLoc) {
+               await procurement.useCases.receivePurchaseOrder.execute(tenantId, po.id, {
+                   locationId: defaultLoc,
+                   items: [{ productId: rawMaterials[0].id, quantity: 50 }]
+               });
+               console.log(`   ✅ PO Received (Partial)`);
+            }
+        } catch(e) { console.error('PO Error:', e); }
+    }
+
+    // Manufacturing
+    // Finished Good
+    let tableProduct;
+    try {
+        tableProduct = await catalog.useCases.createProduct.execute(tenantId, {
+            name: 'Industrial Work Table',
+            sku: 'FG-TABLE-01',
+            price: 150.00,
+            type: 'SIMPLE', // Or should be manufactured type? standard Simple works for now
+            category: 'Furniture'
+        });
+    } catch(e) {
+        const all = await catalog.useCases.listProducts.execute(tenantId, 1, 100);
+        tableProduct = all.find(x => x.sku === 'FG-TABLE-01');
+    }
+
+    if (tableProduct && rawMaterials.length >= 3) {
+        try {
+            // BOM: 1 Table = 1 Steel Sheet + 2 Wood Planks + 10 Screws
+            const bom = await manufacturing.useCases.createBOM.execute(tenantId, {
+                name: 'Standard Table BOM',
+                productId: tableProduct.id,
+                laborCost: 25.00,
+                components: [
+                    { productId: rawMaterials[0].id, quantity: 1 },
+                    { productId: rawMaterials[1].id, quantity: 2 },
+                    { productId: rawMaterials[2].id, quantity: 10 }
+                ]
+            });
+            console.log(`   ✅ BOM created for ${tableProduct.name}`);
+
+            // Work Order
+            const wo = await manufacturing.useCases.createWorkOrder.execute(tenantId, {
+                bomId: bom.id,
+                quantity: 5,
+                startDate: new Date().toISOString()
+            });
+            console.log(`   ✅ Work Order created: ${wo.code}`);
+        } catch(e) { console.error('Manufacturing Seed Error:', e); }
+    }
 
   console.log('🎉 Seeding complete!');
   Deno.exit(0);
