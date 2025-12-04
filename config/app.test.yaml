@@ -1,0 +1,20 @@
+app:
+  environment: test
+
+server:
+  port: 0
+
+database:
+  kv:
+    poolSize: 1
+    path: ":memory:"
+
+security:
+  jwt:
+    secret: test-secret
+    expiresIn: 1h
+  password:
+    saltRounds: 4
+
+observability:
+  logLevel: ERROR
