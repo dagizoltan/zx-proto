@@ -1,0 +1,21 @@
+app:
+  environment: development
+
+server:
+  port: 8080
+
+database:
+  kv:
+    poolSize: 5
+
+security:
+  jwt:
+    secret: dev-secret-key
+    expiresIn: 30d
+  password:
+    saltRounds: 10
+  cors:
+    origin: http://localhost:8080
+
+observability:
+  logLevel: DEBUG
