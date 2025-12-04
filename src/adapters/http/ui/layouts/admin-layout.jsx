@@ -16,52 +16,135 @@ export const AdminLayout = ({ children, user }) => {
             <div class="sidebar-header">
               <h2>Admin Panel</h2>
             </div>
-            <nav class="admin-nav">
+            <nav class="admin-nav" id="admin-nav">
+              {/* General - Top Level */}
               <a href="/admin/dashboard" class="nav-item">
                 <span>Dashboard</span>
               </a>
-              <a href="/admin/catalog" class="nav-item">
-                <span>Catalog</span>
-              </a>
-              <a href="/admin/inventory" class="nav-item">
-                <span>Inventory</span>
-              </a>
-              <a href="/admin/warehouses" class="nav-item">
-                <span>Warehouses</span>
-              </a>
-              <a href="/admin/locations" class="nav-item">
-                <span>Locations</span>
-              </a>
-              <a href="/admin/orders" class="nav-item">
-                <span>Orders</span>
-              </a>
 
-              <div class="nav-divider">Procurement</div>
-              <a href="/admin/suppliers" class="nav-item">
-                <span>Suppliers</span>
-              </a>
-              <a href="/admin/purchase-orders" class="nav-item">
-                <span>Purchase Orders</span>
-              </a>
+              {/* Catalog Group */}
+              <div class="nav-group">
+                <div class="nav-group-header">Catalog</div>
+                <div class="nav-group-items">
+                  <a href="/admin/catalog" class="nav-item">
+                    <span>Products</span>
+                  </a>
+                  <span class="nav-item disabled">
+                    <span>Categories (F)</span>
+                  </span>
+                  <span class="nav-item disabled">
+                    <span>Price Lists (F)</span>
+                  </span>
+                </div>
+              </div>
 
-              <div class="nav-divider">Manufacturing</div>
-              <a href="/admin/boms" class="nav-item">
-                <span>Bill of Materials</span>
-              </a>
-              <a href="/admin/work-orders" class="nav-item">
-                <span>Work Orders</span>
-              </a>
+              {/* Sales Group */}
+              <div class="nav-group">
+                <div class="nav-group-header">Sales</div>
+                <div class="nav-group-items">
+                  <a href="/admin/orders" class="nav-item">
+                    <span>Orders</span>
+                  </a>
+                  <span class="nav-item disabled">
+                    <span>Shipments (F)</span>
+                  </span>
+                  <span class="nav-item disabled">
+                    <span>Returns / RMAs (F)</span>
+                  </span>
+                </div>
+              </div>
 
-              <div class="nav-divider">System</div>
-              <a href="/admin/customers" class="nav-item">
-                <span>Customers</span>
-              </a>
-              <a href="/admin/users" class="nav-item">
-                <span>Users</span>
-              </a>
-              <a href="/admin/roles" class="nav-item">
-                <span>Roles</span>
-              </a>
+              {/* Inventory Group */}
+              <div class="nav-group">
+                <div class="nav-group-header">Inventory</div>
+                <div class="nav-group-items">
+                  <a href="/admin/inventory" class="nav-item">
+                    <span>Stock Levels</span>
+                  </a>
+                  <a href="/admin/warehouses" class="nav-item">
+                    <span>Warehouses</span>
+                  </a>
+                  <a href="/admin/locations" class="nav-item">
+                    <span>Locations</span>
+                  </a>
+                  <span class="nav-item disabled">
+                    <span>Stock Movements (F)</span>
+                  </span>
+                </div>
+              </div>
+
+              {/* Procurement Group */}
+              <div class="nav-group">
+                <div class="nav-group-header">Procurement</div>
+                <div class="nav-group-items">
+                  <a href="/admin/suppliers" class="nav-item">
+                    <span>Suppliers</span>
+                  </a>
+                  <a href="/admin/purchase-orders" class="nav-item">
+                    <span>Purchase Orders</span>
+                  </a>
+                </div>
+              </div>
+
+              {/* Manufacturing Group */}
+              <div class="nav-group">
+                <div class="nav-group-header">Manufacturing</div>
+                <div class="nav-group-items">
+                  <a href="/admin/boms" class="nav-item">
+                    <span>Bill of Materials</span>
+                  </a>
+                  <a href="/admin/work-orders" class="nav-item">
+                    <span>Work Orders</span>
+                  </a>
+                </div>
+              </div>
+
+              {/* CRM Group */}
+              <div class="nav-group">
+                <div class="nav-group-header">CRM</div>
+                <div class="nav-group-items">
+                  <a href="/admin/customers" class="nav-item">
+                    <span>Customers</span>
+                  </a>
+                  <span class="nav-item disabled">
+                    <span>Customer Groups (F)</span>
+                  </span>
+                </div>
+              </div>
+
+              {/* Reports Group */}
+              <div class="nav-group">
+                <div class="nav-group-header">Reports</div>
+                <div class="nav-group-items">
+                  <span class="nav-item disabled">
+                    <span>Sales Report (F)</span>
+                  </span>
+                  <span class="nav-item disabled">
+                    <span>Inventory Valuation (F)</span>
+                  </span>
+                </div>
+              </div>
+
+              {/* System Group */}
+              <div class="nav-group">
+                <div class="nav-group-header">System</div>
+                <div class="nav-group-items">
+                  <a href="/admin/users" class="nav-item">
+                    <span>Users</span>
+                  </a>
+                  <a href="/admin/roles" class="nav-item">
+                    <span>Roles</span>
+                  </a>
+                  <span class="nav-item disabled">
+                    <span>Settings (F)</span>
+                  </span>
+                  <span class="nav-item disabled">
+                    <span>Audit Log (F)</span>
+                  </span>
+                </div>
+              </div>
+
+              {/* Back to Store - Top Level */}
               <a href="/" class="nav-item">
                 <span>Back to Store</span>
               </a>
@@ -82,6 +165,42 @@ export const AdminLayout = ({ children, user }) => {
             </main>
           </div>
         </div>
+        <script dangerouslySetInnerHTML={{ __html: `
+          (function() {
+            // 1. Highlight active link and open its group
+            const currentPath = window.location.pathname;
+            const navItems = document.querySelectorAll('.nav-item');
+
+            navItems.forEach(item => {
+              if (item.getAttribute('href') === currentPath) {
+                item.classList.add('active');
+                const group = item.closest('.nav-group');
+                if (group) {
+                  group.classList.add('open');
+                }
+              }
+            });
+
+            // 2. Accordion Logic
+            const headers = document.querySelectorAll('.nav-group-header');
+            headers.forEach(header => {
+              header.addEventListener('click', () => {
+                const group = header.parentElement;
+                const isOpen = group.classList.contains('open');
+
+                // Close all groups
+                document.querySelectorAll('.nav-group').forEach(g => {
+                  g.classList.remove('open');
+                });
+
+                // If it was not open, open it (toggle)
+                if (!isOpen) {
+                  group.classList.add('open');
+                }
+              });
+            });
+          })();
+        ` }} />
       </body>
     </html>
   );
