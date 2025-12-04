@@ -10,7 +10,7 @@ export const AdminLayout = ({ children, user }) => {
         <link rel="stylesheet" href="/static/css/styles.css" />
         <link rel="stylesheet" href="/static/css/admin.css" />
       </head>
-      <body class="admin-body">
+      <body>
         <div class="admin-layout">
           <aside class="admin-sidebar">
             <div class="sidebar-header">
@@ -20,8 +20,14 @@ export const AdminLayout = ({ children, user }) => {
               <a href="/admin/dashboard" class="nav-item">
                 <span>Dashboard</span>
               </a>
+              <a href="/admin/catalog" class="nav-item">
+                <span>Catalog</span>
+              </a>
               <a href="/admin/inventory" class="nav-item">
                 <span>Inventory</span>
+              </a>
+              <a href="/admin/warehouses" class="nav-item">
+                <span>Warehouses</span>
               </a>
               <a href="/admin/orders" class="nav-item">
                 <span>Orders</span>
@@ -46,7 +52,7 @@ export const AdminLayout = ({ children, user }) => {
               <h1>IMS Shopfront Admin</h1>
               <div class="admin-user">
                 <span>{user.name || user.email}</span>
-                <a href="/logout" style="margin-left: 1rem; color: var(--primary-color);">Logout</a>
+                <a href="/logout" class="btn btn-sm btn-secondary" style="margin-left: 1rem;">Logout</a>
               </div>
             </header>
 

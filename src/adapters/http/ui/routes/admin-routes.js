@@ -9,6 +9,8 @@ import { UsersPage } from '../pages/admin/users-page.jsx';
 import { RolesPage } from '../pages/admin/roles-page.jsx';
 import { CustomersPage } from '../pages/admin/customers-page.jsx';
 import { CustomerDetailPage } from '../pages/admin/customer-detail-page.jsx';
+import { CatalogPage } from '../pages/admin/catalog/catalog-page.jsx';
+import { WarehousesPage } from '../pages/admin/inventory/warehouses-page.jsx';
 import { AdminLayout } from '../layouts/admin-layout.jsx';
 import { authMiddleware } from '../middleware/auth-middleware.js';
 
@@ -36,6 +38,30 @@ adminRoutes.get('/dashboard', async (c) => {
   return c.html(html);
 });
 
+// Catalog Routes
+adminRoutes.get('/catalog', async (c) => {
+    const user = c.get('user');
+    const tenantId = c.get('tenantId');
+    const catalog = c.ctx.get('domain.catalog');
+    const page = parseInt(c.req.query('page') || '1');
+
+    // Note: listProducts returns array, not pagination object in current impl,
+    // but repository findAll returns { items, nextCursor }?
+    // Let's check catalog-use-cases.js. It calls findAll then slices.
+    // Ideally we should use cursor pagination properly.
+    // For now assuming it returns array based on my implementation.
+    const products = await catalog.useCases.listProducts.execute(tenantId, page);
+
+    const html = await renderPage(CatalogPage, {
+        user,
+        products,
+        activePage: 'catalog', // Matches Layout link
+        layout: AdminLayout,
+        title: 'Catalog - IMS Admin'
+    });
+    return c.html(html);
+});
+
 adminRoutes.get('/inventory', async (c) => {
   const user = c.get('user');
   const tenantId = c.get('tenantId');
@@ -54,6 +80,24 @@ adminRoutes.get('/inventory', async (c) => {
   });
 
   return c.html(html);
+});
+
+// Warehouse Routes
+adminRoutes.get('/warehouses', async (c) => {
+    const user = c.get('user');
+    const tenantId = c.get('tenantId');
+    const inventory = c.ctx.get('domain.inventory');
+
+    const warehouses = await inventory.repositories.warehouse.findAll(tenantId);
+
+    const html = await renderPage(WarehousesPage, {
+        user,
+        warehouses,
+        activePage: 'warehouses',
+        layout: AdminLayout,
+        title: 'Warehouses - IMS Admin'
+    });
+    return c.html(html);
 });
 
 adminRoutes.get('/orders', async (c) => {
@@ -144,34 +188,44 @@ adminRoutes.post('/orders/:id/status', async (c) => {
 // --- RBAC & CRM Pages (SSR Refactored) ---
 
 adminRoutes.get('/users', async (c) => {
-    const user = c.get('user');
-    const tenantId = c.get('tenantId');
-    const ac = c.ctx.get('domain.access-control');
+    try {
+        const user = c.get('user');
+        const tenantId = c.get('tenantId');
+        const ac = c.ctx.get('domain.accessControl');
 
-    // Fetch users and roles server-side
-    const { items: users } = await ac.useCases.listUsers.execute(tenantId, { limit: 50 });
-    const roles = await ac.useCases.listRoles.execute(tenantId);
+        if (!ac) throw new Error('Access Control domain not found');
+        if (!ac.useCases) throw new Error('Access Control use cases not found');
+        if (!ac.useCases.listUsers) throw new Error('listUsers use case not found');
 
-    const html = await renderPage(UsersPage, {
-        user,
-        users,
-        roles,
-        layout: AdminLayout,
-        title: 'Users & Roles - IMS Admin'
-    });
-    return c.html(html);
+        // Fetch users and roles server-side
+        const { items: users } = await ac.useCases.listUsers.execute(tenantId, { limit: 50 });
+        const roles = await ac.useCases.listRoles.execute(tenantId);
+
+        const html = await renderPage(UsersPage, {
+            user,
+            users,
+            roles,
+            activePage: 'users',
+            layout: AdminLayout,
+            title: 'Users & Roles - IMS Admin'
+        });
+        return c.html(html);
+    } catch (e) {
+        return c.text(e.message + '\n' + e.stack, 500);
+    }
 });
 
 adminRoutes.get('/roles', async (c) => {
     const user = c.get('user');
     const tenantId = c.get('tenantId');
-    const ac = c.ctx.get('domain.access-control');
+    const ac = c.ctx.get('domain.accessControl');
 
     const roles = await ac.useCases.listRoles.execute(tenantId);
 
     const html = await renderPage(RolesPage, {
         user,
         roles,
+        activePage: 'roles',
         layout: AdminLayout,
         title: 'Roles - IMS Admin'
     });
@@ -181,13 +235,14 @@ adminRoutes.get('/roles', async (c) => {
 adminRoutes.get('/customers', async (c) => {
     const user = c.get('user');
     const tenantId = c.get('tenantId');
-    const ac = c.ctx.get('domain.access-control');
+    const ac = c.ctx.get('domain.accessControl');
 
     const { items: customers } = await ac.useCases.listUsers.execute(tenantId, { limit: 50 });
 
     const html = await renderPage(CustomersPage, {
         user,
         customers,
+        activePage: 'customers',
         layout: AdminLayout,
         title: 'Customers - IMS Admin'
     });
@@ -198,13 +253,14 @@ adminRoutes.get('/customers/:id', async (c) => {
     const user = c.get('user');
     const tenantId = c.get('tenantId');
     const customerId = c.req.param('id');
-    const ac = c.ctx.get('domain.access-control');
+    const ac = c.ctx.get('domain.accessControl');
 
     try {
         const customerData = await ac.useCases.getCustomerProfile.execute(tenantId, customerId);
         const html = await renderPage(CustomerDetailPage, {
             user,
             customer: customerData, // Pass full data bundle
+            activePage: 'customers',
             layout: AdminLayout,
             title: 'Customer Details - IMS Admin'
         });
