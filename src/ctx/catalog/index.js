@@ -2,10 +2,23 @@ import { createListProducts, createSearchProducts, createFilterByCategory } from
 import { createCreateProduct } from './application/use-cases/create-product.js';
 import { createPricingService } from './domain/services/pricing-service.js';
 
+// New Imports
+import { createKVCategoryRepository } from '../../infra/persistence/kv/repositories/kv-category-repository.js';
+import { createKVPriceListRepository } from '../../infra/persistence/kv/repositories/kv-price-list-repository.js';
+import { createCreateCategory } from './application/use-cases/create-category.js';
+import { createListCategories } from './application/use-cases/list-categories.js';
+import { createCreatePriceList } from './application/use-cases/create-price-list.js';
+import { createListPriceLists } from './application/use-cases/list-price-lists.js';
+
+
 export const createCatalogContext = async (deps) => {
-    const { inventory, obs, messaging } = deps;
+    const { inventory, obs, messaging, persistence } = deps; // persistence needed for new repos
     const { eventBus } = messaging || {};
     const productRepository = inventory.repositories.product; // Shared for now
+
+    // Instantiate new Repositories
+    const categoryRepository = createKVCategoryRepository(persistence.kvPool);
+    const priceListRepository = createKVPriceListRepository(persistence.kvPool);
 
     // Domain Services
     const pricingService = createPricingService();
@@ -15,6 +28,12 @@ export const createCatalogContext = async (deps) => {
     const searchProducts = createSearchProducts({ productRepository });
     const filterByCategory = createFilterByCategory({ productRepository });
     const createProduct = createCreateProduct({ productRepository, obs, eventBus });
+
+    // New Use Cases
+    const createCategory = createCreateCategory({ categoryRepository });
+    const listCategories = createListCategories({ categoryRepository });
+    const createPriceList = createCreatePriceList({ priceListRepository });
+    const listPriceLists = createListPriceLists({ priceListRepository });
 
     // Stub for featured products
     const getFeaturedProducts = {
@@ -43,13 +62,22 @@ export const createCatalogContext = async (deps) => {
         services: {
             pricingService
         },
+        repositories: {
+            category: categoryRepository,
+            priceList: priceListRepository
+        },
         useCases: {
             listProducts,
             searchProducts,
             filterByCategory,
             getFeaturedProducts,
             createProduct,
-            getProduct
+            getProduct,
+            // New exports
+            createCategory,
+            listCategories,
+            createPriceList,
+            listPriceLists
         }
     };
 };
