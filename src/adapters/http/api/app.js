@@ -3,9 +3,12 @@ import { cors } from 'hono/middleware.ts';
 import { authRoutes } from './routes/auth-routes.js';
 import { productRoutes } from './routes/product-routes.js';
 import { orderRoutes } from './routes/order-routes.js';
+import { errorHandler } from '../middleware/error-handler.js';
 
 export const createAPIApp = () => {
   const api = new Hono();
+
+  api.onError(errorHandler);
 
   // API-specific middleware
   api.use('*', cors({

@@ -1,10 +1,13 @@
 import { createProduct } from '../../domain/entities/product.js';
+import { createProductSchema } from '../schema.js';
 
 export const createCreateProduct = ({ productRepository, obs, eventBus }) => {
   const execute = async (tenantId, data) => {
+    const validated = createProductSchema.parse(data);
+
     const product = createProduct({
       id: crypto.randomUUID(),
-      ...data
+      ...validated
     });
 
     await productRepository.save(tenantId, product);

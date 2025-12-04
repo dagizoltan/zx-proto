@@ -1,6 +1,7 @@
 import { createKVOrderRepository } from '../../infra/persistence/kv/repositories/kv-order-repository.js';
 import { createCreateOrder } from './application/use-cases/create-order.js';
 import { createUpdateOrderStatus } from './application/use-cases/update-order-status.js';
+import { createListOrders } from './application/use-cases/list-orders.js';
 
 export const createOrdersContext = async (deps) => {
   const { persistence, obs, messaging, registry } = deps;
@@ -61,13 +62,6 @@ const createGetDashboardStats = ({ orderRepository }) => {
 const createGetOrder = ({ orderRepository }) => {
     const execute = async (tenantId, orderId) => {
         return await orderRepository.findById(tenantId, orderId);
-    };
-    return { execute };
-};
-
-const createListOrders = ({ orderRepository }) => {
-    const execute = async (tenantId, { limit = 10, cursor } = {}) => {
-        return await orderRepository.findAll(tenantId, { limit, cursor });
     };
     return { execute };
 };
