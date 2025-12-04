@@ -23,6 +23,8 @@ import { WorkOrderDetailPage } from '../pages/admin/manufacturing/wo-detail-page
 import { CreateWorkOrderPage } from '../pages/admin/manufacturing/create-wo-page.jsx';
 import { CompleteWorkOrderPage } from '../pages/admin/manufacturing/complete-wo-page.jsx';
 import { CatalogPage } from '../pages/admin/catalog/catalog-page.jsx';
+import { CategoriesPage } from '../pages/admin/catalog/categories-page.jsx';
+import { PriceListsPage } from '../pages/admin/catalog/price-lists-page.jsx';
 import { WarehousesPage } from '../pages/admin/inventory/warehouses-page.jsx';
 import { LocationsPage } from '../pages/admin/inventory/locations-page.jsx';
 import { PickListPage } from '../pages/admin/pick-list-page.jsx';
@@ -78,6 +80,81 @@ adminRoutes.get('/catalog', async (c) => {
         title: 'Catalog - IMS Admin'
     });
     return c.html(html);
+});
+
+// Categories
+adminRoutes.get('/categories', async (c) => {
+    const user = c.get('user');
+    const tenantId = c.get('tenantId');
+    const catalog = c.ctx.get('domain.catalog');
+    const cursor = c.req.query('cursor');
+
+    const { items: categories, nextCursor } = await catalog.useCases.listCategories.execute(tenantId, { limit: 50, cursor });
+
+    const html = await renderPage(CategoriesPage, {
+        user,
+        categories,
+        nextCursor,
+        activePage: 'categories',
+        layout: AdminLayout,
+        title: 'Categories - IMS Admin'
+    });
+    return c.html(html);
+});
+
+adminRoutes.post('/categories', async (c) => {
+    const tenantId = c.get('tenantId');
+    const catalog = c.ctx.get('domain.catalog');
+    const body = await c.req.parseBody();
+
+    try {
+        await catalog.useCases.createCategory.execute(tenantId, {
+            name: body.name,
+            description: body.description,
+            parentId: body.parentId || undefined
+        });
+        return c.redirect('/admin/categories');
+    } catch (e) {
+        return c.text(e.message, 400);
+    }
+});
+
+// Price Lists
+adminRoutes.get('/price-lists', async (c) => {
+    const user = c.get('user');
+    const tenantId = c.get('tenantId');
+    const catalog = c.ctx.get('domain.catalog');
+    const cursor = c.req.query('cursor');
+
+    const { items: priceLists, nextCursor } = await catalog.useCases.listPriceLists.execute(tenantId, { limit: 50, cursor });
+
+    const html = await renderPage(PriceListsPage, {
+        user,
+        priceLists,
+        nextCursor,
+        activePage: 'price-lists',
+        layout: AdminLayout,
+        title: 'Price Lists - IMS Admin'
+    });
+    return c.html(html);
+});
+
+adminRoutes.post('/price-lists', async (c) => {
+    const tenantId = c.get('tenantId');
+    const catalog = c.ctx.get('domain.catalog');
+    const body = await c.req.parseBody();
+
+    try {
+        await catalog.useCases.createPriceList.execute(tenantId, {
+            name: body.name,
+            currency: body.currency,
+            description: body.description,
+            prices: {} // Initial empty prices
+        });
+        return c.redirect('/admin/price-lists');
+    } catch (e) {
+        return c.text(e.message, 400);
+    }
 });
 
 // --- Procurement Routes ---
