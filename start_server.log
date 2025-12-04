@@ -1,0 +1,38 @@
+[0m[32mTask[0m [0m[36mstart[0m deno run --allow-net --allow-read --allow-env --unstable-kv main.js
+🚀 IMS Shopfront - Starting...
+
+📋 Environment: local
+🔧 Registering infrastructure contexts...
+🏗️  Registering domain contexts...
+⚙️  Initializing contexts...
+[SUCCESS] All contexts initialized {
+  contexts: [
+    "infra.persistence",
+    "infra.obs",
+    "infra.messaging",
+    "infra.security",
+    "infra.realtime",
+    "domain.accessControl",
+    "domain.inventory",
+    "domain.orders",
+    "domain.catalog"
+  ],
+  initOrder: [
+    "infra.persistence",
+    "infra.obs",
+    "infra.messaging",
+    "infra.security",
+    "infra.realtime",
+    "domain.accessControl",
+    "domain.inventory",
+    "domain.orders",
+    "domain.catalog"
+  ]
+}
+🌐 Creating HTTP server...
+[INFO] Server starting on port 8000 {}
+
+✨ Server ready!
+   🔗 UI:  http://localhost:8000/
+   🔗 API: http://localhost:8000/api
+   🔗 Health: http://localhost:8000/health
