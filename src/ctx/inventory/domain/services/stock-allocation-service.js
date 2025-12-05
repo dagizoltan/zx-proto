@@ -32,14 +32,9 @@ export const createStockAllocationService = (stockRepository, stockMovementRepos
             return expiryA - expiryB;
         }
 
-        // FIFO (using batch receivedAt or entry createdAt/updatedAt?)
-        // Batch receivedAt is best.
+        // FIFO
         const receivedA = a.batch?.receivedAt ? new Date(a.batch.receivedAt).getTime() : 0;
         const receivedB = b.batch?.receivedAt ? new Date(b.batch.receivedAt).getTime() : 0;
-
-        // If no batch info, fallback to entry creation? We don't have created_at on entry easily accessible here (only updated).
-        // Let's assume 0 if unknown, or maybe we should prioritize 'default' last?
-        // Let's just standard sort.
         return receivedA - receivedB;
     });
 
@@ -56,10 +51,6 @@ export const createStockAllocationService = (stockRepository, stockMovementRepos
             reservedQuantity: entry.reservedQuantity + take,
             updatedAt: new Date().toISOString()
         };
-        // entry has .batch property attached now, but save() expects clean object?
-        // No, we destructured/mapped. 'entry' inside 'enrichedEntries' has 'batch'.
-        // We should strip 'batch' before saving or ensure 'save' handles it.
-        // kv-stock-repository just saves what it gets. Ideally we sanitize.
         const { batch, ...cleanEntry } = updated;
 
         await stockRepository.save(tenantId, cleanEntry);
@@ -74,7 +65,7 @@ export const createStockAllocationService = (stockRepository, stockMovementRepos
             fromLocationId: entry.locationId,
             toLocationId: null,
             referenceId,
-            batchId: entry.batchId, // CRITICAL: Save batchId
+            batchId: entry.batchId,
             timestamp: new Date().toISOString()
         });
 
@@ -82,24 +73,91 @@ export const createStockAllocationService = (stockRepository, stockMovementRepos
     }
   };
 
-  const commit = async (tenantId, referenceId) => {
+  const commit = async (tenantId, referenceId, itemsToShip = null) => {
+    // itemsToShip: Array of { productId, quantity } or null (all)
     const movements = await stockMovementRepository.getByReference(tenantId, referenceId);
-    const allocated = movements.filter(m => m.type === 'allocated');
 
-    for (const alloc of allocated) {
-        // Find the specific stock entry using batchId
-        const batchId = alloc.batchId || 'default';
-        const entry = await stockRepository.getEntryByBatch(tenantId, alloc.productId, alloc.fromLocationId, batchId);
+    // 1. Calculate Open Allocations (Allocated - Released - Shipped) per Key (Prod+Loc+Batch)
+    // We use a key to aggregate quantities because multiple movements might exist
+    const getKey = (m) => `${m.productId}:${m.fromLocationId}:${m.batchId || 'default'}`;
+
+    const inventoryMap = new Map(); // Key -> { allocated: 0, shipped: 0, released: 0, meta: { prod, loc, batch } }
+
+    for (const m of movements) {
+        const key = getKey(m);
+        if (!inventoryMap.has(key)) {
+            inventoryMap.set(key, {
+                allocated: 0, shipped: 0, released: 0,
+                meta: { productId: m.productId, fromLocationId: m.fromLocationId, batchId: m.batchId }
+            });
+        }
+        const rec = inventoryMap.get(key);
+        if (m.type === 'allocated') rec.allocated += m.quantity;
+        if (m.type === 'shipped') rec.shipped += m.quantity;
+        if (m.type === 'released') rec.released += m.quantity;
+    }
+
+    // 2. Determine what to ship
+    const toShip = []; // List of { key, quantity }
+
+    if (!itemsToShip) {
+        // Ship ALL remaining
+        for (const [key, rec] of inventoryMap.entries()) {
+            const remaining = rec.allocated - rec.released - rec.shipped;
+            if (remaining > 0) {
+                toShip.push({ key, quantity: remaining, ...rec.meta });
+            }
+        }
+    } else {
+        // Ship specific items
+        // We need to match requested Qty to available allocations
+        // Strategy: Iterate requested items, find matching keys, consume until satisfied
+
+        for (const req of itemsToShip) {
+            let needed = req.quantity;
+
+            // Find keys for this product
+            const candidateKeys = Array.from(inventoryMap.entries())
+                .filter(([k, v]) => v.meta.productId === req.productId)
+                .map(([k, v]) => ({ key: k, rec: v, remaining: v.allocated - v.released - v.shipped }));
+
+            // Sort candidates? FIFO? (Assuming insertion order or just pick first available)
+            // Ideally should match specific batch if requested, but shipment usually just says "SKU X, Qty 5"
+
+            for (const cand of candidateKeys) {
+                if (needed <= 0) break;
+                if (cand.remaining <= 0) continue;
+
+                const take = Math.min(needed, cand.remaining);
+                toShip.push({ key: cand.key, quantity: take, ...cand.rec.meta });
+
+                needed -= take;
+            }
+
+            if (needed > 0) {
+                 // Warning or Error?
+                 // For now, we ship what we can.
+                 console.warn(`Could not find full allocation for product ${req.productId}, missing ${needed}`);
+            }
+        }
+    }
+
+    // 3. Execute Shipments
+    for (const action of toShip) {
+        const { productId, fromLocationId, batchId, quantity } = action;
+        const normalizedBatchId = batchId || 'default';
+
+        const entry = await stockRepository.getEntryByBatch(tenantId, productId, fromLocationId, normalizedBatchId);
 
         if (!entry) {
-            console.error(`Stock entry missing during commit for ${alloc.productId} at ${alloc.fromLocationId} batch ${batchId}`);
+            console.error(`Stock entry missing during commit for ${productId} at ${fromLocationId} batch ${normalizedBatchId}`);
             continue;
         }
 
         const updated = {
             ...entry,
-            quantity: entry.quantity - alloc.quantity,
-            reservedQuantity: entry.reservedQuantity - alloc.quantity,
+            quantity: entry.quantity - quantity,
+            reservedQuantity: entry.reservedQuantity - quantity,
             updatedAt: new Date().toISOString()
         };
 
@@ -109,48 +167,68 @@ export const createStockAllocationService = (stockRepository, stockMovementRepos
         await stockMovementRepository.save(tenantId, {
             id: crypto.randomUUID(),
             tenantId,
-            productId: alloc.productId,
-            quantity: alloc.quantity,
+            productId,
+            quantity,
             type: 'shipped',
-            fromLocationId: alloc.fromLocationId,
+            fromLocationId,
             referenceId,
-            batchId: alloc.batchId,
+            batchId: normalizedBatchId,
             timestamp: new Date().toISOString()
         });
     }
   };
 
   const release = async (tenantId, referenceId) => {
+    // Release ALL remaining allocations (cancel remainder)
+    // Similar logic to commit, calculate remaining allocated and release it
     const movements = await stockMovementRepository.getByReference(tenantId, referenceId);
-    const allocated = movements.filter(m => m.type === 'allocated');
 
-    for (const alloc of allocated) {
-        const batchId = alloc.batchId || 'default';
-        const entry = await stockRepository.getEntryByBatch(tenantId, alloc.productId, alloc.fromLocationId, batchId);
+    const getKey = (m) => `${m.productId}:${m.fromLocationId}:${m.batchId || 'default'}`;
+    const inventoryMap = new Map();
 
-        if (!entry) continue;
+    for (const m of movements) {
+        const key = getKey(m);
+        if (!inventoryMap.has(key)) {
+            inventoryMap.set(key, {
+                allocated: 0, shipped: 0, released: 0,
+                meta: { productId: m.productId, fromLocationId: m.fromLocationId, batchId: m.batchId }
+            });
+        }
+        const rec = inventoryMap.get(key);
+        if (m.type === 'allocated') rec.allocated += m.quantity;
+        if (m.type === 'shipped') rec.shipped += m.quantity;
+        if (m.type === 'released') rec.released += m.quantity;
+    }
 
-        // Release: Reduce ReservedQuantity only.
-        const updated = {
-            ...entry,
-            reservedQuantity: entry.reservedQuantity - alloc.quantity,
-            updatedAt: new Date().toISOString()
-        };
+    for (const [key, rec] of inventoryMap.entries()) {
+        const remaining = rec.allocated - rec.released - rec.shipped;
+        if (remaining > 0) {
+            const { productId, fromLocationId, batchId } = rec.meta;
+            const normalizedBatchId = batchId || 'default';
 
-        await stockRepository.save(tenantId, updated);
+            const entry = await stockRepository.getEntryByBatch(tenantId, productId, fromLocationId, normalizedBatchId);
+            if (!entry) continue;
 
-        // Record 'released' movement
-        await stockMovementRepository.save(tenantId, {
-            id: crypto.randomUUID(),
-            tenantId,
-            productId: alloc.productId,
-            quantity: alloc.quantity,
-            type: 'released',
-            fromLocationId: alloc.fromLocationId,
-            referenceId,
-            batchId: alloc.batchId,
-            timestamp: new Date().toISOString()
-        });
+            const updated = {
+                ...entry,
+                reservedQuantity: entry.reservedQuantity - remaining,
+                updatedAt: new Date().toISOString()
+            };
+
+            await stockRepository.save(tenantId, updated);
+
+            await stockMovementRepository.save(tenantId, {
+                id: crypto.randomUUID(),
+                tenantId,
+                productId,
+                quantity: remaining,
+                type: 'released',
+                fromLocationId,
+                referenceId,
+                batchId: normalizedBatchId,
+                timestamp: new Date().toISOString()
+            });
+        }
     }
   };
 
