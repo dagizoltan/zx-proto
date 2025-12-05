@@ -353,7 +353,6 @@ dialog::backdrop {
 
 /* Indent items inside groups */
 .nav-group .nav-item {
-  padding-left: var(--space-8); /* Indent more than top level */
   font-size: 0.9em;
 }
 
