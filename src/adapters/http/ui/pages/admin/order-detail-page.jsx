@@ -1,80 +1,91 @@
 import { h } from 'preact';
-import { AdminLayout } from '../../layouts/admin-layout.jsx';
 
-export const OrderDetailPage = ({ user, order }) => {
+export const OrderDetailPage = ({ user, order, layout, title, shipments = [] }) => {
   return (
     <div class="order-detail-page">
       <div class="page-header">
-        <h1>Order #{order.id.slice(0, 8)}</h1>
-        <span class={`status-badge ${order.status}`}>{order.status}</span>
-      </div>
+        <div class="flex items-center gap-4">
+            <h1>Order #{order.id}</h1>
+            <span class={`badge status-badge ${order.status}`}>{order.status}</span>
+        </div>
+        <div class="flex gap-2">
+            <a href={`/admin/orders/${order.id}/pick-list`} target="_blank" class="btn btn-secondary">Pick List</a>
+            <a href={`/admin/orders/${order.id}/packing-slip`} target="_blank" class="btn btn-secondary">Packing Slip</a>
 
-      <div class="card">
-        <div class="grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
-            <div>
-                <h4 class="text-muted text-sm uppercase">Customer</h4>
-                <p class="font-medium">{order.userId}</p>
-            </div>
-            <div>
-                <h4 class="text-muted text-sm uppercase">Date</h4>
-                <p class="font-medium">{new Date(order.createdAt).toLocaleString()}</p>
-            </div>
-            <div>
-                <h4 class="text-muted text-sm uppercase">Total</h4>
-                <p class="font-medium text-xl">${order.total.toFixed(2)}</p>
-            </div>
+            {(order.status === 'CREATED' || order.status === 'PAID' || order.status === 'PARTIALLY_SHIPPED') && (
+                <>
+                    <a href={`/admin/orders/${order.id}/shipments/new`} class="btn btn-primary">Create Shipment</a>
+                    <form method="POST" action={`/admin/orders/${order.id}/status`} style="display:inline;">
+                        <input type="hidden" name="status" value="CANCELLED" />
+                        <button type="submit" class="btn btn-danger" onclick="return confirm('Are you sure you want to cancel this order?');">
+                            Cancel Order
+                        </button>
+                    </form>
+                </>
+            )}
         </div>
       </div>
 
-      <div class="card p-0">
+      <div class="card p-0 mb-6">
         <div class="table-container">
             <table>
-            <thead>
-                <tr>
-                <th>Product</th>
-                <th>Price</th>
-                <th>Quantity</th>
-                <th>Total</th>
-                </tr>
-            </thead>
-            <tbody>
-                {order.items.map(item => (
-                <tr>
-                    <td>{item.name || item.productId}</td>
-                    <td>${item.price.toFixed(2)}</td>
-                    <td>{item.quantity}</td>
-                    <td>${(item.price * item.quantity).toFixed(2)}</td>
-                </tr>
-                ))}
-            </tbody>
+                <thead>
+                    <tr>
+                        <th>Product</th>
+                        <th>Quantity</th>
+                        <th>Price</th>
+                        <th>Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {order.items.map(item => (
+                        <tr>
+                            <td>{item.productName || item.productId}</td>
+                            <td>{item.quantity}</td>
+                            <td>${item.price?.toFixed(2)}</td>
+                            <td>${(item.quantity * item.price).toFixed(2)}</td>
+                        </tr>
+                    ))}
+                </tbody>
             </table>
         </div>
       </div>
 
-      <div class="flex gap-4 mt-4">
-        {(order.status === 'CREATED' || order.status === 'PAID') && (
-          <form method="POST" action={`/admin/orders/${order.id}/status`}>
-            <input type="hidden" name="status" value="SHIPPED" />
-            <button type="submit" class="btn btn-primary">Mark as Shipped</button>
-          </form>
-        )}
-
-        {(order.status !== 'SHIPPED' && order.status !== 'DELIVERED' && order.status !== 'CANCELLED') && (
-          <form method="POST" action={`/admin/orders/${order.id}/status`}>
-            <input type="hidden" name="status" value="CANCELLED" />
-            <button type="submit" class="btn btn-danger">Cancel Order</button>
-          </form>
-        )}
-
-        <div class="ml-auto flex gap-4">
-            <a href={`/admin/orders/${order.id}/pick-list`} target="_blank" class="btn btn-secondary">
-                <span class="icon">📋</span> Pick List
-            </a>
-            <a href={`/admin/orders/${order.id}/packing-slip`} target="_blank" class="btn btn-secondary">
-                <span class="icon">📦</span> Packing Slip
-            </a>
-        </div>
-      </div>
+      {shipments.length > 0 && (
+          <div class="card p-0">
+            <div class="card-header px-6 py-4 border-b border-border">
+                <h3 class="m-0">Shipments</h3>
+            </div>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Code</th>
+                            <th>Carrier</th>
+                            <th>Tracking</th>
+                            <th>Status</th>
+                            <th>Date</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {shipments.map(s => (
+                            <tr>
+                                <td>{s.code}</td>
+                                <td>{s.carrier}</td>
+                                <td>{s.trackingNumber}</td>
+                                <td><span class="badge badge-success">{s.status}</span></td>
+                                <td>{new Date(s.shippedAt).toLocaleDateString()}</td>
+                                <td>
+                                    <a href={`/admin/shipments/${s.id}`} class="btn btn-sm btn-secondary">View</a>
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+          </div>
+      )}
     </div>
   );
 };

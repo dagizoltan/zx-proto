@@ -45,9 +45,9 @@ export const AdminLayout = ({ children, user }) => {
                   <a href="/admin/orders" class="nav-item">
                     <span>Orders</span>
                   </a>
-                  <span class="nav-item disabled">
-                    <span>Shipments (F)</span>
-                  </span>
+                  <a href="/admin/shipments" class="nav-item">
+                    <span>Shipments</span>
+                  </a>
                   <span class="nav-item disabled">
                     <span>Returns / RMAs (F)</span>
                   </span>

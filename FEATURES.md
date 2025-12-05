@@ -27,7 +27,7 @@ End-to-end processing of customer orders.
 - [x] **Order Processing:** Lifecycle management (Created -> Paid -> Shipped -> Delivered -> Cancelled).
 - [x] **Document Generation:** Printable Pick Lists and Packing Slips.
 - [x] **Order History:** Full history view for customers and admins.
-- [ ] **Shipments:** Tracking split shipments and carrier integration.
+- [x] **Shipments:** Tracking split shipments and carrier integration.
 - [ ] **Returns & RMAs:** Reverse logistics, refund processing, and restocking.
 - [ ] **B2B Quoting:** Request for Quote (RFQ) and converting quotes to orders.
 - [ ] **Subscriptions:** Recurring billing and automated order generation.

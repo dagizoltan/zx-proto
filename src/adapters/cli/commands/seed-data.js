@@ -66,12 +66,23 @@ async function bootstrap() {
 
   await ctx.initialize(config);
 
+  const persistence = ctx.get('infra.persistence');
   const accessControl = ctx.get('domain.accessControl');
   const inventory = ctx.get('domain.inventory');
   const orders = ctx.get('domain.orders');
   const catalog = ctx.get('domain.catalog');
   const procurement = ctx.get('domain.procurement');
   const manufacturing = ctx.get('domain.manufacturing');
+
+  // --- 0. Clean Database (Tenant Scope) ---
+  console.log('🧹 Cleaning database for tenant...');
+  await persistence.kvPool.withConnection(async (kv) => {
+      const iter = kv.list({ prefix: ['tenants', tenantId] });
+      for await (const res of iter) {
+          await kv.delete(res.key);
+      }
+  });
+  console.log('   ✅ Database cleaned.');
 
   // --- 1. RBAC (Roles & Users) ---
   console.log('🛡️  Seeding Roles & Users...');
@@ -358,17 +369,6 @@ async function bootstrap() {
   // Update Price Lists with random prices for some products
   console.log('💲 Populating Price Lists...');
   for (const pl of createdPriceLists) {
-      // We can't update using 'save' directly if we don't have update use case exposed,
-      // but we can re-save via repository if we accessed it, OR use createPriceList which overwrites?
-      // Actually `createPriceList` calls `save`. Repository `save` overwrites.
-      // But we need to keep ID.
-      // Let's modify the PL object and save it.
-      // But we need access to repository or use an update use case.
-      // We didn't create `updatePriceList` use case.
-      // We can use `createPriceList` logic but we need to pass ID? Use Case creates new ID.
-      // Quick fix: Access repository directly via context?
-      // Context exposes repositories!
-
       const plRepo = catalog.repositories.priceList;
       if (plRepo && allProducts.length > 0) {
           const prices = {};
@@ -387,6 +387,7 @@ async function bootstrap() {
 
   // --- 5. Mock Orders ---
   console.log('🛒 Creating Mock Orders...');
+  const ordersCreated = [];
   // Use catalog listing
   const products = await catalog.useCases.listProducts.execute(tenantId, 1, 100); // Pagination assumed
 
@@ -408,11 +409,46 @@ async function bootstrap() {
               }
 
               try {
-                await orders.useCases.createOrder.execute(tenantId, buyer.id, items);
+                const order = await orders.useCases.createOrder.execute(tenantId, buyer.id, items);
+                ordersCreated.push(order);
                 process.stdout.write('.');
               } catch (e) { }
           }
           console.log('\n   ✅ Mock orders created.');
+      }
+  }
+
+  // --- 5.5 Shipments (NEW) ---
+  console.log('🚚 Creating Mock Shipments...');
+  if (ordersCreated.length > 0) {
+      // Pick 2 orders to fully ship
+      const toShip = ordersCreated.slice(0, 2);
+      for (const order of toShip) {
+          try {
+              await orders.useCases.createShipment.execute(tenantId, {
+                  orderId: order.id,
+                  items: order.items, // Full shipment
+                  carrier: 'UPS',
+                  trackingNumber: '1Z9999999999999999'
+              });
+              console.log(`   ✅ Shipped Order #${order.id.substring(0,8)}`);
+          } catch(e) { console.error('Shipment error:', e.message); }
+      }
+
+      // Pick 1 order to partially ship
+      const partialOrder = ordersCreated[2];
+      if (partialOrder && partialOrder.items.length > 0) {
+          try {
+              // Ship just the first item
+              const itemToShip = partialOrder.items[0];
+              await orders.useCases.createShipment.execute(tenantId, {
+                  orderId: partialOrder.id,
+                  items: [{ productId: itemToShip.productId, quantity: 1 }],
+                  carrier: 'FedEx',
+                  trackingNumber: '789456123'
+              });
+              console.log(`   ✅ Partially Shipped Order #${partialOrder.id.substring(0,8)}`);
+          } catch(e) { console.error('Partial shipment error:', e.message); }
       }
   }
 

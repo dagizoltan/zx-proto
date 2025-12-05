@@ -29,6 +29,9 @@ import { WarehousesPage } from '../pages/admin/inventory/warehouses-page.jsx';
 import { LocationsPage } from '../pages/admin/inventory/locations-page.jsx';
 import { PickListPage } from '../pages/admin/pick-list-page.jsx';
 import { PackingSlipPage } from '../pages/admin/packing-slip-page.jsx';
+import { CreateShipmentPage } from '../pages/admin/shipments/create-shipment-page.jsx';
+import { ShipmentDetailPage } from '../pages/admin/shipments/shipment-detail-page.jsx';
+import { ShipmentsPage } from '../pages/admin/shipments/shipments-page.jsx'; // NEW
 import { AdminLayout } from '../layouts/admin-layout.jsx';
 import { authMiddleware } from '../middleware/auth-middleware.js';
 
@@ -760,13 +763,26 @@ adminRoutes.get('/orders/:id', async (c) => {
   const tenantId = c.get('tenantId');
   const orderId = c.req.param('id');
   const orders = c.ctx.get('domain.orders');
+  const catalog = c.ctx.get('domain.catalog');
 
   const order = await orders.useCases.getOrder.execute(tenantId, orderId);
   if (!order) return c.text('Order not found', 404);
 
+  // Enrich items with product details (e.g. name)
+  for (const item of order.items) {
+      if (!item.productName) {
+          const product = await catalog.useCases.getProduct.execute(tenantId, item.productId).catch(() => null);
+          item.productName = product ? product.name : 'Unknown Product';
+      }
+  }
+
+  // Fetch Shipments
+  const { items: shipments } = await orders.useCases.listShipments.execute(tenantId, { orderId });
+
   const html = await renderPage(OrderDetailPage, {
     user,
     order,
+    shipments,
     layout: AdminLayout,
     title: `Order #${order.id} - IMS Admin`
   });
@@ -936,4 +952,127 @@ adminRoutes.get('/customers/:id', async (c) => {
     } catch (e) {
         return c.text(e.message, 404);
     }
+});
+
+// Create Shipment UI
+adminRoutes.get('/orders/:id/shipments/new', async (c) => {
+    const user = c.get('user');
+    const tenantId = c.get('tenantId');
+    const orderId = c.req.param('id');
+    const orders = c.ctx.get('domain.orders');
+    const catalog = c.ctx.get('domain.catalog');
+
+    const order = await orders.useCases.getOrder.execute(tenantId, orderId);
+    if (!order) return c.text('Order not found', 404);
+
+    // Enrich items
+    for (const item of order.items) {
+        if (!item.productName) {
+            const p = await catalog.useCases.getProduct.execute(tenantId, item.productId).catch(() => null);
+            item.productName = p ? p.name : 'Unknown Product';
+            item.sku = p ? p.sku : '';
+        }
+    }
+
+    const html = await renderPage(CreateShipmentPage, {
+        user,
+        order,
+        orderItems: order.items,
+        activePage: 'orders',
+        layout: AdminLayout,
+        title: 'New Shipment - IMS Admin'
+    });
+    return c.html(html);
+});
+
+// Create Shipment POST
+adminRoutes.post('/orders/:id/shipments', async (c) => {
+    const tenantId = c.get('tenantId');
+    const orderId = c.req.param('id');
+    const orders = c.ctx.get('domain.orders');
+    const body = await c.req.parseBody();
+
+    // Parse Items
+    const items = [];
+    const indices = new Set(Object.keys(body).filter(k => k.startsWith('items[')).map(k => k.match(/items\[(\d+)\]/)[1]));
+
+    for (const i of indices) {
+        const qty = parseInt(body[`items[${i}][quantity]`]);
+        if (qty > 0) {
+            items.push({
+                productId: body[`items[${i}][productId]`],
+                quantity: qty
+            });
+        }
+    }
+
+    if (items.length === 0) return c.text('No items selected for shipment', 400);
+
+    try {
+        await orders.useCases.createShipment.execute(tenantId, {
+            orderId,
+            carrier: body.carrier,
+            trackingNumber: body.trackingNumber,
+            code: `SH-${Date.now()}`, // Generate simple code
+            items
+        });
+        return c.redirect(`/admin/orders/${orderId}`);
+    } catch (e) {
+        return c.text(e.message, 400);
+    }
+});
+
+// Shipment Detail
+adminRoutes.get('/shipments/:id', async (c) => {
+    const user = c.get('user');
+    const tenantId = c.get('tenantId');
+    const shipmentId = c.req.param('id');
+    const orders = c.ctx.get('domain.orders');
+    const catalog = c.ctx.get('domain.catalog');
+
+    const shipment = await orders.repositories.shipment.findById(tenantId, shipmentId);
+
+    if (!shipment) return c.text('Shipment not found', 404);
+
+    const order = await orders.useCases.getOrder.execute(tenantId, shipment.orderId);
+
+    // Enrich shipment items
+    const enrichedItems = await Promise.all(shipment.items.map(async (item) => {
+        const p = await catalog.useCases.getProduct.execute(tenantId, item.productId).catch(() => null);
+        return {
+            ...item,
+            productName: p ? p.name : 'Unknown',
+            sku: p ? p.sku : ''
+        };
+    }));
+
+    const html = await renderPage(ShipmentDetailPage, {
+        user,
+        shipment,
+        items: enrichedItems,
+        order,
+        layout: AdminLayout,
+        title: `Shipment ${shipment.code} - IMS Admin`
+    });
+    return c.html(html);
+});
+
+// List Shipments (NEW)
+adminRoutes.get('/shipments', async (c) => {
+    const user = c.get('user');
+    const tenantId = c.get('tenantId');
+    const orders = c.ctx.get('domain.orders');
+    const cursor = c.req.query('cursor');
+
+    const { items: shipments, nextCursor } = await orders.useCases.listShipments.execute(tenantId, { limit: 20, cursor });
+
+    const html = await renderPage(ShipmentsPage, {
+        user,
+        shipments,
+        nextCursor,
+        currentUrl: c.req.url,
+        layout: AdminLayout,
+        title: 'Shipments - IMS Admin'
+    });
+    return c.html(html);
 });
