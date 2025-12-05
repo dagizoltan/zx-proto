@@ -48,8 +48,8 @@ export const seedInventory = async (ctx, tenantId, products) => {
     for (const p of products) {
         const loc = Random.element(locationIds);
         const qty = Random.int(100, 1000);
-        // Robust reception call
-        await inventory.services.receiveStockRobust(tenantId, {
+        // Robust reception call via Use Case Interface
+        await inventory.useCases.receiveStockRobust.execute(tenantId, {
             productId: p.id,
             locationId: loc,
             quantity: qty,
