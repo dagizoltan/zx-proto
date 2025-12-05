@@ -2,7 +2,7 @@ import { createOrder } from '../../domain/entities/order.js';
 import { createOrderSchema } from '../schema.js';
 
 export const createCreateOrder = ({ orderRepository, obs, registry, eventBus }) => {
-  const execute = async (tenantId, userId, items) => {
+  const execute = async (tenantId, userId, items, createdAt) => {
     // Validate input
     createOrderSchema.parse({ items });
 
@@ -47,6 +47,7 @@ export const createCreateOrder = ({ orderRepository, obs, registry, eventBus }) 
       userId,
       items: enrichedItems,
       total: calculatedTotal,
+      createdAt
     });
 
     // 3. Batch Reserve Stock (Atomic-ish Check + Reserve)

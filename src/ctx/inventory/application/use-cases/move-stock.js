@@ -1,8 +1,10 @@
 export const createMoveStock = ({ stockRepository, stockMovementRepository }) => {
-    const execute = async (tenantId, { productId, fromLocationId, toLocationId, quantity, userId }) => {
+    const execute = async (tenantId, { productId, fromLocationId, toLocationId, quantity, userId, date }) => {
         // Validate inputs
         if (fromLocationId === toLocationId) throw new Error('Source and destination locations must be different');
         if (quantity <= 0) throw new Error('Quantity must be positive');
+
+        const timestamp = date || new Date().toISOString();
 
         // Use 'default' batch for simple moves if not specified.
         // Future: Add batch selection to moveStock signature.
@@ -49,14 +51,14 @@ export const createMoveStock = ({ stockRepository, stockMovementRepository }) =>
         await stockRepository.save(tenantId, {
             ...fromEntry,
             quantity: fromEntry.quantity - quantity,
-            updatedAt: new Date().toISOString()
+            updatedAt: timestamp
         });
 
         // 2. Add to Destination
         await stockRepository.save(tenantId, {
             ...toEntry,
             quantity: toEntry.quantity + quantity,
-            updatedAt: new Date().toISOString()
+            updatedAt: timestamp
         });
 
         // 3. Record Movement
@@ -71,7 +73,7 @@ export const createMoveStock = ({ stockRepository, stockMovementRepository }) =>
             toLocationId,
             batchId: fromEntry.batchId || 'default',
             userId,
-            timestamp: new Date().toISOString(),
+            timestamp,
             referenceId: `TRANSFER-${Date.now()}` // Traceability
         });
 

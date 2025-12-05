@@ -11,8 +11,8 @@ export const createCreateShipment = ({ shipmentRepository, orderRepository, inve
       id: crypto.randomUUID(),
       tenantId,
       ...data,
-      shippedAt: new Date().toISOString(),
-      createdAt: new Date().toISOString()
+      shippedAt: data.shippedAt || new Date().toISOString(),
+      createdAt: data.shippedAt || new Date().toISOString()
     });
 
     // 3. Save Shipment
