@@ -1,19 +1,34 @@
 import { createKVOrderRepository } from '../../infra/persistence/kv/repositories/kv-order-repository.js';
+import { createKVShipmentRepository } from '../../infra/persistence/kv/repositories/kv-shipment-repository.js'; // NEW
+
 import { createCreateOrder } from './application/use-cases/create-order.js';
-import { createUpdateOrderStatus } from './application/use-cases/update-order-status.js';
 import { createListOrders } from './application/use-cases/list-orders.js';
+import { createGetOrder } from './application/use-cases/get-order.js';
+import { createUpdateOrderStatus } from './application/use-cases/update-order-status.js';
+import { createGetDashboardStats } from './application/use-cases/get-dashboard-stats.js';
+import { createCreateShipment } from './application/use-cases/create-shipment.js'; // NEW
+import { createListShipments } from './application/use-cases/list-shipments.js'; // NEW
 
 export const createOrdersContext = async (deps) => {
-  const { persistence, obs, messaging, registry } = deps;
+  const { persistence, registry, obs, messaging } = deps;
   const { eventBus } = messaging;
 
   const orderRepository = createKVOrderRepository(persistence.kvPool);
+  const shipmentRepository = createKVShipmentRepository(persistence.kvPool); // NEW
 
   const createOrder = createCreateOrder({
     orderRepository,
-    obs,
     registry,
+    obs,
     eventBus
+  });
+
+  const listOrders = createListOrders({
+    orderRepository
+  });
+
+  const getOrder = createGetOrder({
+    orderRepository
   });
 
   const updateOrderStatus = createUpdateOrderStatus({
@@ -23,45 +38,35 @@ export const createOrdersContext = async (deps) => {
     eventBus
   });
 
-  const getDashboardStats = createGetDashboardStats({ orderRepository });
+  const getDashboardStats = createGetDashboardStats({
+    orderRepository
+  });
 
-  const getOrder = createGetOrder({ orderRepository });
-  const listOrders = createListOrders({ orderRepository });
+  const createShipment = createCreateShipment({
+      shipmentRepository,
+      orderRepository,
+      inventoryService: registry.get('domain.inventory').useCases, // Access useCases directly or via service wrapper
+      eventBus
+  });
+
+  const listShipments = createListShipments({
+      shipmentRepository
+  });
 
   return {
     name: 'orders',
     repositories: {
-      order: orderRepository
+      order: orderRepository,
+      shipment: shipmentRepository
     },
     useCases: {
       createOrder,
+      listOrders,
+      getOrder,
       updateOrderStatus,
       getDashboardStats,
-      getOrder,
-      listOrders
+      createShipment,
+      listShipments
     }
   };
-};
-
-// Simple mock for stats - expanded to actually work slightly better if repo supported it,
-// but for now keeping it simple or we'd need to add findAll to order repo.
-const createGetDashboardStats = ({ orderRepository }) => {
-    return {
-        execute: async (tenantId) => {
-             // Mock implementation, normally would aggregate from DB
-            return {
-                totalOrders: 150,
-                revenue: 12500.50,
-                activeProducts: 45,
-                lowStockCount: 3
-            };
-        }
-    }
-}
-
-const createGetOrder = ({ orderRepository }) => {
-    const execute = async (tenantId, orderId) => {
-        return await orderRepository.findById(tenantId, orderId);
-    };
-    return { execute };
 };
