@@ -9,7 +9,7 @@ export const UsersPage = (props) => {
     <div>
       <div class="page-header">
         <h1>Users</h1>
-        {/* Users usually created via auth, no create button needed unless Invitation system */}
+        <a href="/admin/users/new" class="btn btn-primary">New User</a>
       </div>
 
       <div class="card p-0">
