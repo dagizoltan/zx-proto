@@ -43,27 +43,26 @@ export const createCompleteWorkOrder = ({ woRepository, bomRepository, inventory
 
     if (!outputLocationId) throw new Error('Output location is required');
 
-    // 1. Consume Raw Materials (Deduct Stock)
-    for (const component of bom.components) {
-      const requiredQty = component.quantity * wo.quantity;
-
-      // Use correct consumeStock use case
-      await inventoryService.consumeStock.execute(tenantId, {
+    // Prepare Production Plan
+    const consumeList = bom.components.map(component => ({
         productId: component.productId,
-        locationId: inputLocationId, // Use input location
-        quantity: requiredQty,
-        reason: `Consumed for WO ${wo.code}`,
-        userId: completionData.userId || null
-      });
-    }
+        quantity: component.quantity * wo.quantity,
+        locationId: inputLocationId
+    }));
 
-    // 2. Produce Finished Good (Add Stock)
-    await inventoryService.receiveStock.execute(tenantId, {
-      productId: bom.productId,
-      locationId: outputLocationId, // Use output location
-      quantity: wo.quantity,
-      batchId: null,
-      reason: `Produced by WO ${wo.code}`
+    const produceItem = {
+        productId: bom.productId,
+        quantity: wo.quantity,
+        locationId: outputLocationId,
+        batchId: `LOT-${wo.code}` // Traceability: Link Batch to WO Code
+    };
+
+    // Execute Atomic Production via Use Case Interface
+    await inventoryService.executeProduction.execute(tenantId, {
+        consume: consumeList,
+        produce: produceItem,
+        reason: `WO ${wo.code}`,
+        userId: completionData.userId || null
     });
 
     wo.status = 'COMPLETED';

@@ -29,8 +29,6 @@ export const createKVStockRepository = (kvPool) => {
 
   const getEntriesAtLocation = async (tenantId, productId, locationId) => {
     return kvPool.withConnection(async (kv) => {
-      // New Key: ['tenants', tenantId, 'stock', productId, locationId, batchId]
-      // Prefix matching ['tenants', tenantId, 'stock', productId, locationId] captures all batches at this location.
       const iter = kv.list({ prefix: ['tenants', tenantId, 'stock', productId, locationId] });
       const entries = [];
       for await (const res of iter) {
@@ -40,7 +38,6 @@ export const createKVStockRepository = (kvPool) => {
     });
   };
 
-  // Paginated version for UI
   const listEntriesForProduct = async (tenantId, productId, { limit = 50, cursor } = {}) => {
     return kvPool.withConnection(async (kv) => {
       const iter = kv.list({ prefix: ['tenants', tenantId, 'stock', productId] }, { limit, cursor });
@@ -52,7 +49,6 @@ export const createKVStockRepository = (kvPool) => {
     });
   };
 
-  // Full fetch for Domain Logic (Allocation Service)
   const getEntriesForProduct = async (tenantId, productId) => {
     return kvPool.withConnection(async (kv) => {
       const iter = kv.list({ prefix: ['tenants', tenantId, 'stock', productId] });
@@ -64,13 +60,43 @@ export const createKVStockRepository = (kvPool) => {
     });
   };
 
-  // Keep the old 'getStock' signature for compatibility, but aggregate
+  // NEW: Atomic Support
+  const getEntriesWithVersion = async (tenantId, productId) => {
+    return kvPool.withConnection(async (kv) => {
+      const iter = kv.list({ prefix: ['tenants', tenantId, 'stock', productId] });
+      const entries = [];
+      for await (const res of iter) {
+        entries.push({
+            value: res.value,
+            versionstamp: res.versionstamp,
+            key: res.key
+        });
+      }
+      return entries;
+    });
+  };
+
+  // NEW: Atomic Commit for multiple updates
+  const commitUpdates = async (tenantId, updates) => {
+      // updates: [{ key, versionstamp, value }]
+      return kvPool.withConnection(async (kv) => {
+          const op = kv.atomic();
+          for (const u of updates) {
+              if (u.versionstamp) {
+                  op.check({ key: u.key, versionstamp: u.versionstamp });
+              }
+              op.set(u.key, u.value);
+          }
+          const res = await op.commit();
+          return res.ok;
+      });
+  };
+
   const getStock = async (tenantId, productId) => {
     const entries = await getEntriesForProduct(tenantId, productId);
     return entries.reduce((sum, entry) => sum + (entry.quantity - entry.reservedQuantity), 0);
   };
 
-  // Deprecated direct update shim
   const updateStock = async (tenantId, productId, quantity) => {
       const defaultLocId = 'default-loc';
       const entry = await getEntryByBatch(tenantId, productId, defaultLocId, null) || {
@@ -88,5 +114,15 @@ export const createKVStockRepository = (kvPool) => {
       return updated;
   };
 
-  return { save, getEntryByBatch, getEntriesAtLocation, getEntriesForProduct, listEntriesForProduct, getStock, updateStock };
+  return {
+      save,
+      getEntryByBatch,
+      getEntriesAtLocation,
+      getEntriesForProduct,
+      listEntriesForProduct,
+      getStock,
+      updateStock,
+      getEntriesWithVersion, // New
+      commitUpdates // New
+  };
 };

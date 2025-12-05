@@ -6,9 +6,8 @@ export const createRBACService = (userRepository, roleRepository) => {
     // If no roles, no access
     if (!user.roleIds || user.roleIds.length === 0) return false;
 
-    const roles = await Promise.all(
-      user.roleIds.map(id => roleRepository.findById(tenantId, id))
-    );
+    // Fixed N+1: Use batch fetch
+    const roles = await roleRepository.findByIds(tenantId, user.roleIds);
 
     return roles.some(role =>
       role && role.permissions && role.permissions.some(p =>
@@ -21,9 +20,7 @@ export const createRBACService = (userRepository, roleRepository) => {
     const user = await userRepository.findById(tenantId, userId);
     if (!user) return false;
 
-    const roles = await Promise.all(
-      user.roleIds.map(id => roleRepository.findById(tenantId, id))
-    );
+    const roles = await roleRepository.findByIds(tenantId, user.roleIds);
 
     return roles.some(role => role && role.name === roleName);
   };

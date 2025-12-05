@@ -14,6 +14,17 @@ export const createKVRoleRepository = (kvPool) => {
     });
   };
 
+  // NEW: Batch Fetch to solve N+1
+  const findByIds = async (tenantId, ids) => {
+      if (!ids || ids.length === 0) return [];
+      return kvPool.withConnection(async (kv) => {
+          const keys = ids.map(id => ['tenants', tenantId, 'roles', id]);
+          const results = await kv.getMany(keys);
+          // Filter out nulls (missing roles)
+          return results.map(r => r.value).filter(r => r !== null);
+      });
+  };
+
   const findAll = async (tenantId) => {
       return kvPool.withConnection(async (kv) => {
           const iter = kv.list({ prefix: ['tenants', tenantId, 'roles'] });
@@ -25,5 +36,5 @@ export const createKVRoleRepository = (kvPool) => {
       });
   };
 
-  return { save, findById, findAll };
+  return { save, findById, findByIds, findAll };
 };

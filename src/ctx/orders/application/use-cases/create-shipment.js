@@ -15,28 +15,31 @@ export const createCreateShipment = ({ shipmentRepository, orderRepository, inve
       createdAt: new Date().toISOString()
     });
 
-    // 3. Save Shipment
+    // 3. Update Inventory (Commit Allocation)
+    // We do this BEFORE saving the shipment to ensure stock is available and committed.
+    // If commit fails, shipment is not created.
+    try {
+        await inventoryService.confirmStockShipment.execute(tenantId, order.id, shipment.items);
+    } catch (e) {
+        throw new Error(`Failed to create shipment: ${e.message}`);
+    }
+
+    // 4. Save Shipment
     await shipmentRepository.save(tenantId, shipment);
 
-    // 4. Update Inventory (Commit Allocation)
-    await inventoryService.confirmStockShipment.execute(tenantId, order.id, shipment.items);
-
     // 5. Update Order Status
-    // Calculate total shipped quantities including this new shipment
     const allShipments = await shipmentRepository.findByOrderId(tenantId, order.id);
-    // Note: allShipments might not include the one just saved if consistency is eventual,
-    // but Deno KV strong consistency within same request usually holds or we just push current shipment to array.
-    // To be safe, let's use the list we have + current if not returned.
 
-    let totalShipped = {};
-    for (const s of allShipments) {
-        for (const item of s.items) {
-            totalShipped[item.productId] = (totalShipped[item.productId] || 0) + item.quantity;
-        }
+    // Aggregate shipped quantities
+    const totalShipped = {};
+    // ensure current is counted
+    const shipmentsToCheck = [...allShipments];
+    if (!shipmentsToCheck.find(s => s.id === shipment.id)) {
+        shipmentsToCheck.push(shipment);
     }
-    // Ensure current shipment is counted (if not in list yet)
-    if (!allShipments.find(s => s.id === shipment.id)) {
-        for (const item of shipment.items) {
+
+    for (const s of shipmentsToCheck) {
+        for (const item of s.items) {
             totalShipped[item.productId] = (totalShipped[item.productId] || 0) + item.quantity;
         }
     }
@@ -52,7 +55,6 @@ export const createCreateShipment = ({ shipmentRepository, orderRepository, inve
 
     const newStatus = fullyShipped ? 'SHIPPED' : 'PARTIALLY_SHIPPED';
 
-    // Only update if status changes or moving forward
     if (order.status !== newStatus && order.status !== 'DELIVERED' && order.status !== 'CANCELLED') {
         const updatedOrder = { ...order, status: newStatus, updatedAt: new Date().toISOString() };
         await orderRepository.save(tenantId, updatedOrder);
