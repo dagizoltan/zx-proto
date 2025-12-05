@@ -39,13 +39,13 @@ export const createCompleteWorkOrder = ({ woRepository, bomRepository, inventory
     for (const component of bom.components) {
       const requiredQty = component.quantity * wo.quantity;
 
-      // Assumption: adjustStock handles negative quantities
-      await inventoryService.updateStock.execute(tenantId, {
+      // Use correct consumeStock use case
+      await inventoryService.consumeStock.execute(tenantId, {
         productId: component.productId,
         locationId: completionData.locationId,
-        quantity: -requiredQty,
+        quantity: requiredQty, // Positive quantity to consume
         reason: `Consumed for WO ${wo.code}`,
-        type: 'adjustment'
+        userId: null // We don't have user ID in this context easily, would need to pass in
       });
     }
 

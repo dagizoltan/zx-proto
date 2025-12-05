@@ -21,6 +21,7 @@ import { createCancelStockReservation } from './application/use-cases/cancel-sto
 import { createListStockMovements } from './application/use-cases/list-stock-movements.js';
 import { createCreateWarehouse } from './application/use-cases/create-warehouse.js';
 import { createCreateLocation } from './application/use-cases/create-location.js';
+import { createConsumeStock } from './application/use-cases/consume-stock.js';
 
 export const createInventoryContext = async (deps) => {
   const { persistence, config, obs, messaging, registry } = deps;
@@ -36,8 +37,8 @@ export const createInventoryContext = async (deps) => {
   const batchRepository = createKVBatchRepository(persistence.kvPool);
 
   // Domain Services
-  const stockAllocationService = createStockAllocationService(stockRepository, stockMovementRepository, batchRepository);
-  const inventoryAdjustmentService = createInventoryAdjustmentService(stockRepository, stockMovementRepository, batchRepository);
+  const stockAllocationService = createStockAllocationService(stockRepository, stockMovementRepository, batchRepository, productRepository);
+  const inventoryAdjustmentService = createInventoryAdjustmentService(stockRepository, stockMovementRepository, batchRepository, productRepository);
 
   // Use Cases
   const createProduct = createCreateProduct({
@@ -71,6 +72,10 @@ export const createInventoryContext = async (deps) => {
   });
 
   const receiveStock = createReceiveStock({
+      inventoryAdjustmentService
+  });
+
+  const consumeStock = createConsumeStock({
       inventoryAdjustmentService
   });
 
@@ -130,6 +135,7 @@ export const createInventoryContext = async (deps) => {
       reserveStock,
       listAllProducts,
       receiveStock,
+      consumeStock, // NEW
       moveStock,
       confirmStockShipment,
       cancelStockReservation,

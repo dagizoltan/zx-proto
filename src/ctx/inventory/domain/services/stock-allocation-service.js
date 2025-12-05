@@ -1,5 +1,15 @@
 // Service to handle complex allocation logic
-export const createStockAllocationService = (stockRepository, stockMovementRepository, batchRepository) => {
+export const createStockAllocationService = (stockRepository, stockMovementRepository, batchRepository, productRepository) => {
+
+  const _updateProductTotal = async (tenantId, productId) => {
+    if (!productRepository) return;
+    const entries = await stockRepository.getEntriesForProduct(tenantId, productId);
+    const total = entries.reduce((sum, e) => sum + e.quantity, 0);
+    const product = await productRepository.findById(tenantId, productId);
+    if (product) {
+        await productRepository.save(tenantId, { ...product, quantity: total });
+    }
+  };
 
   const allocate = async (tenantId, productId, amount, referenceId) => {
     // 1. Get all stock entries for product
@@ -54,6 +64,7 @@ export const createStockAllocationService = (stockRepository, stockMovementRepos
         const { batch, ...cleanEntry } = updated;
 
         await stockRepository.save(tenantId, cleanEntry);
+        // Note: allocations do not change total quantity, only reserved. So no need to updateProductTotal.
 
         // Record movement (soft allocation)
         await stockMovementRepository.save(tenantId, {
@@ -99,6 +110,7 @@ export const createStockAllocationService = (stockRepository, stockMovementRepos
 
     // 2. Determine what to ship
     const toShip = []; // List of { key, quantity }
+    const affectedProducts = new Set();
 
     if (!itemsToShip) {
         // Ship ALL remaining
@@ -162,6 +174,7 @@ export const createStockAllocationService = (stockRepository, stockMovementRepos
         };
 
         await stockRepository.save(tenantId, updated);
+        affectedProducts.add(productId);
 
         // Record 'shipped' movement
         await stockMovementRepository.save(tenantId, {
@@ -175,6 +188,11 @@ export const createStockAllocationService = (stockRepository, stockMovementRepos
             batchId: normalizedBatchId,
             timestamp: new Date().toISOString()
         });
+    }
+
+    // Update product totals
+    for (const pid of affectedProducts) {
+        await _updateProductTotal(tenantId, pid);
     }
   };
 
@@ -216,6 +234,7 @@ export const createStockAllocationService = (stockRepository, stockMovementRepos
             };
 
             await stockRepository.save(tenantId, updated);
+            // Release does not change total stock, only reserved. No need to updateProductTotal.
 
             await stockMovementRepository.save(tenantId, {
                 id: crypto.randomUUID(),
