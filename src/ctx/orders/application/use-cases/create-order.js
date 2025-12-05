@@ -39,19 +39,20 @@ export const createCreateOrder = ({ orderRepository, obs, registry, eventBus }) 
         });
     }
 
-    // 2. Create Order (Pending Stock Confirmation)
-    // We create the ID here to pass to reservation
+    // 2. Create Order Object
     const orderId = crypto.randomUUID();
     const order = createOrder({
       id: orderId,
       userId,
       items: enrichedItems,
       total: calculatedTotal,
+      status: 'CREATED' // Initial Status
     });
 
-    // 3. Batch Reserve Stock (Atomic-ish Check + Reserve)
-    // This replaces the separate checkAvailability loop + separate reserve loop.
-    // The `allocateBatch` method in inventory will do Check + Reserve in one go.
+    // 3. Reserve Stock (Atomic Batch)
+    // We do this BEFORE saving the order to DB to prevent "Order exists, but Stock failed" state (Overselling risk is handled by atomic allocation).
+    // Risk: "Stock Reserved, but Order Save Fails" (Orphaned Reservation).
+    // Mitigation: We use a compensating transaction (Release) in the catch block.
 
     try {
         await inventory.useCases.reserveStock.executeBatch(
@@ -60,13 +61,25 @@ export const createCreateOrder = ({ orderRepository, obs, registry, eventBus }) 
             order.id
         );
     } catch (e) {
-        // Map inventory error to user friendly error
-        throw new Error(`Order creation failed: ${e.message}`);
+        throw new Error(`Order creation failed due to stock availability: ${e.message}`);
     }
 
     // 4. Save Order
-    // Only save if stock reservation succeeded
-    await orderRepository.save(tenantId, order);
+    try {
+        await orderRepository.save(tenantId, order);
+    } catch (e) {
+        // CRITICAL: Rollback Stock Reservation
+        console.error('Order save failed, releasing stock...', e);
+        try {
+             // We can use the generic release logic which finds allocations by Order ID
+             // Wait, the movements are saved. So release logic works.
+             await inventory.useCases.cancelStockReservation.execute(tenantId, order.id);
+        } catch (releaseError) {
+             console.error('CRITICAL: Failed to release stock after order save failure. Orphaned stock.', releaseError);
+             // In enterprise system, this logs to an alert queue for manual intervention.
+        }
+        throw new Error('Order creation failed during save. Please try again.');
+    }
 
     // Publish event
     if (eventBus) {

@@ -111,6 +111,11 @@ export const createInventoryContext = async (deps) => {
     return accessControl.useCases.checkPermission.execute(tenantId, userId, 'inventory', action);
   };
 
+  // Expose services directly for cross-domain orchestration (e.g., Manufacturing, Procurement)
+  // This is a "Service-to-Service" communication pattern
+  const executeProduction = stockAllocationService.executeProduction;
+  const receiveStockRobust = stockAllocationService.receiveStockRobust;
+
   return {
     name: 'inventory',
 
@@ -125,6 +130,8 @@ export const createInventoryContext = async (deps) => {
 
     services: {
       stockAllocation: stockAllocationService,
+      executeProduction, // Exposed
+      receiveStockRobust, // Exposed
     },
 
     useCases: {
@@ -135,7 +142,7 @@ export const createInventoryContext = async (deps) => {
       reserveStock,
       listAllProducts,
       receiveStock,
-      consumeStock, // NEW
+      consumeStock,
       moveStock,
       confirmStockShipment,
       cancelStockReservation,
