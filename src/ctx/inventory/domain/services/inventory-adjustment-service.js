@@ -12,8 +12,9 @@ export const createInventoryAdjustmentService = (stockRepository, stockMovementR
         }
     };
 
-    const receiveStock = async (tenantId, { productId, locationId, quantity, batchId, batchData, reason, userId }) => {
+    const receiveStock = async (tenantId, { productId, locationId, quantity, batchId, batchData, reason, userId, date }) => {
         let finalBatchId = batchId;
+        const timestamp = date || new Date().toISOString();
 
         // Handle Batch Creation
         if (!finalBatchId && batchData && batchRepository) {
@@ -27,7 +28,7 @@ export const createInventoryAdjustmentService = (stockRepository, stockMovementR
                     sku: batchData.sku || 'UNKNOWN', // Should verify SKU from product
                     batchNumber: batchData.batchNumber,
                     expiryDate: batchData.expiryDate,
-                    receivedAt: new Date().toISOString()
+                    receivedAt: timestamp
                 });
                 await batchRepository.save(tenantId, batch);
                 finalBatchId = batch.id;
@@ -54,7 +55,7 @@ export const createInventoryAdjustmentService = (stockRepository, stockMovementR
         const updated = {
             ...entry,
             quantity: entry.quantity + quantity,
-            updatedAt: new Date().toISOString()
+            updatedAt: timestamp
         };
 
         await stockRepository.save(tenantId, updated);
@@ -71,19 +72,20 @@ export const createInventoryAdjustmentService = (stockRepository, stockMovementR
             batchId: finalBatchId,
             reason,
             userId,
-            timestamp: new Date().toISOString()
+            timestamp
         });
 
         return updated;
     };
 
-    const adjustStock = async (tenantId, { productId, locationId, newQuantity, reason, userId, batchId }) => {
+    const adjustStock = async (tenantId, { productId, locationId, newQuantity, reason, userId, batchId, date }) => {
         // Adjustment should ideally specify batch. If not, we might be in trouble.
         // For now, default to 'default' or we could try to find ANY entry at location.
         // Let's assume 'default' if missing for legacy compatibility, but this is weak.
 
         const targetBatchId = batchId || 'default';
         const entry = await stockRepository.getEntryByBatch(tenantId, productId, locationId, targetBatchId);
+        const timestamp = date || new Date().toISOString();
 
         if (!entry) throw new Error('Stock entry not found for adjustment');
 
@@ -92,7 +94,7 @@ export const createInventoryAdjustmentService = (stockRepository, stockMovementR
         const updated = {
             ...entry,
             quantity: newQuantity,
-            updatedAt: new Date().toISOString()
+            updatedAt: timestamp
         };
 
         await stockRepository.save(tenantId, updated);
@@ -108,16 +110,17 @@ export const createInventoryAdjustmentService = (stockRepository, stockMovementR
             batchId: targetBatchId,
             referenceId: reason,
             userId,
-            timestamp: new Date().toISOString()
+            timestamp
         });
 
         return updated;
     };
 
-    const consumeStock = async (tenantId, { productId, locationId, quantity, reason, userId, batchId }) => {
+    const consumeStock = async (tenantId, { productId, locationId, quantity, reason, userId, batchId, date }) => {
         // Similar to adjust, but delta based and ensures availability
         const targetBatchId = batchId || 'default';
         const entry = await stockRepository.getEntryByBatch(tenantId, productId, locationId, targetBatchId);
+        const timestamp = date || new Date().toISOString();
 
         if (!entry) throw new Error('Stock entry not found for consumption');
         if (entry.quantity < quantity) throw new Error(`Insufficient stock for consumption. Required: ${quantity}, Available: ${entry.quantity}`);
@@ -125,7 +128,7 @@ export const createInventoryAdjustmentService = (stockRepository, stockMovementR
         const updated = {
             ...entry,
             quantity: entry.quantity - quantity,
-            updatedAt: new Date().toISOString()
+            updatedAt: timestamp
         };
 
         await stockRepository.save(tenantId, updated);
@@ -142,7 +145,7 @@ export const createInventoryAdjustmentService = (stockRepository, stockMovementR
             batchId: targetBatchId,
             referenceId: reason,
             userId,
-            timestamp: new Date().toISOString()
+            timestamp
         });
 
         return updated;
