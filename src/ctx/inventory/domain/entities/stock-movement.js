@@ -9,7 +9,8 @@ export const createStockMovement = ({
   referenceId,    // orderId, shipmentId, adjustmentId
   batchId,
   reason,
-  userId
+  userId,
+  timestamp
 }) => ({
   id,
   tenantId,
@@ -22,5 +23,5 @@ export const createStockMovement = ({
   batchId,
   reason,
   userId,
-  timestamp: new Date().toISOString(),
+  timestamp: timestamp || new Date().toISOString(),
 });

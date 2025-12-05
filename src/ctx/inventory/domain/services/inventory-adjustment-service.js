@@ -2,8 +2,9 @@ import { createBatch } from '../entities/warehouse.js';
 
 export const createInventoryAdjustmentService = (stockRepository, stockMovementRepository, batchRepository) => {
 
-    const receiveStock = async (tenantId, { productId, locationId, quantity, batchId, batchData, reason, userId }) => {
+    const receiveStock = async (tenantId, { productId, locationId, quantity, batchId, batchData, reason, userId, date }) => {
         let finalBatchId = batchId;
+        const now = date || new Date().toISOString();
 
         // Handle Batch Creation
         if (!finalBatchId && batchData && batchRepository) {
@@ -17,7 +18,7 @@ export const createInventoryAdjustmentService = (stockRepository, stockMovementR
                     sku: batchData.sku || 'UNKNOWN', // Should verify SKU from product
                     batchNumber: batchData.batchNumber,
                     expiryDate: batchData.expiryDate,
-                    receivedAt: new Date().toISOString()
+                    receivedAt: now
                 });
                 await batchRepository.save(tenantId, batch);
                 finalBatchId = batch.id;
@@ -44,7 +45,7 @@ export const createInventoryAdjustmentService = (stockRepository, stockMovementR
         const updated = {
             ...entry,
             quantity: entry.quantity + quantity,
-            updatedAt: new Date().toISOString()
+            updatedAt: now
         };
 
         await stockRepository.save(tenantId, updated);
@@ -60,16 +61,17 @@ export const createInventoryAdjustmentService = (stockRepository, stockMovementR
             batchId: finalBatchId,
             reason,
             userId,
-            timestamp: new Date().toISOString()
+            timestamp: now
         });
 
         return updated;
     };
 
-    const adjustStock = async (tenantId, { productId, locationId, newQuantity, reason, userId, batchId }) => {
+    const adjustStock = async (tenantId, { productId, locationId, newQuantity, reason, userId, batchId, date }) => {
         // Adjustment should ideally specify batch. If not, we might be in trouble.
         // For now, default to 'default' or we could try to find ANY entry at location.
         // Let's assume 'default' if missing for legacy compatibility, but this is weak.
+        const now = date || new Date().toISOString();
 
         const targetBatchId = batchId || 'default';
         const entry = await stockRepository.getEntryByBatch(tenantId, productId, locationId, targetBatchId);
@@ -81,7 +83,7 @@ export const createInventoryAdjustmentService = (stockRepository, stockMovementR
         const updated = {
             ...entry,
             quantity: newQuantity,
-            updatedAt: new Date().toISOString()
+            updatedAt: now
         };
 
         await stockRepository.save(tenantId, updated);
@@ -96,7 +98,7 @@ export const createInventoryAdjustmentService = (stockRepository, stockMovementR
             batchId: targetBatchId,
             referenceId: reason,
             userId,
-            timestamp: new Date().toISOString()
+            timestamp: now
         });
 
         return updated;

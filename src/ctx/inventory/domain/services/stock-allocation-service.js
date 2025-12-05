@@ -1,7 +1,8 @@
 // Service to handle complex allocation logic
 export const createStockAllocationService = (stockRepository, stockMovementRepository, batchRepository) => {
 
-  const allocate = async (tenantId, productId, amount, referenceId) => {
+  const allocate = async (tenantId, productId, amount, referenceId, date) => {
+    const now = date || new Date().toISOString();
     // 1. Get all stock entries for product
     const entries = await stockRepository.getEntriesForProduct(tenantId, productId);
 
@@ -49,7 +50,7 @@ export const createStockAllocationService = (stockRepository, stockMovementRepos
         const updated = {
             ...entry,
             reservedQuantity: entry.reservedQuantity + take,
-            updatedAt: new Date().toISOString()
+            updatedAt: now
         };
         const { batch, ...cleanEntry } = updated;
 
@@ -66,14 +67,15 @@ export const createStockAllocationService = (stockRepository, stockMovementRepos
             toLocationId: null,
             referenceId,
             batchId: entry.batchId,
-            timestamp: new Date().toISOString()
+            timestamp: now
         });
 
         remaining -= take;
     }
   };
 
-  const commit = async (tenantId, referenceId, itemsToShip = null) => {
+  const commit = async (tenantId, referenceId, itemsToShip = null, date) => {
+    const now = date || new Date().toISOString();
     // itemsToShip: Array of { productId, quantity } or null (all)
     const movements = await stockMovementRepository.getByReference(tenantId, referenceId);
 
@@ -158,7 +160,7 @@ export const createStockAllocationService = (stockRepository, stockMovementRepos
             ...entry,
             quantity: entry.quantity - quantity,
             reservedQuantity: entry.reservedQuantity - quantity,
-            updatedAt: new Date().toISOString()
+            updatedAt: now
         };
 
         await stockRepository.save(tenantId, updated);
@@ -173,12 +175,13 @@ export const createStockAllocationService = (stockRepository, stockMovementRepos
             fromLocationId,
             referenceId,
             batchId: normalizedBatchId,
-            timestamp: new Date().toISOString()
+            timestamp: now
         });
     }
   };
 
-  const release = async (tenantId, referenceId) => {
+  const release = async (tenantId, referenceId, date) => {
+    const now = date || new Date().toISOString();
     // Release ALL remaining allocations (cancel remainder)
     // Similar logic to commit, calculate remaining allocated and release it
     const movements = await stockMovementRepository.getByReference(tenantId, referenceId);
@@ -212,7 +215,7 @@ export const createStockAllocationService = (stockRepository, stockMovementRepos
             const updated = {
                 ...entry,
                 reservedQuantity: entry.reservedQuantity - remaining,
-                updatedAt: new Date().toISOString()
+                updatedAt: now
             };
 
             await stockRepository.save(tenantId, updated);
@@ -226,7 +229,7 @@ export const createStockAllocationService = (stockRepository, stockMovementRepos
                 fromLocationId,
                 referenceId,
                 batchId: normalizedBatchId,
-                timestamp: new Date().toISOString()
+                timestamp: now
             });
         }
     }

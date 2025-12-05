@@ -1,7 +1,8 @@
 import { createShipment } from '../../domain/entities/shipment.js';
 
 export const createCreateShipment = ({ shipmentRepository, orderRepository, inventoryService, eventBus }) => {
-  const execute = async (tenantId, data) => {
+  const execute = async (tenantId, data, date) => {
+    const now = date || new Date().toISOString();
     // 1. Validate Order
     const order = await orderRepository.findById(tenantId, data.orderId);
     if (!order) throw new Error('Order not found');
@@ -11,15 +12,15 @@ export const createCreateShipment = ({ shipmentRepository, orderRepository, inve
       id: crypto.randomUUID(),
       tenantId,
       ...data,
-      shippedAt: new Date().toISOString(),
-      createdAt: new Date().toISOString()
+      shippedAt: now,
+      createdAt: now
     });
 
     // 3. Save Shipment
     await shipmentRepository.save(tenantId, shipment);
 
     // 4. Update Inventory (Commit Allocation)
-    await inventoryService.confirmStockShipment.execute(tenantId, order.id, shipment.items);
+    await inventoryService.confirmStockShipment.execute(tenantId, order.id, shipment.items, now);
 
     // 5. Update Order Status
     // Calculate total shipped quantities including this new shipment

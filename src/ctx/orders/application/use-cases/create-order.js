@@ -2,7 +2,7 @@ import { createOrder } from '../../domain/entities/order.js';
 import { createOrderSchema } from '../schema.js';
 
 export const createCreateOrder = ({ orderRepository, obs, registry, eventBus }) => {
-  const execute = async (tenantId, userId, items) => {
+  const execute = async (tenantId, userId, items, createdAt) => {
     // Validate input
     createOrderSchema.parse({ items });
 
@@ -46,6 +46,7 @@ export const createCreateOrder = ({ orderRepository, obs, registry, eventBus }) 
       userId,
       items: enrichedItems,
       total: calculatedTotal,
+      createdAt
     });
 
     await orderRepository.save(tenantId, order);
@@ -56,7 +57,8 @@ export const createCreateOrder = ({ orderRepository, obs, registry, eventBus }) 
         tenantId,
         item.productId,
         item.quantity,
-        order.id
+        order.id,
+        createdAt
       );
     }
 
