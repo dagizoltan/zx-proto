@@ -1,5 +1,6 @@
 export const createMoveStock = ({ stockRepository, stockMovementRepository }) => {
-    const execute = async (tenantId, { productId, fromLocationId, toLocationId, quantity, userId }) => {
+    const execute = async (tenantId, { productId, fromLocationId, toLocationId, quantity, userId, date }) => {
+        const now = date || new Date().toISOString();
         const fromEntry = await stockRepository.getEntry(tenantId, productId, fromLocationId);
         if (!fromEntry || (fromEntry.quantity - fromEntry.reservedQuantity) < quantity) {
             throw new Error('Insufficient stock at source location');
@@ -21,13 +22,13 @@ export const createMoveStock = ({ stockRepository, stockMovementRepository }) =>
         await stockRepository.save(tenantId, {
             ...fromEntry,
             quantity: fromEntry.quantity - quantity,
-            updatedAt: new Date().toISOString()
+            updatedAt: now
         });
 
         await stockRepository.save(tenantId, {
             ...toEntry,
             quantity: toEntry.quantity + quantity,
-            updatedAt: new Date().toISOString()
+            updatedAt: now
         });
 
         await stockMovementRepository.save(tenantId, {
@@ -39,7 +40,7 @@ export const createMoveStock = ({ stockRepository, stockMovementRepository }) =>
             fromLocationId,
             toLocationId,
             userId,
-            timestamp: new Date().toISOString()
+            timestamp: now
         });
 
         return true;

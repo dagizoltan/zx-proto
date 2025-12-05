@@ -14,566 +14,389 @@ import { createCatalogContext } from '../../../ctx/catalog/index.js';
 import { createProcurementContext } from '../../../ctx/procurement/index.js';
 import { createManufacturingContext } from '../../../ctx/manufacturing/index.js';
 
-// Simple random helpers
-const faker = {
-  internet: {
-    email: (name) => `${name.toLowerCase().replace(/\s+/g, '.')}@example.com`,
-  },
-  person: {
-    fullName: () => {
-      const firsts = ['James', 'Mary', 'Robert', 'Patricia', 'John', 'Jennifer', 'Michael', 'Linda', 'David', 'Elizabeth'];
-      const lasts = ['Smith', 'Johnson', 'Williams', 'Brown', 'Jones', 'Garcia', 'Miller', 'Davis', 'Rodriguez', 'Martinez'];
-      return `${firsts[Math.floor(Math.random() * firsts.length)]} ${lasts[Math.floor(Math.random() * lasts.length)]}`;
-    }
-  },
-  commerce: {
-    productName: () => {
-      const adjs = ['Small', 'Ergonomic', 'Rustic', 'Intelligent', 'Gorgeous', 'Incredible', 'Fantastic', 'Practical', 'Sleek', 'Awesome'];
-      const materials = ['Steel', 'Wooden', 'Concrete', 'Plastic', 'Cotton', 'Granite', 'Rubber', 'Metal', 'Soft', 'Fresh'];
-      const products = ['Chair', 'Car', 'Computer', 'Keyboard', 'Mouse', 'Bike', 'Ball', 'Gloves', 'Pants', 'Shirt', 'Table', 'Shoes', 'Hat', 'Towels', 'Soap', 'Tuna', 'Chicken', 'Fish', 'Cheese', 'Bacon', 'Pizza', 'Salad', 'Sausages', 'Chips'];
-      return `${adjs[Math.floor(Math.random() * adjs.length)]} ${materials[Math.floor(Math.random() * materials.length)]} ${products[Math.floor(Math.random() * products.length)]}`;
-    },
-    price: () => (Math.random() * 100 + 10).toFixed(2),
-    department: () => {
-      const depts = ['Electronics', 'Clothing', 'Home', 'Garden', 'Toys', 'Books', 'Sports'];
-      return depts[Math.floor(Math.random() * depts.length)];
-    }
-  }
+// --- Constants & Config ---
+const TENANT_ID = Deno.args[0] || 'default';
+const TARGET_PRODUCTS = 1000;
+const TARGET_ORDERS = 5000;
+const HISTORY_DAYS = 180;
+const START_DATE = new Date();
+START_DATE.setDate(START_DATE.getDate() - HISTORY_DAYS);
+
+// --- Helpers ---
+const log = (msg) => console.log(`[${new Date().toLocaleTimeString()}] ${msg}`);
+const randomInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
+const randomElement = (arr) => arr[Math.floor(Math.random() * arr.length)];
+const randomDate = (start, end) => new Date(start.getTime() + Math.random() * (end.getTime() - start.getTime()));
+
+// Electronics / Assembly Theme Data
+const CATEGORIES = {
+  'Processors': ['CPU', 'NPU', 'Microcontrollers'],
+  'Graphics': ['Gaming GPU', 'Workstation GPU'],
+  'Memory': ['DDR4', 'DDR5', 'SO-DIMM'],
+  'Storage': ['NVMe SSD', 'SATA SSD', 'HDD'],
+  'Motherboards': ['ATX', 'Micro-ATX', 'Mini-ITX'],
+  'Cases': ['Full Tower', 'Mid Tower', 'Mini Tower'],
+  'Power Supplies': ['650W', '850W', '1000W'],
+  'Cooling': ['Air Coolers', 'AIO Liquid', 'Thermal Paste'],
+  'Cables': ['HDMI', 'DisplayPort', 'USB-C', 'Ethernet'],
+  'Assembly Tools': ['Screwdrivers', 'Soldering Irons', 'Anti-static Mats']
 };
 
-async function bootstrap() {
-  const environment = Deno.env.get('ENVIRONMENT') || 'local';
-  const tenantId = Deno.args[0] || 'default';
+const BRANDS = ['Nexus', 'HyperCore', 'SiliconWafer', 'GigaTech', 'Quantum', 'Velocity', 'ArcticFlow', 'PowerGrid', 'CircuitMaster'];
+const ADJECTIVES = ['Pro', 'Elite', 'Ultra', 'Gaming', 'Extreme', 'Silent', 'Compact', 'Industrial', 'RGB'];
 
-  console.log(`🌱 Seeding data for tenant: ${tenantId} in ${environment} mode...`);
+function generateProductData(category, subcategory) {
+    const brand = randomElement(BRANDS);
+    const adj = randomElement(ADJECTIVES);
+    const modelNum = randomInt(100, 9000);
+    const suffix = randomElement(['X', 'Ti', 'Super', 'V2', 'Max']);
 
-  const config = await createConfigService(environment);
-  const ctx = createContextRegistry();
+    const name = `${brand} ${subcategory} ${modelNum}${suffix} ${adj}`;
+    const sku = `${brand.substring(0,3).toUpperCase()}-${subcategory.substring(0,3).toUpperCase()}-${modelNum}-${suffix}`;
 
-  // Register contexts
-  ctx
-    .registerInfra('persistence', createPersistenceContext, [])
-    .registerInfra('obs', createObsContext, ['infra.persistence'])
-    .registerInfra('messaging', createMessagingContext, ['infra.persistence'])
-    .registerInfra('security', createSecurityContext, [])
-    .registerInfra('realtime', createRealtimeContext, ['infra.messaging'])
-    .registerDomain('accessControl', createAccessControlContext, ['infra.persistence', 'infra.obs', 'infra.security'])
-    .registerDomain('inventory', createInventoryContext, ['infra.persistence', 'infra.obs', 'infra.messaging', 'domain.accessControl'])
-    .registerDomain('orders', createOrdersContext, ['infra.persistence', 'infra.obs', 'infra.messaging', 'domain.inventory', 'domain.accessControl'])
-    .registerDomain('catalog', createCatalogContext, ['infra.persistence', 'infra.obs', 'domain.inventory'])
-    .registerDomain('procurement', createProcurementContext, ['infra.persistence', 'domain.inventory'])
-    .registerDomain('manufacturing', createManufacturingContext, ['infra.persistence', 'domain.inventory']);
+    // Realistic-ish pricing logic
+    let basePrice = 50;
+    if (category === 'Processors') basePrice = 300;
+    if (category === 'Graphics') basePrice = 600;
+    if (category === 'Memory') basePrice = 100;
+    if (category === 'Storage') basePrice = 80;
+    if (category === 'Cables') basePrice = 15;
+    if (category === 'Assembly Tools') basePrice = 40;
 
-  await ctx.initialize(config);
+    const price = +(basePrice * (0.8 + Math.random() * 1.5)).toFixed(2);
 
-  const persistence = ctx.get('infra.persistence');
-  const accessControl = ctx.get('domain.accessControl');
-  const inventory = ctx.get('domain.inventory');
-  const orders = ctx.get('domain.orders');
-  const catalog = ctx.get('domain.catalog');
-  const procurement = ctx.get('domain.procurement');
-  const manufacturing = ctx.get('domain.manufacturing');
+    return { name, sku, price, description: `High performance ${subcategory} for demanding applications.`, type: 'SIMPLE' };
+}
 
-  // --- 0. Clean Database (Tenant Scope) ---
-  console.log('🧹 Cleaning database for tenant...');
-  await persistence.kvPool.withConnection(async (kv) => {
-      const iter = kv.list({ prefix: ['tenants', tenantId] });
-      for await (const res of iter) {
-          await kv.delete(res.key);
-      }
-  });
-  console.log('   ✅ Database cleaned.');
+// --- Main Seeder Class ---
+class Seeder {
+    constructor(ctx, tenantId) {
+        this.ctx = ctx;
+        this.tenantId = tenantId;
+        this.repo = ctx.get('infra.persistence').kvPool;
 
-  // --- 1. RBAC (Roles & Users) ---
-  console.log('🛡️  Seeding Roles & Users...');
+        // Contexts
+        this.ac = ctx.get('domain.accessControl');
+        this.inv = ctx.get('domain.inventory');
+        this.cat = ctx.get('domain.catalog');
+        this.ord = ctx.get('domain.orders');
+        this.proc = ctx.get('domain.procurement');
+        this.mfg = ctx.get('domain.manufacturing');
 
-  // Create Roles
-  const roles = {
-      admin: null,
-      manager: null,
-      customer: null
-  };
-
-  try {
-      roles.admin = await accessControl.useCases.createRole.execute(tenantId, {
-          name: 'admin',
-          permissions: [{ resource: '*', action: '*' }]
-      });
-      console.log('   ✅ Role: admin created');
-  } catch(e) { /* existing */ }
-
-  try {
-      roles.manager = await accessControl.useCases.createRole.execute(tenantId, {
-          name: 'manager',
-          permissions: [{ resource: 'products', action: '*' }, { resource: 'orders', action: 'read' }]
-      });
-      console.log('   ✅ Role: manager created');
-  } catch(e) { /* existing */ }
-
-  try {
-      roles.customer = await accessControl.useCases.createRole.execute(tenantId, {
-          name: 'customer',
-          permissions: [{ resource: 'products', action: 'read' }]
-      });
-      console.log('   ✅ Role: customer created');
-  } catch(e) { /* existing */ }
-
-  // Fallback if roles already existed, fetch them (need a findByName ideally, but for now we iterate or just proceed)
-  const allRoles = await accessControl.useCases.listRoles.execute(tenantId);
-  const getRoleId = (name) => allRoles.find(r => r.name === name)?.id;
-
-  const adminRoleId = getRoleId('admin');
-  const managerRoleId = getRoleId('manager');
-  const customerRoleId = getRoleId('customer');
-
-  // Create Users
-  const seedUser = async (email, name, roleId) => {
-      try {
-          const user = await accessControl.useCases.registerUser.execute(tenantId, { email, password: 'password123', name });
-          if (roleId) {
-              await accessControl.useCases.assignRole.execute(tenantId, { userId: user.id, roleIds: [roleId] });
-          }
-          console.log(`   ✅ User: ${email} created`);
-          return user;
-      } catch (e) {
-          console.log(`   ℹ️  User: ${email} exists, skipped`);
-          const existing = await accessControl.repositories.user.findByEmail(tenantId, email);
-          if (existing && roleId) {
-             await accessControl.useCases.assignRole.execute(tenantId, { userId: existing.id, roleIds: [roleId] });
-          }
-          return existing;
-      }
-  };
-
-  const adminUser = await seedUser('admin@imsshop.com', 'Super Admin', adminRoleId);
-  await seedUser('manager@imsshop.com', 'Store Manager', managerRoleId);
-  const customerUser = await seedUser('customer@imsshop.com', 'Regular Customer', customerRoleId);
-
-  // Seed a few more random customers
-  for(let i=0; i<5; i++) {
-      await seedUser(faker.internet.email(faker.person.fullName()), faker.person.fullName(), customerRoleId);
-  }
-
-  // --- 2. Warehouses & Locations ---
-  console.log('🏭 Seeding Warehouses & Locations...');
-
-  const createdLocations = [];
-
-  // Seed Warehouses
-  const warehouses = [
-      { name: 'Main Warehouse', code: 'WH-01' },
-      { name: 'East Coast Distribution', code: 'WH-02' }
-  ];
-
-  for (const wData of warehouses) {
-      let warehouse;
-      try {
-          const allWh = await inventory.repositories.warehouse.findAll(tenantId);
-          warehouse = allWh.find(w => w.code === wData.code);
-
-          if (!warehouse) {
-              warehouse = await inventory.useCases.createWarehouse.execute(tenantId, wData);
-              console.log(`   ✅ Warehouse: ${wData.name} created`);
-          } else {
-              console.log(`   ℹ️  Warehouse: ${wData.name} exists`);
-          }
-
-          // Create Locations (Zones)
-          const zones = ['Zone A', 'Zone B'];
-          for (const zName of zones) {
-              const allLocs = await inventory.repositories.location.findByWarehouseId(tenantId, warehouse.id);
-              let zone = allLocs.find(l => l.code === zName && l.type === 'ZONE');
-
-              if (!zone) {
-                  zone = await inventory.useCases.createLocation.execute(tenantId, {
-                      warehouseId: warehouse.id,
-                      code: zName,
-                      type: 'ZONE'
-                  });
-              }
-              createdLocations.push(zone.id);
-
-              // Create Aisles
-              for (let i = 1; i <= 3; i++) {
-                  const aisleCode = `${zName}-Aisle-${i}`;
-                  let aisle = allLocs.find(l => l.code === aisleCode);
-                  if (!aisle) {
-                      aisle = await inventory.useCases.createLocation.execute(tenantId, {
-                          warehouseId: warehouse.id,
-                          parentId: zone.id,
-                          code: aisleCode,
-                          type: 'AISLE'
-                      });
-                  }
-                  createdLocations.push(aisle.id);
-              }
-          }
-
-      } catch (e) { console.error(e); }
-  }
-
-  // --- 3. Categories & Price Lists (NEW) ---
-  console.log('🗂️  Seeding Categories & Price Lists...');
-  const categoryNames = ['Electronics', 'Clothing', 'Home & Garden', 'Toys', 'Furniture'];
-  const createdCategories = [];
-
-  for (const name of categoryNames) {
-      try {
-          // Check if exists
-          const { items } = await catalog.useCases.listCategories.execute(tenantId, { limit: 100, search: name });
-          let cat = items.find(c => c.name === name);
-
-          if (!cat) {
-            cat = await catalog.useCases.createCategory.execute(tenantId, {
-              name,
-              description: `All things ${name}`,
-            });
-            console.log(`   ✅ Category: ${name} created`);
-          }
-          createdCategories.push(cat);
-      } catch(e) { console.error(e); }
-  }
-
-  // Seed Subcategories for Clothing
-  const clothingCat = createdCategories.find(c => c.name === 'Clothing');
-  if (clothingCat) {
-      const subs = ['Men', 'Women', 'Kids'];
-      for (const sub of subs) {
-          try {
-             await catalog.useCases.createCategory.execute(tenantId, {
-                 name: sub,
-                 parentId: clothingCat.id
-             });
-             console.log(`   ✅ Subcategory: ${sub} created`);
-          } catch(e) {}
-      }
-  }
-
-  // Seed Price Lists
-  const priceLists = [
-      { name: 'VIP Customers', currency: 'USD' },
-      { name: 'Wholesale', currency: 'USD' }
-  ];
-  const createdPriceLists = [];
-
-  for (const pl of priceLists) {
-      try {
-          const { items } = await catalog.useCases.listPriceLists.execute(tenantId, { limit: 100, search: pl.name });
-          let list = items.find(l => l.name === pl.name);
-
-          if (!list) {
-              list = await catalog.useCases.createPriceList.execute(tenantId, {
-                  name: pl.name,
-                  currency: pl.currency,
-                  description: 'Special pricing tier'
-              });
-              console.log(`   ✅ Price List: ${pl.name} created`);
-          }
-          createdPriceLists.push(list);
-      } catch(e) { console.error(e); }
-  }
-
-
-  // --- 4. Products & Variants (Catalog) ---
-  console.log('📦 Creating Products & Variants...');
-
-  // Create Configurable Product (T-Shirt)
-  let tshirtParent;
-  try {
-      tshirtParent = await catalog.useCases.createProduct.execute(tenantId, {
-          sku: 'TSHIRT-CLASSIC-V2',
-          name: 'Classic Cotton T-Shirt V2',
-          description: 'A comfortable classic t-shirt in various colors.',
-          price: 20.00,
-          type: 'CONFIGURABLE',
-          configurableAttributes: ['color', 'size'],
-          category: 'Clothing' // This is just a string in product schema currently, but could link to ID if schema updated.
-                               // Ideally we should update product schema to store categoryId, but sticking to existing pattern for now.
-      });
-      console.log('   ✅ Product: Classic T-Shirt (Configurable) created');
-  } catch (e) {
-      const all = await catalog.useCases.listProducts.execute(tenantId);
-      tshirtParent = all.find(p => p.sku === 'TSHIRT-CLASSIC-V2');
-      console.log('   ℹ️  Product: Classic T-Shirt V2 exists');
-  }
-
-  const allProducts = [];
-  if (tshirtParent) allProducts.push(tshirtParent);
-
-  if (tshirtParent) {
-      const variants = [
-          { color: 'Red', size: 'M', sku: 'TSHIRT-RED-M' },
-          { color: 'Blue', size: 'L', sku: 'TSHIRT-BLUE-L' },
-          { color: 'Green', size: 'S', sku: 'TSHIRT-GREEN-S' }
-      ];
-
-      for (const v of variants) {
-          try {
-              const vProduct = await catalog.useCases.createProduct.execute(tenantId, {
-                  sku: v.sku,
-                  name: `Classic T-Shirt - ${v.color} (${v.size})`,
-                  price: 20.00,
-                  type: 'VARIANT',
-                  parentId: tshirtParent.id,
-                  variantAttributes: { color: v.color, size: v.size },
-                  category: 'Clothing'
-              });
-              allProducts.push(vProduct);
-              console.log(`   ✅ Variant: ${v.sku} created`);
-
-              // Seed Stock for Variant
-              if (createdLocations.length > 0) {
-                  const loc = createdLocations[Math.floor(Math.random() * createdLocations.length)];
-                  await inventory.useCases.receiveStock.execute(tenantId, {
-                      productId: vProduct.id,
-                      locationId: loc,
-                      quantity: 50,
-                      reason: 'Initial Seed',
-                      userId: adminUser?.id || 'system'
-                  });
-              }
-          } catch (e) { console.error('Failed to create variant:', e); }
-      }
-  }
-
-  // Random Products
-  for (let i = 0; i < 10; i++) {
-      try {
-          const product = await catalog.useCases.createProduct.execute(tenantId, {
-              sku: `SKU-${1000 + i}`,
-              name: faker.commerce.productName(),
-              price: parseFloat(faker.commerce.price()),
-              description: `A wonderful product for your daily needs.`,
-              category: faker.commerce.department(),
-              type: 'SIMPLE',
-              status: Math.random() > 0.1 ? 'ACTIVE' : 'INACTIVE'
-          });
-          allProducts.push(product);
-
-          const loc = createdLocations[Math.floor(Math.random() * createdLocations.length)];
-          const qty = Math.floor(Math.random() * 50) + 10;
-
-          await inventory.useCases.receiveStock.execute(tenantId, {
-              productId: product.id,
-              locationId: loc,
-              quantity: qty,
-              reason: 'Initial Seed',
-              userId: adminUser?.id || 'system'
-          });
-
-          process.stdout.write('.');
-      } catch (e) { }
-  }
-  console.log(`\n   ✅ Random products created.`);
-
-  // Update Price Lists with random prices for some products
-  console.log('💲 Populating Price Lists...');
-  for (const pl of createdPriceLists) {
-      const plRepo = catalog.repositories.priceList;
-      if (plRepo && allProducts.length > 0) {
-          const prices = {};
-          // Pick 5 random products
-          for(let i=0; i<5; i++) {
-              const p = allProducts[Math.floor(Math.random() * allProducts.length)];
-              // 10-20% discount
-              prices[p.id] = parseFloat((p.price * (0.8 + Math.random() * 0.1)).toFixed(2));
-          }
-
-          pl.prices = prices;
-          await plRepo.save(tenantId, pl);
-          console.log(`   ✅ Updated ${pl.name} with ${Object.keys(prices).length} prices`);
-      }
-  }
-
-  // --- 5. Mock Orders ---
-  console.log('🛒 Creating Mock Orders...');
-  const ordersCreated = [];
-  // Use catalog listing
-  const products = await catalog.useCases.listProducts.execute(tenantId, 1, 100); // Pagination assumed
-
-  if (products && products.length > 0) {
-      // Get some customers
-      const { items: customers } = await accessControl.useCases.listUsers.execute(tenantId, { limit: 50 });
-      const customerUsers = customers.filter(c => c.email !== 'admin@imsshop.com' && c.email !== 'manager@imsshop.com');
-
-      if (customerUsers.length > 0) {
-          for (let i = 0; i < 15; i++) {
-              const buyer = customerUsers[Math.floor(Math.random() * customerUsers.length)];
-              const items = [];
-              const numItems = Math.floor(Math.random() * 3) + 1;
-
-              for (let j = 0; j < numItems; j++) {
-                  const p = products[Math.floor(Math.random() * products.length)];
-                  // Ensure stock exists? createOrder checks.
-                  items.push({ productId: p.id, quantity: 1 }); // Simple quantity
-              }
-
-              try {
-                const order = await orders.useCases.createOrder.execute(tenantId, buyer.id, items);
-                ordersCreated.push(order);
-                process.stdout.write('.');
-              } catch (e) { }
-          }
-          console.log('\n   ✅ Mock orders created.');
-      }
-  }
-
-  // --- 5.5 Shipments (NEW) ---
-  console.log('🚚 Creating Mock Shipments...');
-  if (ordersCreated.length > 0) {
-      // Pick 2 orders to fully ship
-      const toShip = ordersCreated.slice(0, 2);
-      for (const order of toShip) {
-          try {
-              await orders.useCases.createShipment.execute(tenantId, {
-                  orderId: order.id,
-                  items: order.items, // Full shipment
-                  carrier: 'UPS',
-                  trackingNumber: '1Z9999999999999999'
-              });
-              console.log(`   ✅ Shipped Order #${order.id.substring(0,8)}`);
-          } catch(e) { console.error('Shipment error:', e.message); }
-      }
-
-      // Pick 1 order to partially ship
-      const partialOrder = ordersCreated[2];
-      if (partialOrder && partialOrder.items.length > 0) {
-          try {
-              // Ship just the first item
-              const itemToShip = partialOrder.items[0];
-              await orders.useCases.createShipment.execute(tenantId, {
-                  orderId: partialOrder.id,
-                  items: [{ productId: itemToShip.productId, quantity: 1 }],
-                  carrier: 'FedEx',
-                  trackingNumber: '789456123'
-              });
-              console.log(`   ✅ Partially Shipped Order #${partialOrder.id.substring(0,8)}`);
-          } catch(e) { console.error('Partial shipment error:', e.message); }
-      }
-  }
-
-    // --- 6. Procurement & Manufacturing ---
-    console.log('🏭 Seeding Procurement & Manufacturing...');
-
-    const suppliersData = [
-      { name: 'Global Steel Co', code: 'SUP-STEEL', email: 'orders@globalsteel.com' },
-      { name: 'WoodWorks Inc', code: 'SUP-WOOD', email: 'sales@woodworks.com' },
-      { name: 'FastParts Ltd', code: 'SUP-PARTS', email: 'contact@fastparts.com' }
-    ];
-
-    const suppliers = [];
-    for (const s of suppliersData) {
-        try {
-            // Naive dupe check
-            const existing = (await procurement.useCases.listSuppliers.execute(tenantId)).items.find(x => x.code === s.code);
-            if(!existing) {
-                const created = await procurement.useCases.createSupplier.execute(tenantId, s);
-                suppliers.push(created);
-                console.log(`   ✅ Supplier: ${s.name} created`);
-            } else {
-                suppliers.push(existing);
-            }
-        } catch(e) { console.error(e); }
+        // State
+        this.adminUser = null;
+        this.users = [];
+        this.products = [];
+        this.warehouses = [];
+        this.locations = [];
+        this.suppliers = [];
     }
 
-    // Raw Materials
-    const rawMaterialsData = [
-        { name: 'Steel Sheet 4x8', sku: 'RM-STEEL-01', price: 50.00 },
-        { name: 'Pine Plank 2x4', sku: 'RM-WOOD-01', price: 8.50 },
-        { name: 'Industrial Screw', sku: 'RM-SCREW-01', price: 0.10 }
-    ];
+    async clean() {
+        log('🧹 Cleaning database...');
+        await this.repo.withConnection(async (kv) => {
+            const iter = kv.list({ prefix: ['tenants', this.tenantId] });
+            let count = 0;
+            for await (const res of iter) {
+                await kv.delete(res.key);
+                count++;
+            }
+            log(`   Deleted ${count} records.`);
+        });
+    }
 
-    const rawMaterials = [];
-    for (const p of rawMaterialsData) {
-        try {
-            const created = await catalog.useCases.createProduct.execute(tenantId, {
-                ...p,
-                type: 'SIMPLE',
-                category: 'Raw Materials'
-            });
-            rawMaterials.push(created);
-            console.log(`   ✅ Raw Material: ${p.name} created`);
-        } catch(e) {
-           // If fails (duplicate SKU), try to fetch
-           const all = await catalog.useCases.listProducts.execute(tenantId, 1, 100);
-           const existing = all.find(x => x.sku === p.sku);
-           if(existing) rawMaterials.push(existing);
+    async seedRolesAndUsers() {
+        log('🛡️  Seeding Access Control...');
+
+        // Roles
+        const rAdmin = await this.ac.useCases.createRole.execute(this.tenantId, { name: 'admin', permissions: [{ resource: '*', action: '*' }] });
+        const rManager = await this.ac.useCases.createRole.execute(this.tenantId, { name: 'manager', permissions: [{ resource: '*', action: '*' }] }); // Simplified
+        const rCustomer = await this.ac.useCases.createRole.execute(this.tenantId, { name: 'customer', permissions: [{ resource: 'products', action: 'read' }] });
+
+        // Admin
+        this.adminUser = await this.ac.useCases.registerUser.execute(this.tenantId, { email: 'admin@imsshop.com', password: 'password123', name: 'System Admin' });
+        await this.ac.useCases.assignRole.execute(this.tenantId, { userId: this.adminUser.id, roleIds: [rAdmin.id] });
+
+        // Manager
+        const manager = await this.ac.useCases.registerUser.execute(this.tenantId, { email: 'manager@imsshop.com', password: 'password123', name: 'Store Manager' });
+        await this.ac.useCases.assignRole.execute(this.tenantId, { userId: manager.id, roleIds: [rManager.id] });
+
+        // Customers
+        const firstNames = ['James', 'Mary', 'Robert', 'Patricia', 'John', 'Jennifer', 'Michael', 'Linda', 'David', 'Elizabeth', 'William', 'Barbara', 'Richard', 'Susan', 'Joseph', 'Jessica'];
+        const lastNames = ['Smith', 'Johnson', 'Williams', 'Brown', 'Jones', 'Garcia', 'Miller', 'Davis', 'Rodriguez', 'Martinez'];
+
+        for (let i = 0; i < 50; i++) {
+            const fn = randomElement(firstNames);
+            const ln = randomElement(lastNames);
+            const name = `${fn} ${ln}`;
+            const email = `${fn.toLowerCase()}.${ln.toLowerCase()}${randomInt(1,999)}@example.com`;
+
+            try {
+                const u = await this.ac.useCases.registerUser.execute(this.tenantId, { email, password: 'password123', name });
+                await this.ac.useCases.assignRole.execute(this.tenantId, { userId: u.id, roleIds: [rCustomer.id] });
+                this.users.push(u);
+            } catch(e) { /* ignore dupes */ }
+        }
+        log(`   Created ${this.users.length + 2} users.`);
+    }
+
+    async seedInventoryStructure() {
+        log('🏭 Seeding Warehouses...');
+        const wh1 = await this.inv.useCases.createWarehouse.execute(this.tenantId, { name: 'Central Assembly Hub', code: 'WH-MAIN' });
+        const wh2 = await this.inv.useCases.createWarehouse.execute(this.tenantId, { name: 'Regional Components Depot', code: 'WH-EAST' });
+        this.warehouses.push(wh1, wh2);
+
+        // Locations
+        const createLocs = async (wh) => {
+            const zone = await this.inv.useCases.createLocation.execute(this.tenantId, { warehouseId: wh.id, code: 'Z1', type: 'ZONE' });
+            for(let i=1; i<=5; i++) {
+                const aisle = await this.inv.useCases.createLocation.execute(this.tenantId, { warehouseId: wh.id, parentId: zone.id, code: `A${i}`, type: 'AISLE' });
+                this.locations.push(aisle.id);
+            }
+        };
+
+        await createLocs(wh1);
+        await createLocs(wh2);
+    }
+
+    async seedCatalog() {
+        log('📦 Seeding Catalog...');
+        const categoryMap = {}; // name -> id
+
+        for (const [catName, subs] of Object.entries(CATEGORIES)) {
+            const c = await this.cat.useCases.createCategory.execute(this.tenantId, { name: catName, description: `All ${catName}` });
+            categoryMap[catName] = c.id;
+
+            for (const sub of subs) {
+                // Just create products directly mapped to parent category for simplicity in logic, or create sub-cats
+                // Let's create sub-cats
+                await this.cat.useCases.createCategory.execute(this.tenantId, { name: sub, parentId: c.id });
+            }
+        }
+
+        // Generate Products
+        let count = 0;
+        const targetPerCategory = Math.ceil(TARGET_PRODUCTS / Object.keys(CATEGORIES).length);
+
+        for (const [catName, subs] of Object.entries(CATEGORIES)) {
+            for (let i=0; i < targetPerCategory; i++) {
+                const sub = randomElement(subs);
+                const data = generateProductData(catName, sub);
+                // Ensure unique SKU
+                data.sku = `${data.sku}-${randomInt(1000,9999)}`;
+                data.category = catName;
+
+                try {
+                    const p = await this.cat.useCases.createProduct.execute(this.tenantId, data);
+                    this.products.push(p);
+                    count++;
+                } catch(e) {}
+            }
+            process.stdout.write('.');
+        }
+        console.log('');
+        log(`   Created ${this.products.length} products.`);
+    }
+
+    async seedSuppliers() {
+        log('🚚 Seeding Suppliers...');
+        const names = ['TechSupply Global', 'Component Direct', 'Shenzhen Electronics', 'US Chipworks', 'MegaParts Ltd'];
+        for (const name of names) {
+            const s = await this.proc.useCases.createSupplier.execute(this.tenantId, { name, code: name.substring(0,4).toUpperCase(), email: 'orders@test.com' });
+            this.suppliers.push(s);
         }
     }
 
-    // Create PO
-    if (suppliers.length > 0 && rawMaterials.length > 0) {
-        try {
-            const po = await procurement.useCases.createPurchaseOrder.execute(tenantId, {
-                supplierId: suppliers[0].id,
-                items: [
-                    { productId: rawMaterials[0].id, quantity: 100, unitCost: 45.00 }, // Bulk discount
-                    { productId: rawMaterials[2].id, quantity: 1000, unitCost: 0.08 }
-                ],
-                expectedDate: new Date(Date.now() + 86400000 * 7).toISOString()
-            });
-            console.log(`   ✅ PO created: ${po.code}`);
+    async simulateHistory() {
+        log(`📅 Simulating History (${HISTORY_DAYS} days)...`);
 
-            // Receive it partially
-            const defaultLoc = createdLocations[0];
-            if(defaultLoc) {
-               await procurement.useCases.receivePurchaseOrder.execute(tenantId, po.id, {
-                   locationId: defaultLoc,
-                   items: [{ productId: rawMaterials[0].id, quantity: 50 }]
-               });
-               console.log(`   ✅ PO Received (Partial)`);
+        // Initial Stock (Day 0)
+        log('   Receiving initial stock...');
+        const initialDate = new Date(START_DATE);
+
+        // 80% of products get stock initially
+        for (const p of this.products) {
+            if (Math.random() > 0.2) {
+                const loc = randomElement(this.locations);
+                const qty = randomInt(50, 500);
+                await this.inv.useCases.receiveStock.execute(this.tenantId, {
+                    productId: p.id,
+                    locationId: loc,
+                    quantity: qty,
+                    reason: 'Opening Balance',
+                    userId: this.adminUser.id,
+                    date: initialDate.toISOString()
+                });
             }
-        } catch(e) { console.error('PO Error:', e); }
+        }
+
+        // Daily Loop
+        let currentDate = new Date(START_DATE);
+        const endDate = new Date();
+        const totalDays = HISTORY_DAYS;
+        let dayCount = 0;
+
+        // Curve for orders: Starts low, grows quadratic
+        const getDailyOrderCount = (day) => {
+             const progress = day / totalDays;
+             const base = (TARGET_ORDERS / totalDays) * 2 * progress; // Linear growth approximation
+             return Math.max(1, Math.floor(base * (0.5 + Math.random())));
+        };
+
+        while (currentDate <= endDate) {
+            const isoDate = currentDate.toISOString();
+            dayCount++;
+
+            // 1. Restock (Randomly)
+            if (Math.random() > 0.7) {
+                const p = randomElement(this.products);
+                const loc = randomElement(this.locations);
+                await this.inv.useCases.receiveStock.execute(this.tenantId, {
+                    productId: p.id, locationId: loc, quantity: randomInt(20, 100),
+                    reason: 'Restock', userId: this.adminUser.id, date: isoDate
+                });
+            }
+
+            // 2. Adjustments / Movements (Daily Ops)
+            if (Math.random() > 0.8) {
+                 // Move
+                 const p = randomElement(this.products);
+                 const from = randomElement(this.locations);
+                 const to = randomElement(this.locations);
+                 if (from !== to) {
+                     try {
+                        await this.inv.useCases.moveStock.execute(this.tenantId, {
+                            productId: p.id, fromLocationId: from, toLocationId: to, quantity: randomInt(1, 10),
+                            userId: this.adminUser.id, date: isoDate
+                        });
+                     } catch(e) {}
+                 }
+            }
+
+            // 3. Create Orders
+            const dailyOrders = getDailyOrderCount(dayCount);
+            for (let i=0; i<dailyOrders; i++) {
+                if (this.users.length === 0) break;
+                const buyer = randomElement(this.users);
+
+                // Build Cart
+                const itemCount = randomInt(1, 5);
+                const items = [];
+                for(let k=0; k<itemCount; k++) {
+                    const p = randomElement(this.products);
+                    items.push({ productId: p.id, quantity: randomInt(1, 3) });
+                }
+
+                try {
+                    // Create Order
+                    const order = await this.ord.useCases.createOrder.execute(this.tenantId, buyer.id, items, isoDate);
+
+                    // Decide Lifecycle based on how old the order is
+                    const ageDays = (endDate - currentDate) / (1000 * 60 * 60 * 24);
+
+                    if (ageDays > 30) {
+                        // Old orders: Mostly Delivered (90%), Cancelled (5%), Shipped (5%) ?? No, shipped implies not delivered yet?
+                        // Let's say 95% Delivered.
+                        await this.fulfillOrder(order, currentDate, 'DELIVERED');
+                    } else if (ageDays > 5) {
+                        // Recent past: Mostly Shipped or Delivered
+                        await this.fulfillOrder(order, currentDate, Math.random() > 0.5 ? 'DELIVERED' : 'SHIPPED');
+                    } else {
+                        // Very recent: Created, maybe Shipped
+                        if (Math.random() > 0.5) {
+                            await this.fulfillOrder(order, currentDate, 'SHIPPED');
+                        }
+                    }
+
+                } catch(e) {
+                    // Stockout likely, ignore
+                }
+            }
+
+            if (dayCount % 10 === 0) process.stdout.write(`Day ${dayCount}/${totalDays} `);
+
+            currentDate.setDate(currentDate.getDate() + 1);
+        }
+        console.log('');
     }
 
-    // Manufacturing
-    // Finished Good
-    let tableProduct;
-    try {
-        tableProduct = await catalog.useCases.createProduct.execute(tenantId, {
-            name: 'Industrial Work Table',
-            sku: 'FG-TABLE-01',
-            price: 150.00,
-            type: 'SIMPLE', // Or should be manufactured type? standard Simple works for now
-            category: 'Furniture'
-        });
-    } catch(e) {
-        const all = await catalog.useCases.listProducts.execute(tenantId, 1, 100);
-        tableProduct = all.find(x => x.sku === 'FG-TABLE-01');
+    async fulfillOrder(order, orderDate, targetStatus) {
+        // Delay for shipment
+        const shipDate = new Date(orderDate);
+        shipDate.setHours(shipDate.getHours() + randomInt(4, 48));
+
+        if (targetStatus === 'CANCELLED') {
+             // Not implemented in simple logic yet without dedicated use case exposing state change
+             // But we can just leave it if we want.
+             return;
+        }
+
+        if (targetStatus === 'SHIPPED' || targetStatus === 'DELIVERED') {
+            try {
+                const shipment = await this.ord.useCases.createShipment.execute(this.tenantId, {
+                    orderId: order.id,
+                    items: order.items, // Full ship
+                    carrier: randomElement(['UPS', 'FedEx', 'DHL']),
+                    trackingNumber: `1Z${randomInt(10000000,99999999)}`,
+                }, shipDate.toISOString());
+
+                if (targetStatus === 'DELIVERED') {
+                    // Manually update order status to DELIVERED as we don't have a "deliver" use case usually
+                    // or we check if there's one. The 'createShipment' sets it to SHIPPED.
+                    // We will hack the repo to set it to DELIVERED for realism.
+                    const repo = this.ord.repositories.order;
+                    const o = await repo.findById(this.tenantId, order.id);
+                    o.status = 'DELIVERED';
+                    // o.deliveredAt = ...
+                    await repo.save(this.tenantId, o);
+                }
+            } catch(e) {
+                // console.log('Ship fail', e.message);
+            }
+        }
     }
+}
 
-    if (tableProduct && rawMaterials.length >= 3) {
-        try {
-            // BOM: 1 Table = 1 Steel Sheet + 2 Wood Planks + 10 Screws
-            const bom = await manufacturing.useCases.createBOM.execute(tenantId, {
-                name: 'Standard Table BOM',
-                productId: tableProduct.id,
-                laborCost: 25.00,
-                components: [
-                    { productId: rawMaterials[0].id, quantity: 1 },
-                    { productId: rawMaterials[1].id, quantity: 2 },
-                    { productId: rawMaterials[2].id, quantity: 10 }
-                ]
-            });
-            console.log(`   ✅ BOM created for ${tableProduct.name}`);
+async function bootstrap() {
+    const environment = Deno.env.get('ENVIRONMENT') || 'local';
 
-            // Work Order
-            const wo = await manufacturing.useCases.createWorkOrder.execute(tenantId, {
-                bomId: bom.id,
-                quantity: 5,
-                startDate: new Date().toISOString()
-            });
-            console.log(`   ✅ Work Order created: ${wo.code}`);
-        } catch(e) { console.error('Manufacturing Seed Error:', e); }
-    }
+    console.log(`🌱 Seeding TENANT: ${TENANT_ID} | TARGET: ${TARGET_PRODUCTS} prods, ${TARGET_ORDERS} orders`);
 
-  console.log('🎉 Seeding complete!');
-  Deno.exit(0);
+    const config = await createConfigService(environment);
+    const ctx = createContextRegistry();
+
+    // Register contexts
+    ctx
+        .registerInfra('persistence', createPersistenceContext, [])
+        .registerInfra('obs', createObsContext, ['infra.persistence'])
+        .registerInfra('messaging', createMessagingContext, ['infra.persistence'])
+        .registerInfra('security', createSecurityContext, [])
+        .registerInfra('realtime', createRealtimeContext, ['infra.messaging'])
+        .registerDomain('accessControl', createAccessControlContext, ['infra.persistence', 'infra.obs', 'infra.security'])
+        .registerDomain('inventory', createInventoryContext, ['infra.persistence', 'infra.obs', 'infra.messaging', 'domain.accessControl'])
+        .registerDomain('orders', createOrdersContext, ['infra.persistence', 'infra.obs', 'infra.messaging', 'domain.inventory', 'domain.accessControl'])
+        .registerDomain('catalog', createCatalogContext, ['infra.persistence', 'infra.obs', 'domain.inventory'])
+        .registerDomain('procurement', createProcurementContext, ['infra.persistence', 'domain.inventory'])
+        .registerDomain('manufacturing', createManufacturingContext, ['infra.persistence', 'domain.inventory']);
+
+    await ctx.initialize(config);
+
+    const seeder = new Seeder(ctx, TENANT_ID);
+
+    await seeder.clean();
+    await seeder.seedRolesAndUsers();
+    await seeder.seedInventoryStructure();
+    await seeder.seedSuppliers();
+    await seeder.seedCatalog();
+    await seeder.simulateHistory();
+
+    log('🎉 Seeding Complete!');
+    Deno.exit(0);
 }
 
 if (import.meta.main) {
-  bootstrap().catch(e => {
-      console.error(e);
-      Deno.exit(1);
-  });
+    bootstrap().catch(e => {
+        console.error(e);
+        Deno.exit(1);
+    });
 }
