@@ -8,7 +8,8 @@ export const UsersPage = (props) => {
   return (
     <div>
       <div class="page-header">
-        <h1>Users & Roles</h1>
+        <h1>Users</h1>
+        {/* Users usually created via auth, no create button needed unless Invitation system */}
       </div>
 
       <div class="card p-0">
@@ -16,15 +17,17 @@ export const UsersPage = (props) => {
             <table>
                 <thead>
                     <tr>
+                        <th>ID</th>
                         <th>Name</th>
                         <th>Email</th>
                         <th>Roles</th>
-                        <th class="text-right">Actions</th>
+                        <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody>
                     {users.map(user => (
                         <tr key={user.id}>
+                            <td class="font-mono text-sm">{user.id.slice(0, 8)}...</td>
                             <td>{user.name}</td>
                             <td>{user.email}</td>
                             <td>
@@ -35,7 +38,8 @@ export const UsersPage = (props) => {
                                     })
                                 ) : <span class="text-muted">No roles</span>}
                             </td>
-                            <td class="text-right">
+                            <td>
+                                <a href={`/admin/users/${user.id}`} class="btn btn-sm btn-secondary" style="margin-right: 0.25rem;">View</a>
                                 <button
                                   class="btn btn-sm btn-secondary open-role-modal"
                                   data-user-id={user.id}

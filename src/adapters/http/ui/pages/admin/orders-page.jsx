@@ -13,7 +13,7 @@ export const OrdersPage = ({ user, orders, nextCursor, currentUrl }) => {
             <table>
                 <thead>
                 <tr>
-                    <th>Order ID</th>
+                    <th>ID</th>
                     <th>Date</th>
                     <th>Customer</th>
                     <th>Status</th>
@@ -24,7 +24,7 @@ export const OrdersPage = ({ user, orders, nextCursor, currentUrl }) => {
                 <tbody>
                 {orders.map(order => (
                     <tr>
-                    <td>#{order.id.slice(0, 8)}</td>
+                    <td class="font-mono text-sm">{order.id.slice(0, 8)}...</td>
                     <td>{new Date(order.createdAt).toLocaleDateString()}</td>
                     <td>{order.userId}</td>
                     <td>

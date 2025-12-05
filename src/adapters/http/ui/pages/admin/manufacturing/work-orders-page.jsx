@@ -3,9 +3,9 @@ import { h } from 'preact';
 export const WorkOrdersPage = ({ user, workOrders }) => {
   return (
     <div class="work-orders-page">
-      <div class="header-actions">
+      <div class="page-header">
         <h1>Work Orders</h1>
-        <button class="btn-primary" onclick="window.location.href='/admin/work-orders/new'">Create WO</button>
+        <a href="/admin/work-orders/new" class="btn btn-primary">Create WO</a>
       </div>
 
       <div class="card p-0">
@@ -13,6 +13,7 @@ export const WorkOrdersPage = ({ user, workOrders }) => {
           <table>
             <thead>
               <tr>
+                <th>ID</th>
                 <th>Code</th>
                 <th>Status</th>
                 <th>Product (BOM)</th>
@@ -23,21 +24,23 @@ export const WorkOrdersPage = ({ user, workOrders }) => {
             <tbody>
               {workOrders.map(wo => (
                 <tr>
+                  <td class="font-mono text-sm">{wo.id.slice(0, 8)}...</td>
                   <td><a href={`/admin/work-orders/${wo.id}`}>{wo.code}</a></td>
                   <td><span class={`badge badge-${wo.status.toLowerCase()}`}>{wo.status}</span></td>
                   <td>{wo.productName || 'Unknown'}</td>
                   <td>{wo.quantity}</td>
                   <td>
+                    <a href={`/admin/work-orders/${wo.id}`} class="btn btn-sm btn-secondary" style="margin-right: 0.25rem;">View</a>
                     {['PLANNED', 'IN_PROGRESS'].includes(wo.status) && (
                         <form method="POST" action={`/admin/work-orders/${wo.id}/complete`} style="display:inline">
-                           <button class="btn-sm btn-primary">Complete</button>
+                           <button class="btn btn-sm btn-primary">Complete</button>
                          </form>
                     )}
                   </td>
                 </tr>
               ))}
               {workOrders.length === 0 && (
-                <tr><td colspan="5" class="text-center">No work orders found</td></tr>
+                <tr><td colspan="6" class="text-center">No work orders found</td></tr>
               )}
             </tbody>
           </table>

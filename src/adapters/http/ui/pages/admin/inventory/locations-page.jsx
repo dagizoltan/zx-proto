@@ -5,7 +5,7 @@ export const LocationsPage = ({ locations = [], warehouses = [] }) => {
     <div>
       <div class="page-header">
         <h1>Locations</h1>
-        <button class="btn btn-primary" id="btn-create-location">Add Location</button>
+        <a href="/admin/locations/new" class="btn btn-primary">Add Location</a>
       </div>
 
       <div class="card p-0">
@@ -13,6 +13,7 @@ export const LocationsPage = ({ locations = [], warehouses = [] }) => {
             <table>
                 <thead>
                     <tr>
+                        <th>ID</th>
                         <th>Code</th>
                         <th>Type</th>
                         <th>Warehouse</th>
@@ -26,18 +27,19 @@ export const LocationsPage = ({ locations = [], warehouses = [] }) => {
                         const parent = locations.find(p => p.id === l.parentId);
                         return (
                             <tr key={l.id}>
+                                <td class="font-mono text-sm">{l.id.slice(0, 8)}...</td>
                                 <td class="font-mono">{l.code}</td>
                                 <td><span class="badge badge-neutral">{l.type}</span></td>
                                 <td>{wh ? wh.name : l.warehouseId}</td>
                                 <td class="text-muted">{parent ? parent.code : '-'}</td>
                                 <td>
-                                    <button class="btn btn-sm btn-secondary">Edit</button>
+                                    <a href={`/admin/locations/${l.id}`} class="btn btn-sm btn-secondary">View</a>
                                 </td>
                             </tr>
                         );
                     })}
                     {locations.length === 0 && (
-                        <tr><td colspan="5" class="text-center text-muted">No locations found.</td></tr>
+                        <tr><td colspan="6" class="text-center text-muted">No locations found.</td></tr>
                     )}
                 </tbody>
             </table>

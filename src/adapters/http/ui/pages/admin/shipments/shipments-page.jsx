@@ -13,6 +13,7 @@ export const ShipmentsPage = ({ user, shipments, nextCursor, currentUrl }) => {
           <table class="table">
             <thead>
               <tr>
+                <th>ID</th>
                 <th>Code</th>
                 <th>Order ID</th>
                 <th>Carrier</th>
@@ -26,6 +27,7 @@ export const ShipmentsPage = ({ user, shipments, nextCursor, currentUrl }) => {
               {shipments.length > 0 ? (
                 shipments.map(s => (
                   <tr>
+                    <td class="font-mono text-sm">{s.id.slice(0, 8)}...</td>
                     <td class="font-mono">{s.code}</td>
                     <td><a href={`/admin/orders/${s.orderId}`}>#{s.orderId.substring(0, 8)}...</a></td>
                     <td>{s.carrier || '-'}</td>
@@ -39,7 +41,7 @@ export const ShipmentsPage = ({ user, shipments, nextCursor, currentUrl }) => {
                 ))
               ) : (
                 <tr>
-                  <td colspan="7" class="text-center py-4 text-muted">No shipments found.</td>
+                  <td colspan="8" class="text-center py-4 text-muted">No shipments found.</td>
                 </tr>
               )}
             </tbody>

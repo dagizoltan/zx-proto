@@ -12,24 +12,26 @@ export const CustomersPage = ({ customers = [] }) => {
             <table>
                 <thead>
                     <tr>
+                        <th>ID</th>
                         <th>Name</th>
                         <th>Email</th>
                         <th>Joined</th>
-                        <th class="text-right">Actions</th>
+                        <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody>
                     {customers.map(c => (
                         <tr key={c.id}>
+                            <td class="font-mono text-sm">{c.id.slice(0, 8)}...</td>
                             <td class="font-medium">{c.name}</td>
                             <td class="text-muted">{c.email}</td>
                             <td class="text-muted text-sm">{new Date(c.createdAt).toLocaleDateString()}</td>
-                            <td class="text-right">
+                            <td>
                                 <a href={`/admin/customers/${c.id}`} class="btn btn-sm btn-secondary">View Profile</a>
                             </td>
                         </tr>
                     ))}
-                    {customers.length === 0 && <tr><td colspan="4" class="text-center text-muted">No customers found</td></tr>}
+                    {customers.length === 0 && <tr><td colspan="5" class="text-center text-muted">No customers found</td></tr>}
                 </tbody>
             </table>
         </div>
