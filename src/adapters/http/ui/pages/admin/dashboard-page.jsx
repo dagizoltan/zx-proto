@@ -15,7 +15,7 @@ export const DashboardPage = ({ user, stats, orders }) => {
         </div>
         <div class="stat-card">
           <h3>Total Revenue</h3>
-          <div class="stat-value">${stats.revenue.toFixed(2)}</div>
+          <div class="stat-value">${stats.revenue}</div>
         </div>
         <div class="stat-card">
           <h3>Active Products</h3>
