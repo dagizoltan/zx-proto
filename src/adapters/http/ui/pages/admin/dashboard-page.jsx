@@ -15,7 +15,7 @@ export const DashboardPage = ({ user, stats, orders }) => {
         </div>
         <div class="stat-card">
           <h3>Total Revenue</h3>
-          <div class="stat-value">${stats.revenue.toFixed(2)}</div>
+          <div class="stat-value">${(stats.revenue || 0).toFixed(2)}</div>
         </div>
         <div class="stat-card">
           <h3>Active Products</h3>
@@ -34,7 +34,7 @@ export const DashboardPage = ({ user, stats, orders }) => {
             <table>
               <thead>
                 <tr>
-                  <th>Order ID</th>
+                  <th>ID</th>
                   <th>Date</th>
                   <th>Status</th>
                   <th>Total</th>
@@ -44,7 +44,7 @@ export const DashboardPage = ({ user, stats, orders }) => {
               <tbody>
                 {orders.map(order => (
                   <tr>
-                    <td>#{order.id.slice(0, 8)}</td>
+                    <td class="font-mono text-sm">{order.id.slice(0, 8)}...</td>
                     <td>{new Date(order.createdAt).toLocaleDateString()}</td>
                     <td>
                       <span class={`status-badge ${order.status}`}>{order.status}</span>
