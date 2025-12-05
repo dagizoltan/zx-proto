@@ -2,69 +2,70 @@ import { h } from 'preact';
 
 export const PickListPage = ({ user, order, pickItems }) => {
   return (
-    <div class="pick-list-page print-layout">
-      <div class="header">
-        <h1>Pick List</h1>
-        <div class="meta">
-            <p><strong>Order:</strong> #{order.id}</p>
-            <p><strong>Date:</strong> {new Date().toLocaleDateString()}</p>
+    <div class="pick-list-page">
+      <div class="page-header">
+        <div class="flex items-center gap-4">
+            <h1>Pick List #{order.id}</h1>
+            <span class="badge badge-neutral text-base font-normal">Date: {new Date().toLocaleDateString()}</span>
+        </div>
+        <div class="flex gap-2 no-print">
+            <button onclick="window.print()" class="btn btn-primary">Print Pick List</button>
+            <a href={`/admin/orders/${order.id}`} class="btn btn-secondary">Back to Order</a>
         </div>
       </div>
 
-      <div class="instructions">
-        <p>Please pick the following items in the order listed.</p>
+      <div class="card mb-6">
+        <h3>Instructions</h3>
+        <p class="m-0">Please pick the following items in the order listed.</p>
       </div>
 
-      <div class="table-container">
-        <table class="table-compact">
-          <thead>
-            <tr>
-              <th>Location</th>
-              <th>Product</th>
-              <th>SKU</th>
-              <th>Batch</th>
-              <th>Qty</th>
-              <th>Check</th>
-            </tr>
-          </thead>
-          <tbody>
-            {pickItems.map(item => (
-              <tr>
-                <td class="font-mono font-bold">{item.locationCode}</td>
-                <td>{item.productName}</td>
-                <td>{item.sku}</td>
-                <td>
-                    {item.batchNumber && (
-                        <div>
-                            <span class="text-sm">{item.batchNumber}</span>
-                            {item.expiryDate && <div class="text-xs text-muted">Exp: {new Date(item.expiryDate).toLocaleDateString()}</div>}
-                        </div>
-                    )}
-                </td>
-                <td class="text-lg font-bold">{item.quantity}</td>
-                <td><div class="checkbox-box"></div></td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      <div class="card p-0">
+        <div class="table-container">
+            <table>
+            <thead>
+                <tr>
+                <th>Location</th>
+                <th>Product</th>
+                <th>SKU</th>
+                <th>Batch</th>
+                <th>Qty</th>
+                <th>Check</th>
+                </tr>
+            </thead>
+            <tbody>
+                {pickItems.map(item => (
+                <tr>
+                    <td class="font-mono font-bold">{item.locationCode}</td>
+                    <td>{item.productName}</td>
+                    <td>{item.sku}</td>
+                    <td>
+                        {item.batchNumber && (
+                            <div>
+                                <span class="text-sm">{item.batchNumber}</span>
+                                {item.expiryDate && <div class="text-xs text-muted">Exp: {new Date(item.expiryDate).toLocaleDateString()}</div>}
+                            </div>
+                        )}
+                    </td>
+                    <td class="text-lg font-bold">{item.quantity}</td>
+                    <td><div class="checkbox-box"></div></td>
+                </tr>
+                ))}
+            </tbody>
+            </table>
+        </div>
       </div>
 
       <style>{`
-        .print-layout { max-width: 800px; margin: 0 auto; padding: 2rem; background: white; color: black; }
-        .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #000; padding-bottom: 1rem; margin-bottom: 2rem; }
         .checkbox-box { width: 20px; height: 20px; border: 1px solid #000; }
-        .table-compact th, .table-compact td { padding: 0.5rem; border-bottom: 1px solid #ddd; text-align: left; }
         @media print {
-            body { background: white; }
-            .print-layout { width: 100%; max-width: none; padding: 0; }
-            .btn, .sidebar, .navbar { display: none !important; }
+            .admin-sidebar, .admin-header, .no-print { display: none !important; }
+            .admin-content { padding: 0 !important; margin: 0 !important; overflow: visible !important; }
+            .card { box-shadow: none !important; border: none !important; margin-bottom: 1rem !important; padding: 0 !important; }
+            .page-header { margin-bottom: 1rem !important; }
+            body { background-color: white !important; }
+            .pick-list-page { width: 100%; }
         }
       `}</style>
-
-      <div class="actions no-print mt-8">
-        <button onclick="window.print()" class="btn btn-primary">Print Pick List</button>
-        <a href={`/admin/orders/${order.id}`} class="btn btn-secondary ml-4">Back to Order</a>
-      </div>
     </div>
   );
 };
