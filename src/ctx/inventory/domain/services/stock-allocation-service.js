@@ -1,5 +1,15 @@
 // Service to handle complex allocation logic
-export const createStockAllocationService = (stockRepository, stockMovementRepository, batchRepository) => {
+export const createStockAllocationService = (stockRepository, stockMovementRepository, batchRepository, productRepository) => {
+
+  const _updateProductTotal = async (tenantId, productId) => {
+    if (!productRepository) return;
+    const entries = await stockRepository.getEntriesForProduct(tenantId, productId);
+    const total = entries.reduce((sum, e) => sum + e.quantity, 0);
+    const product = await productRepository.findById(tenantId, productId);
+    if (product) {
+        await productRepository.save(tenantId, { ...product, quantity: total });
+    }
+  };
 
   const allocate = async (tenantId, productId, amount, referenceId) => {
     // 1. Get all stock entries for product
@@ -40,8 +50,17 @@ export const createStockAllocationService = (stockRepository, stockMovementRepos
 
     let remaining = amount;
 
+    // Use a simpler approach for now: Serial reservation updates
+    // In a real high-concurrency scenario, this should be an atomic transaction block.
+    // For MVP, we at least ensure check happened.
+
     for (const entry of enrichedEntries) {
         if (remaining <= 0) break;
+
+        // Re-check logic here is hard without transaction, assuming Optimistic Locking or Single Threaded Deno (mostly)
+        // Deno is single threaded JS, so no preemptive race condition within synchronous blocks,
+        // BUT async await yields. So between "getEntries" and "save", another request could intervene.
+        // We'll trust the caller to handle higher level locking or accept the risk for MVP.
 
         const available = entry.quantity - entry.reservedQuantity;
         const take = Math.min(available, remaining);
@@ -54,6 +73,7 @@ export const createStockAllocationService = (stockRepository, stockMovementRepos
         const { batch, ...cleanEntry } = updated;
 
         await stockRepository.save(tenantId, cleanEntry);
+        // Note: allocations do not change total quantity, only reserved. So no need to updateProductTotal.
 
         // Record movement (soft allocation)
         await stockMovementRepository.save(tenantId, {
@@ -70,6 +90,28 @@ export const createStockAllocationService = (stockRepository, stockMovementRepos
         });
 
         remaining -= take;
+    }
+  };
+
+  // NEW: Bulk allocation wrapper to reduce race conditions
+  const allocateBatch = async (tenantId, items, referenceId) => {
+    // Items: [{ productId, quantity }]
+    // Phase 1: Check ALL availability first (Read Phase)
+    for (const item of items) {
+        const entries = await stockRepository.getEntriesForProduct(tenantId, item.productId);
+        const available = entries.reduce((sum, e) => sum + (e.quantity - e.reservedQuantity), 0);
+        if (available < item.quantity) {
+             throw new Error(`Insufficient stock for product ${item.productId}. Required: ${item.quantity}, Available: ${available}`);
+        }
+    }
+
+    // Phase 2: Reserve (Write Phase)
+    // We execute reserves sequentially. If one fails (rare after check), we are in trouble (partial order).
+    // Ideal: Rollback mechanism.
+    // MVP: Proceed. The window for race condition is now minimized to the time between Phase 1 and Phase 2.
+
+    for (const item of items) {
+        await allocate(tenantId, item.productId, item.quantity, referenceId);
     }
   };
 
@@ -99,6 +141,7 @@ export const createStockAllocationService = (stockRepository, stockMovementRepos
 
     // 2. Determine what to ship
     const toShip = []; // List of { key, quantity }
+    const affectedProducts = new Set();
 
     if (!itemsToShip) {
         // Ship ALL remaining
@@ -162,6 +205,7 @@ export const createStockAllocationService = (stockRepository, stockMovementRepos
         };
 
         await stockRepository.save(tenantId, updated);
+        affectedProducts.add(productId);
 
         // Record 'shipped' movement
         await stockMovementRepository.save(tenantId, {
@@ -175,6 +219,11 @@ export const createStockAllocationService = (stockRepository, stockMovementRepos
             batchId: normalizedBatchId,
             timestamp: new Date().toISOString()
         });
+    }
+
+    // Update product totals
+    for (const pid of affectedProducts) {
+        await _updateProductTotal(tenantId, pid);
     }
   };
 
@@ -216,6 +265,7 @@ export const createStockAllocationService = (stockRepository, stockMovementRepos
             };
 
             await stockRepository.save(tenantId, updated);
+            // Release does not change total stock, only reserved. No need to updateProductTotal.
 
             await stockMovementRepository.save(tenantId, {
                 id: crypto.randomUUID(),
@@ -232,5 +282,5 @@ export const createStockAllocationService = (stockRepository, stockMovementRepos
     }
   };
 
-  return { allocate, commit, release };
+  return { allocate, commit, release, allocateBatch };
 };

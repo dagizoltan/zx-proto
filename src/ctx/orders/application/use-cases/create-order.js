@@ -9,56 +9,64 @@ export const createCreateOrder = ({ orderRepository, obs, registry, eventBus }) 
     // Access other domains through registry
     const inventory = registry.get('domain.inventory');
 
-    // Check stock availability for all items
-    for (const item of items) {
-      const available = await inventory.useCases.checkAvailability.execute(
-        tenantId,
-        item.productId,
-        item.quantity
-      );
+    // Optimization: Bulk Fetch Products (Not fully implemented in catalog yet, but we can parallelize)
+    // We still need prices to calculate total.
 
-      if (!available) {
-        throw new Error(`Insufficient stock for product ${item.productId}`);
-      }
-    }
-
-    // Fetch prices to ensure valid total (security)
+    // 1. Prepare Enriched Items (Price Lookup)
     let calculatedTotal = 0;
     const enrichedItems = [];
+    const stockReservationRequest = [];
 
-    for (const item of items) {
-        const product = await inventory.useCases.getProduct.execute(tenantId, item.productId);
-        if (!product) throw new Error(`Product ${item.productId} not found`);
+    // Use Promise.all for fetching products (reduce N+1 latency)
+    const products = await Promise.all(items.map(async item => {
+        const p = await inventory.useCases.getProduct.execute(tenantId, item.productId);
+        if (!p) throw new Error(`Product ${item.productId} not found`);
+        return { ...p, requestedQty: item.quantity };
+    }));
 
-        const itemTotal = product.price * item.quantity;
+    for (const product of products) {
+        const itemTotal = product.price * product.requestedQty;
         calculatedTotal += itemTotal;
         enrichedItems.push({
-            productId: item.productId,
-            quantity: item.quantity,
+            productId: product.id,
+            quantity: product.requestedQty,
             price: product.price,
             name: product.name
         });
+        stockReservationRequest.push({
+            productId: product.id,
+            quantity: product.requestedQty
+        });
     }
 
-    // Create order
+    // 2. Create Order (Pending Stock Confirmation)
+    // We create the ID here to pass to reservation
+    const orderId = crypto.randomUUID();
     const order = createOrder({
-      id: crypto.randomUUID(),
+      id: orderId,
       userId,
       items: enrichedItems,
       total: calculatedTotal,
     });
 
-    await orderRepository.save(tenantId, order);
+    // 3. Batch Reserve Stock (Atomic-ish Check + Reserve)
+    // This replaces the separate checkAvailability loop + separate reserve loop.
+    // The `allocateBatch` method in inventory will do Check + Reserve in one go.
 
-    // Reserve stock
-    for (const item of enrichedItems) {
-      await inventory.useCases.reserveStock.execute(
-        tenantId,
-        item.productId,
-        item.quantity,
-        order.id
-      );
+    try {
+        await inventory.useCases.reserveStock.executeBatch(
+            tenantId,
+            stockReservationRequest,
+            order.id
+        );
+    } catch (e) {
+        // Map inventory error to user friendly error
+        throw new Error(`Order creation failed: ${e.message}`);
     }
+
+    // 4. Save Order
+    // Only save if stock reservation succeeded
+    await orderRepository.save(tenantId, order);
 
     // Publish event
     if (eventBus) {
