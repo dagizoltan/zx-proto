@@ -17,7 +17,7 @@ export const CatalogPage = ({ user, products, nextCursor, currentUrl, query = ''
                 />
                 <button type="submit" class="btn btn-secondary">Search</button>
             </form>
-            <a href="/admin/products/new" class="btn btn-primary">Add Product</a>
+            <a href="/admin/catalog/products/new" class="btn btn-primary">Add Product</a>
         </div>
       </div>
 
@@ -53,7 +53,7 @@ export const CatalogPage = ({ user, products, nextCursor, currentUrl, query = ''
                                 </span>
                             </td>
                             <td>
-                                <a href={`/admin/products/${product.id}`} class="btn btn-sm btn-secondary">View</a>
+                                <a href={`/admin/catalog/products/${product.id}`} class="btn btn-sm btn-secondary">View</a>
                             </td>
                         </tr>
                     ))}

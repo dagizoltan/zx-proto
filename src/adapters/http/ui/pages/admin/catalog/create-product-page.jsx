@@ -13,7 +13,7 @@ export const CreateProductPage = ({ user, categories, priceLists, error, values 
                 {error}
             </div>
         )}
-        <form method="POST" action="/admin/products">
+        <form method="POST" action="/admin/catalog/products">
             <div class="form-group mb-4">
                 <label>Name</label>
                 <input type="text" name="name" required placeholder="Product Name" value={values.name} />

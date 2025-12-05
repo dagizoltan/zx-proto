@@ -8,7 +8,7 @@ export const CreatePriceListPage = ({ user }) => {
       </div>
 
       <div class="card">
-        <form method="POST" action="/admin/price-lists">
+        <form method="POST" action="/admin/catalog/price-lists">
             <div class="form-group mb-4">
                 <label>Name</label>
                 <input type="text" name="name" required placeholder="e.g., VIP Customers" />
@@ -25,7 +25,7 @@ export const CreatePriceListPage = ({ user }) => {
             </div>
 
             <div class="flex justify-end gap-2">
-                <a href="/admin/price-lists" class="btn btn-secondary">Cancel</a>
+                <a href="/admin/catalog/price-lists" class="btn btn-secondary">Cancel</a>
                 <button type="submit" class="btn btn-primary">Create Price List</button>
             </div>
         </form>

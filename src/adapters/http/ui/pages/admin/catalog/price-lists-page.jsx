@@ -5,7 +5,7 @@ export const PriceListsPage = ({ user, priceLists = [] }) => {
     <div class="price-lists-page">
       <div class="page-header">
         <h1>Price Lists</h1>
-        <a href="/admin/price-lists/new" class="btn btn-primary">Create Price List</a>
+        <a href="/admin/catalog/price-lists/new" class="btn btn-primary">Create Price List</a>
       </div>
 
       <div class="card p-0">
@@ -31,7 +31,7 @@ export const PriceListsPage = ({ user, priceLists = [] }) => {
                     <td>{Object.keys(pl.prices || {}).length}</td>
                     <td>{new Date(pl.createdAt).toLocaleDateString()}</td>
                     <td>
-                        <a href={`/admin/price-lists/${pl.id}`} class="btn btn-sm btn-secondary">View</a>
+                        <a href={`/admin/catalog/price-lists/${pl.id}`} class="btn btn-sm btn-secondary">View</a>
                     </td>
                   </tr>
                 ))

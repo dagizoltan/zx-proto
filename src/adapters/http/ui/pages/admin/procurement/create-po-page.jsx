@@ -51,11 +51,11 @@ export const CreatePurchaseOrderPage = ({ user, suppliers, products }) => {
     <div class="create-po-page">
       <div class="header-actions">
         <h1>New Purchase Order</h1>
-        <a href="/admin/purchase-orders" class="btn-secondary">Cancel</a>
+        <a href="/admin/procurement/purchase-orders" class="btn-secondary">Cancel</a>
       </div>
 
       <div class="card">
-        <form method="POST" action="/admin/purchase-orders">
+        <form method="POST" action="/admin/procurement/purchase-orders">
           <div class="form-row">
             <div class="form-group">
               <label>Supplier</label>

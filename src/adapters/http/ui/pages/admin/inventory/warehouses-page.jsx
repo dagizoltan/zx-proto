@@ -5,7 +5,7 @@ export const WarehousesPage = ({ warehouses = [] }) => {
     <div>
       <div class="page-header">
         <h1>Warehouses</h1>
-        <a href="/admin/warehouses/new" class="btn btn-primary">Add Warehouse</a>
+        <a href="/admin/inventory/warehouses/new" class="btn btn-primary">Add Warehouse</a>
       </div>
 
       <div class="card p-0">
@@ -28,7 +28,7 @@ export const WarehousesPage = ({ warehouses = [] }) => {
                             <td class="font-medium">{w.name}</td>
                             <td class="text-muted">{new Date(w.createdAt).toLocaleDateString()}</td>
                             <td>
-                                <a href={`/admin/warehouses/${w.id}`} class="btn btn-sm btn-secondary">View</a>
+                                <a href={`/admin/inventory/warehouses/${w.id}`} class="btn btn-sm btn-secondary">View</a>
                             </td>
                         </tr>
                     ))}

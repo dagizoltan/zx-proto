@@ -5,7 +5,7 @@ export const CreateWorkOrderPage = ({ user, boms, error, values = {} }) => {
     <div class="create-wo-page">
       <div class="header-actions">
         <h1>New Work Order</h1>
-        <a href="/admin/work-orders" class="btn-secondary">Cancel</a>
+        <a href="/admin/manufacturing/work-orders" class="btn-secondary">Cancel</a>
       </div>
 
       <div class="card">
@@ -14,7 +14,7 @@ export const CreateWorkOrderPage = ({ user, boms, error, values = {} }) => {
                 {error}
             </div>
         )}
-        <form method="POST" action="/admin/work-orders">
+        <form method="POST" action="/admin/manufacturing/work-orders">
           <div class="form-group">
             <label>Work Order Code</label>
             <input type="text" name="code" placeholder="Auto-generated if empty" value={values.code} />

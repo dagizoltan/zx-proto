@@ -5,7 +5,7 @@ export const CategoriesPage = ({ user, categories = [], nextCursor }) => {
     <div class="categories-page">
       <div class="page-header">
         <h1>Categories</h1>
-        <a href="/admin/categories/new" class="btn btn-primary">Add Category</a>
+        <a href="/admin/catalog/categories/new" class="btn btn-primary">Add Category</a>
       </div>
 
       <div class="card p-0">
@@ -31,7 +31,7 @@ export const CategoriesPage = ({ user, categories = [], nextCursor }) => {
                     <td><span class="badge badge-neutral">{cat.parentId || 'Root'}</span></td>
                     <td>{new Date(cat.createdAt).toLocaleDateString()}</td>
                     <td>
-                        <a href={`/admin/categories/${cat.id}`} class="btn btn-sm btn-secondary">View</a>
+                        <a href={`/admin/catalog/categories/${cat.id}`} class="btn btn-sm btn-secondary">View</a>
                     </td>
                   </tr>
                 ))

@@ -5,7 +5,7 @@ export const CompleteWorkOrderPage = ({ user, wo, locations }) => {
     <div class="complete-wo-page">
       <div class="header-actions">
         <h1>Complete Work Order: {wo.code}</h1>
-        <a href="/admin/work-orders" class="btn-secondary">Cancel</a>
+        <a href="/admin/manufacturing/work-orders" class="btn-secondary">Cancel</a>
       </div>
 
       <div class="card">
@@ -13,7 +13,7 @@ export const CompleteWorkOrderPage = ({ user, wo, locations }) => {
             Completing this work order will deduct raw materials and add finished goods to the selected location.
         </div>
 
-        <form method="POST" action={`/admin/work-orders/${wo.id}/complete`}>
+        <form method="POST" action={`/admin/manufacturing/work-orders/${wo.id}/complete`}>
 
           <div class="form-group">
              <label>Finished Good</label>
@@ -26,12 +26,21 @@ export const CompleteWorkOrderPage = ({ user, wo, locations }) => {
           </div>
 
           <div class="form-group">
-            <label>Output Location</label>
+            <label>Input Location (Raw Materials)</label>
+            <select name="inputLocationId">
+              <option value="">Same as Output Location (Default)</option>
+              {locations.map(l => <option value={l.id}>{l.code} ({l.type})</option>)}
+            </select>
+            <small>Where raw materials will be consumed from.</small>
+          </div>
+
+          <div class="form-group">
+            <label>Output Location (Finished Goods)</label>
             <select name="locationId" required>
               <option value="">Select Location</option>
               {locations.map(l => <option value={l.id}>{l.code} ({l.type})</option>)}
             </select>
-            <small>Finished goods will be added here. Components will be deducted from here.</small>
+            <small>Where finished goods will be stored.</small>
           </div>
 
           <div class="form-actions" style="margin-top: 2rem;">

@@ -8,7 +8,7 @@ export const CreateWarehousePage = ({ user }) => {
       </div>
 
       <div class="card">
-        <form method="POST" action="/admin/warehouses">
+        <form method="POST" action="/admin/inventory/warehouses">
             <div class="form-group mb-4">
                 <label>Name</label>
                 <input type="text" name="name" required placeholder="Warehouse Name" />
@@ -20,7 +20,7 @@ export const CreateWarehousePage = ({ user }) => {
             </div>
 
             <div class="flex justify-end gap-2">
-                <a href="/admin/warehouses" class="btn btn-secondary">Cancel</a>
+                <a href="/admin/inventory/warehouses" class="btn btn-secondary">Cancel</a>
                 <button type="submit" class="btn btn-primary">Create Warehouse</button>
             </div>
         </form>

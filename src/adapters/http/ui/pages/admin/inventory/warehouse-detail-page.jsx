@@ -6,7 +6,7 @@ export const WarehouseDetailPage = ({ user, warehouse, locations = [] }) => {
       <div class="page-header">
         <h1>{warehouse.name}</h1>
         <div class="flex gap-2">
-            <a href="/admin/warehouses" class="btn btn-secondary">Back to List</a>
+            <a href="/admin/inventory/warehouses" class="btn btn-secondary">Back to List</a>
         </div>
       </div>
 
@@ -45,7 +45,7 @@ export const WarehouseDetailPage = ({ user, warehouse, locations = [] }) => {
                               <td>{loc.code}</td>
                               <td>{loc.type || 'Standard'}</td>
                               <td>
-                                  <a href={`/admin/locations/${loc.id}`} class="btn btn-sm btn-secondary">View</a>
+                                  <a href={`/admin/inventory/locations/${loc.id}`} class="btn btn-sm btn-secondary">View</a>
                               </td>
                           </tr>
                       ))}

@@ -6,7 +6,7 @@ export const LocationDetailPage = ({ user, location, warehouse, parentLocation }
       <div class="page-header">
         <h1>{location.code}</h1>
         <div class="flex gap-2">
-            <a href="/admin/locations" class="btn btn-secondary">Back to List</a>
+            <a href="/admin/inventory/locations" class="btn btn-secondary">Back to List</a>
         </div>
       </div>
 

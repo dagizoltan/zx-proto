@@ -8,7 +8,7 @@ export const CreateCategoryPage = ({ user, categories }) => {
       </div>
 
       <div class="card">
-        <form method="POST" action="/admin/categories">
+        <form method="POST" action="/admin/catalog/categories">
             <div class="form-group mb-4">
                 <label>Name</label>
                 <input type="text" name="name" required placeholder="Category Name" />
@@ -30,7 +30,7 @@ export const CreateCategoryPage = ({ user, categories }) => {
             </div>
 
             <div class="flex justify-end gap-2">
-                <a href="/admin/categories" class="btn btn-secondary">Cancel</a>
+                <a href="/admin/catalog/categories" class="btn btn-secondary">Cancel</a>
                 <button type="submit" class="btn btn-primary">Create Category</button>
             </div>
         </form>
