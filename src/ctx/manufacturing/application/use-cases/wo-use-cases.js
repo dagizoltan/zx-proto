@@ -57,8 +57,8 @@ export const createCompleteWorkOrder = ({ woRepository, bomRepository, inventory
         batchId: `LOT-${wo.code}` // Traceability: Link Batch to WO Code
     };
 
-    // Execute Atomic Production
-    await inventoryService.executeProduction(tenantId, {
+    // Execute Atomic Production via Use Case Interface
+    await inventoryService.executeProduction.execute(tenantId, {
         consume: consumeList,
         produce: produceItem,
         reason: `WO ${wo.code}`,

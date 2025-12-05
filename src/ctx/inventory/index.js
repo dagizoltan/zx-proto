@@ -105,16 +105,22 @@ export const createInventoryContext = async (deps) => {
       warehouseRepository
   });
 
+  // WRAPPER USE CASES for Cross-Domain Service Calls
+  // This ensures that when 'inventory.useCases' is injected into other domains,
+  // they can access these robust methods via a consistent interface.
+  const executeProduction = {
+      execute: async (...args) => stockAllocationService.executeProduction(...args)
+  };
+
+  const receiveStockRobust = {
+      execute: async (...args) => stockAllocationService.receiveStockRobust(...args)
+  };
+
   // Access other contexts when needed
   const checkUserPermission = async (tenantId, userId, action) => {
     const accessControl = registry.get('domain.accessControl');
     return accessControl.useCases.checkPermission.execute(tenantId, userId, 'inventory', action);
   };
-
-  // Expose services directly for cross-domain orchestration (e.g., Manufacturing, Procurement)
-  // This is a "Service-to-Service" communication pattern
-  const executeProduction = stockAllocationService.executeProduction;
-  const receiveStockRobust = stockAllocationService.receiveStockRobust;
 
   return {
     name: 'inventory',
@@ -130,8 +136,6 @@ export const createInventoryContext = async (deps) => {
 
     services: {
       stockAllocation: stockAllocationService,
-      executeProduction, // Exposed
-      receiveStockRobust, // Exposed
     },
 
     useCases: {
@@ -149,6 +153,9 @@ export const createInventoryContext = async (deps) => {
       listStockMovements,
       createWarehouse,
       createLocation,
+      // Exposed Robust Methods
+      executeProduction,
+      receiveStockRobust
     },
 
     // Cross-context helpers

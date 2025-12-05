@@ -139,17 +139,15 @@ export const createStockAllocationService = (stockRepository, stockMovementRepos
   };
 
   const commit = async (tenantId, referenceId, itemsToShip = null) => {
-    // Note: Commit is strictly deducting 'reserved' and 'quantity'.
-    // It is also subject to race conditions if multiple people try to ship the SAME order at once.
-    // Ideally should be atomic too.
-    // For this task, prioritizing Allocate (Inventory Risk) and Creation.
-    // Reusing existing logic but implementing standard locking would be good.
-    // Leaving as is for now as requested focus is on Race Conditions in Allocation.
+    // Commit converts Reserved -> Shipped (Reduction of Total)
 
-    // Original Logic...
+    // We need to fetch movements to know WHAT was reserved.
     const movements = await stockMovementRepository.getByReference(tenantId, referenceId);
+
+    // Aggregate Reservations
     const getKey = (m) => `${m.productId}:${m.fromLocationId}:${m.batchId || 'default'}`;
     const inventoryMap = new Map();
+
     for (const m of movements) {
         const key = getKey(m);
         if (!inventoryMap.has(key)) {
@@ -164,51 +162,83 @@ export const createStockAllocationService = (stockRepository, stockMovementRepos
         if (m.type === 'released') rec.released += m.quantity;
     }
 
-    const toShip = [];
+    // Determine what to ship
+    const toShip = []; // { key, quantity, ...meta }
     const affectedProducts = new Set();
 
     if (!itemsToShip) {
+        // Ship ALL remaining
         for (const [key, rec] of inventoryMap.entries()) {
             const remaining = rec.allocated - rec.released - rec.shipped;
             if (remaining > 0) {
-                toShip.push({ key, quantity: remaining, ...rec.meta });
+                toShip.push({ keyStr: key, quantity: remaining, ...rec.meta });
             }
         }
     } else {
+        // Ship specific items
         for (const req of itemsToShip) {
             let needed = req.quantity;
             const candidateKeys = Array.from(inventoryMap.entries())
                 .filter(([k, v]) => v.meta.productId === req.productId)
-                .map(([k, v]) => ({ key: k, rec: v, remaining: v.allocated - v.released - v.shipped }));
+                .map(([k, v]) => ({ keyStr: k, rec: v, remaining: v.allocated - v.released - v.shipped }));
 
             for (const cand of candidateKeys) {
                 if (needed <= 0) break;
                 if (cand.remaining <= 0) continue;
                 const take = Math.min(needed, cand.remaining);
-                toShip.push({ key: cand.key, quantity: take, ...cand.rec.meta });
+                toShip.push({ keyStr: cand.keyStr, quantity: take, ...cand.rec.meta });
                 needed -= take;
             }
         }
     }
 
+    // execute atomic updates
+    // We must read versions first to be safe (Optimistic Locking)
+    // Group by productId for efficiency? Or just loop.
+    // For simplicity, we loop robustly (similar to allocateBatch)
+
+    // Since 'commit' is deduction, we can reuse logic or write a simplified loop.
+    // We'll iterate the 'toShip' list and attempt atomic updates.
+
+    const updates = [];
+    const newMovements = [];
+
+    // Pre-fetch versions
+    const productIds = [...new Set(toShip.map(x => x.productId))];
+    const stockMap = new Map();
+    await Promise.all(productIds.map(async (pid) => {
+        const entries = await stockRepository.getEntriesWithVersion(tenantId, pid);
+        stockMap.set(pid, entries);
+    }));
+
     for (const action of toShip) {
         const { productId, fromLocationId, batchId, quantity } = action;
         const normalizedBatchId = batchId || 'default';
-        const entry = await stockRepository.getEntryByBatch(tenantId, productId, fromLocationId, normalizedBatchId);
 
-        if (!entry) continue;
+        const entries = stockMap.get(productId);
+        const entry = entries.find(e => e.value.locationId === fromLocationId && e.value.batchId === normalizedBatchId);
 
-        const updated = {
-            ...entry,
-            quantity: entry.quantity - quantity,
-            reservedQuantity: entry.reservedQuantity - quantity,
+        if (!entry) {
+             console.error(`Stock entry missing/concurrently deleted during commit: ${productId} @ ${fromLocationId}`);
+             continue;
+        }
+
+        const newValue = {
+            ...entry.value,
+            quantity: entry.value.quantity - quantity, // Deduct from Total
+            reservedQuantity: entry.value.reservedQuantity - quantity, // Deduct from Reserved
             updatedAt: new Date().toISOString()
         };
 
-        await stockRepository.save(tenantId, updated);
+        updates.push({
+            key: entry.key,
+            versionstamp: entry.versionstamp,
+            value: newValue
+        });
+
         affectedProducts.add(productId);
 
-        await stockMovementRepository.save(tenantId, {
+        newMovements.push({
             id: crypto.randomUUID(),
             tenantId,
             productId,
@@ -221,60 +251,118 @@ export const createStockAllocationService = (stockRepository, stockMovementRepos
         });
     }
 
-    for (const pid of affectedProducts) {
-        await _updateProductTotal(tenantId, pid);
+    if (updates.length > 0) {
+        // Commit updates
+        const success = await stockRepository.commitUpdates(tenantId, updates);
+        if (!success) {
+            throw new Error('Commit failed due to concurrent modification. Please retry.');
+        }
+
+        // Save Movements
+        await Promise.all(newMovements.map(m => stockMovementRepository.save(tenantId, m)));
+
+        // Update Product Totals
+        for (const pid of affectedProducts) {
+             await _updateProductTotal(tenantId, pid);
+        }
     }
   };
 
   const release = async (tenantId, referenceId) => {
-    // Similar to commit, deduct reserved.
-    const movements = await stockMovementRepository.getByReference(tenantId, referenceId);
-    // ... (Implementation similar to previous, logic remains valid but potentially racy on double-cancellation)
-    // For MVP robustness, we focus on Allocation integrity.
+    // Release ALL remaining allocations (cancel remainder)
+    // Refactored to be Atomic (Robust) with Retry Loop
 
-    // Simplification for brevity in this patch:
-    // Copy original logic.
-    const getKey = (m) => `${m.productId}:${m.fromLocationId}:${m.batchId || 'default'}`;
-    const inventoryMap = new Map();
-    for (const m of movements) {
-        const key = getKey(m);
-        if (!inventoryMap.has(key)) {
-            inventoryMap.set(key, {
-                allocated: 0, shipped: 0, released: 0,
-                meta: { productId: m.productId, fromLocationId: m.fromLocationId, batchId: m.batchId }
-            });
-        }
-        const rec = inventoryMap.get(key);
-        if (m.type === 'allocated') rec.allocated += m.quantity;
-        if (m.type === 'shipped') rec.shipped += m.quantity;
-        if (m.type === 'released') rec.released += m.quantity;
-    }
+    const MAX_RETRIES = 5;
+    let attempt = 0;
 
-    for (const [key, rec] of inventoryMap.entries()) {
-        const remaining = rec.allocated - rec.released - rec.shipped;
-        if (remaining > 0) {
-            const { productId, fromLocationId, batchId } = rec.meta;
-            const normalizedBatchId = batchId || 'default';
-            const entry = await stockRepository.getEntryByBatch(tenantId, productId, fromLocationId, normalizedBatchId);
-            if (!entry) continue;
+    while (attempt < MAX_RETRIES) {
+        attempt++;
+        try {
+            const movements = await stockMovementRepository.getByReference(tenantId, referenceId);
 
-            const updated = {
-                ...entry,
-                reservedQuantity: entry.reservedQuantity - remaining,
-                updatedAt: new Date().toISOString()
-            };
-            await stockRepository.save(tenantId, updated);
-            await stockMovementRepository.save(tenantId, {
-                id: crypto.randomUUID(),
-                tenantId,
-                productId,
-                quantity: remaining,
-                type: 'released',
-                fromLocationId,
-                referenceId,
-                batchId: normalizedBatchId,
-                timestamp: new Date().toISOString()
-            });
+            const getKey = (m) => `${m.productId}:${m.fromLocationId}:${m.batchId || 'default'}`;
+            const inventoryMap = new Map();
+            for (const m of movements) {
+                const key = getKey(m);
+                if (!inventoryMap.has(key)) {
+                    inventoryMap.set(key, {
+                        allocated: 0, shipped: 0, released: 0,
+                        meta: { productId: m.productId, fromLocationId: m.fromLocationId, batchId: m.batchId }
+                    });
+                }
+                const rec = inventoryMap.get(key);
+                if (m.type === 'allocated') rec.allocated += m.quantity;
+                if (m.type === 'shipped') rec.shipped += m.quantity;
+                if (m.type === 'released') rec.released += m.quantity;
+            }
+
+            const updates = [];
+            const newMovements = [];
+            const productIdsToScan = new Set();
+            const actions = [];
+
+            for (const [key, rec] of inventoryMap.entries()) {
+                const remaining = rec.allocated - rec.released - rec.shipped;
+                if (remaining > 0) {
+                    productIdsToScan.add(rec.meta.productId);
+                    actions.push({ ...rec.meta, quantity: remaining });
+                }
+            }
+
+            if (actions.length === 0) return; // Nothing to release
+
+            // Pre-fetch versions
+            const stockMap = new Map();
+            await Promise.all(Array.from(productIdsToScan).map(async (pid) => {
+                const entries = await stockRepository.getEntriesWithVersion(tenantId, pid);
+                stockMap.set(pid, entries);
+            }));
+
+            for (const action of actions) {
+                const { productId, fromLocationId, batchId, quantity } = action;
+                const normalizedBatchId = batchId || 'default';
+                const entries = stockMap.get(productId);
+                const entry = entries.find(e => e.value.locationId === fromLocationId && e.value.batchId === normalizedBatchId);
+
+                if (!entry) continue; // Can't release what's gone
+
+                const newValue = {
+                    ...entry.value,
+                    reservedQuantity: entry.value.reservedQuantity - quantity,
+                    updatedAt: new Date().toISOString()
+                };
+
+                updates.push({
+                    key: entry.key,
+                    versionstamp: entry.versionstamp,
+                    value: newValue
+                });
+
+                newMovements.push({
+                    id: crypto.randomUUID(),
+                    tenantId,
+                    productId,
+                    quantity,
+                    type: 'released',
+                    fromLocationId,
+                    referenceId,
+                    batchId: normalizedBatchId,
+                    timestamp: new Date().toISOString()
+                });
+            }
+
+            if (updates.length > 0) {
+                const success = await stockRepository.commitUpdates(tenantId, updates);
+                if (!success) {
+                    await new Promise(r => setTimeout(r, Math.random() * 50));
+                    continue; // Retry
+                }
+                await Promise.all(newMovements.map(m => stockMovementRepository.save(tenantId, m)));
+            }
+            return; // Success
+
+        } catch (e) {
+            if (attempt === MAX_RETRIES) throw e;
         }
     }
   };
@@ -303,18 +391,12 @@ export const createStockAllocationService = (stockRepository, stockMovementRepos
 
              const updates = [];
              const movements = [];
+             const affectedProducts = new Set();
 
              // 2. Process Consumption (Deduction)
              for (const item of consume) {
                  const entries = stockMap.get(item.productId);
-                 // Filter by location if specified
                  const locationEntries = entries.filter(e => e.value.locationId === item.locationId);
-
-                 // Sort FEFO for consumption?
-                 // Assuming FEFO within the location.
-                 const enriched = locationEntries.map(e => ({...e, batch: {}})); // Mock batch for sort if needed or just use default
-                 // Simple sort by received/created (FIFO) if no batch info loaded
-                 // For MVP, just take first available.
 
                  let remaining = item.quantity;
                  let availableTotal = locationEntries.reduce((sum, e) => sum + e.value.quantity, 0);
@@ -352,12 +434,13 @@ export const createStockAllocationService = (stockRepository, stockMovementRepos
                          timestamp: new Date().toISOString()
                      });
 
+                     affectedProducts.add(item.productId);
+
                      remaining -= take;
                  }
              }
 
              // 3. Process Production (Addition)
-             // Check if entry exists for produced item at location/batch
              const produceEntries = stockMap.get(producePid);
              const targetBatch = produce.batchId || `BATCH-${new Date().toISOString().slice(0,10).replace(/-/g,'')}`;
 
@@ -377,9 +460,6 @@ export const createStockAllocationService = (stockRepository, stockMovementRepos
                      }
                  });
              } else {
-                 // Create New Entry
-                 // This requires a KEY construction.
-                 // We need to know the Key structure: ['tenants', tenantId, 'stock', productId, locationId, batchId]
                  const newEntry = {
                      id: crypto.randomUUID(),
                      tenantId,
@@ -391,16 +471,13 @@ export const createStockAllocationService = (stockRepository, stockMovementRepos
                      createdAt: new Date().toISOString(),
                      updatedAt: new Date().toISOString()
                  };
-                 // We pass 'null' versionstamp to indicate "create if not exists" logic or just use set
-                 // But our commitUpdates uses 'check' if versionstamp is present.
-                 // If new, we might need a check(key, null) to ensure no overwrite?
-                 // Deno KV check(key, null) means "key does not exist".
                  updates.push({
                      key: ['tenants', tenantId, 'stock', produce.productId, produce.locationId, targetBatch],
                      versionstamp: null,
                      value: newEntry
                  });
              }
+             affectedProducts.add(produce.productId);
 
              movements.push({
                  id: crypto.randomUUID(),
@@ -422,8 +499,11 @@ export const createStockAllocationService = (stockRepository, stockMovementRepos
                  continue;
              }
 
-             // 5. Log Movements
+             // 5. Log Movements & Update Totals
              await Promise.all(movements.map(m => stockMovementRepository.save(tenantId, m)));
+             for (const pid of affectedProducts) {
+                 await _updateProductTotal(tenantId, pid);
+             }
              return;
 
          } catch (e) {
@@ -494,6 +574,9 @@ export const createStockAllocationService = (stockRepository, stockMovementRepos
                   referenceId: reason,
                   timestamp: new Date().toISOString()
               });
+
+              // Update Product Total
+              await _updateProductTotal(tenantId, productId);
               return;
 
           } catch (e) {

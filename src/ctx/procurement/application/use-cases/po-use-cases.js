@@ -47,8 +47,8 @@ export const createReceivePurchaseOrder = ({ poRepository, inventoryService }) =
         poItem.receivedQuantity += receivedItem.quantity;
       }
 
-      // Use Robust Reception
-      await inventoryService.receiveStockRobust(tenantId, {
+      // Use Robust Reception via Use Case Interface
+      await inventoryService.receiveStockRobust.execute(tenantId, {
         productId: receivedItem.productId,
         locationId: receiveData.locationId,
         quantity: receivedItem.quantity,
@@ -62,7 +62,8 @@ export const createReceivePurchaseOrder = ({ poRepository, inventoryService }) =
     po.status = allReceived ? 'RECEIVED' : 'PARTIAL';
     po.updatedAt = new Date().toISOString();
 
-    return await poRepository.save(tenantId, po);
+    const saved = await poRepository.save(tenantId, po);
+    return saved || po;
   };
 
   return { execute };
