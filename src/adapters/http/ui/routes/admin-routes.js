@@ -7,9 +7,13 @@ import { ProductDetailPage } from '../pages/admin/product-detail-page.jsx';
 import { OrdersPage } from '../pages/admin/orders-page.jsx';
 import { UsersPage } from '../pages/admin/users-page.jsx';
 import { RolesPage } from '../pages/admin/roles-page.jsx';
+import { CreateRolePage } from '../pages/admin/create-role-page.jsx';
+import { RoleDetailPage } from '../pages/admin/role-detail-page.jsx';
+import { UserDetailPage } from '../pages/admin/user-detail-page.jsx';
 import { CustomersPage } from '../pages/admin/customers-page.jsx';
 import { CustomerDetailPage } from '../pages/admin/customer-detail-page.jsx';
 import { SuppliersPage } from '../pages/admin/procurement/suppliers-page.jsx';
+import { CreateSupplierPage } from '../pages/admin/procurement/create-supplier-page.jsx';
 import { SupplierDetailPage } from '../pages/admin/procurement/supplier-detail-page.jsx';
 import { PurchaseOrdersPage } from '../pages/admin/procurement/purchase-orders-page.jsx';
 import { PurchaseOrderDetailPage } from '../pages/admin/procurement/po-detail-page.jsx';
@@ -23,10 +27,19 @@ import { WorkOrderDetailPage } from '../pages/admin/manufacturing/wo-detail-page
 import { CreateWorkOrderPage } from '../pages/admin/manufacturing/create-wo-page.jsx';
 import { CompleteWorkOrderPage } from '../pages/admin/manufacturing/complete-wo-page.jsx';
 import { CatalogPage } from '../pages/admin/catalog/catalog-page.jsx';
+import { CreateProductPage } from '../pages/admin/catalog/create-product-page.jsx';
 import { CategoriesPage } from '../pages/admin/catalog/categories-page.jsx';
+import { CreateCategoryPage } from '../pages/admin/catalog/create-category-page.jsx';
+import { CategoryDetailPage } from '../pages/admin/catalog/category-detail-page.jsx';
 import { PriceListsPage } from '../pages/admin/catalog/price-lists-page.jsx';
+import { CreatePriceListPage } from '../pages/admin/catalog/create-price-list-page.jsx';
+import { PriceListDetailPage } from '../pages/admin/catalog/price-list-detail-page.jsx';
 import { WarehousesPage } from '../pages/admin/inventory/warehouses-page.jsx';
+import { CreateWarehousePage } from '../pages/admin/inventory/create-warehouse-page.jsx';
+import { WarehouseDetailPage } from '../pages/admin/inventory/warehouse-detail-page.jsx';
 import { LocationsPage } from '../pages/admin/inventory/locations-page.jsx';
+import { CreateLocationPage } from '../pages/admin/inventory/create-location-page.jsx';
+import { LocationDetailPage } from '../pages/admin/inventory/location-detail-page.jsx';
 import { PickListPage } from '../pages/admin/pick-list-page.jsx';
 import { PackingSlipPage } from '../pages/admin/packing-slip-page.jsx';
 import { CreateShipmentPage } from '../pages/admin/shipments/create-shipment-page.jsx';
@@ -85,6 +98,162 @@ adminRoutes.get('/catalog', async (c) => {
     return c.html(html);
 });
 
+adminRoutes.get('/locations/new', async (c) => {
+    const user = c.get('user');
+    const tenantId = c.get('tenantId');
+    const inventory = c.ctx.get('domain.inventory');
+
+    const warehouses = await inventory.repositories.warehouse.findAll(tenantId);
+    // Fetch all locations for parent selection (naive)
+    let allLocations = [];
+    for (const w of warehouses) {
+        const locs = await inventory.repositories.location.findByWarehouseId(tenantId, w.id);
+        allLocations = allLocations.concat(locs);
+    }
+
+    const html = await renderPage(CreateLocationPage, {
+        user,
+        warehouses,
+        locations: allLocations,
+        activePage: 'locations',
+        layout: AdminLayout,
+        title: 'New Location - IMS Admin'
+    });
+    return c.html(html);
+});
+
+adminRoutes.post('/locations', async (c) => {
+    const tenantId = c.get('tenantId');
+    const inventory = c.ctx.get('domain.inventory');
+    const body = await c.req.parseBody();
+
+    try {
+        await inventory.repositories.location.save(tenantId, {
+            code: body.code,
+            type: body.type,
+            warehouseId: body.warehouseId,
+            parentId: body.parentId || undefined
+        });
+        return c.redirect('/admin/locations');
+    } catch (e) {
+        return c.text(e.message, 400);
+    }
+});
+
+adminRoutes.get('/locations/:id', async (c) => {
+    const user = c.get('user');
+    const tenantId = c.get('tenantId');
+    const locId = c.req.param('id');
+    const inventory = c.ctx.get('domain.inventory');
+
+    const location = await inventory.repositories.location.findById(tenantId, locId);
+    if (!location) return c.text('Location not found', 404);
+
+    const warehouse = await inventory.repositories.warehouse.findById(tenantId, location.warehouseId);
+    const parent = location.parentId ? await inventory.repositories.location.findById(tenantId, location.parentId) : null;
+
+    const html = await renderPage(LocationDetailPage, {
+        user,
+        location,
+        warehouse,
+        parentLocation: parent,
+        activePage: 'locations',
+        layout: AdminLayout,
+        title: `${location.code} - IMS Admin`
+    });
+    return c.html(html);
+});
+
+adminRoutes.get('/warehouses/new', async (c) => {
+    const user = c.get('user');
+
+    const html = await renderPage(CreateWarehousePage, {
+        user,
+        activePage: 'warehouses',
+        layout: AdminLayout,
+        title: 'New Warehouse - IMS Admin'
+    });
+    return c.html(html);
+});
+
+adminRoutes.post('/warehouses', async (c) => {
+    const tenantId = c.get('tenantId');
+    const inventory = c.ctx.get('domain.inventory');
+    const body = await c.req.parseBody();
+
+    try {
+        await inventory.repositories.warehouse.save(tenantId, {
+            name: body.name,
+            code: body.code
+        });
+        return c.redirect('/admin/warehouses');
+    } catch (e) {
+        return c.text(e.message, 400);
+    }
+});
+
+adminRoutes.get('/warehouses/:id', async (c) => {
+    const user = c.get('user');
+    const tenantId = c.get('tenantId');
+    const wId = c.req.param('id');
+    const inventory = c.ctx.get('domain.inventory');
+
+    const warehouse = await inventory.repositories.warehouse.findById(tenantId, wId);
+    if (!warehouse) return c.text('Warehouse not found', 404);
+
+    const locations = await inventory.repositories.location.findByWarehouseId(tenantId, wId);
+
+    const html = await renderPage(WarehouseDetailPage, {
+        user,
+        warehouse,
+        locations,
+        activePage: 'warehouses',
+        layout: AdminLayout,
+        title: `${warehouse.name} - IMS Admin`
+    });
+    return c.html(html);
+});
+
+adminRoutes.get('/products/new', async (c) => {
+    const user = c.get('user');
+    const tenantId = c.get('tenantId');
+    const catalog = c.ctx.get('domain.catalog');
+
+    const { items: categories } = await catalog.useCases.listCategories.execute(tenantId, { limit: 100 });
+    const { items: priceLists } = await catalog.useCases.listPriceLists.execute(tenantId, { limit: 100 });
+
+    const html = await renderPage(CreateProductPage, {
+        user,
+        categories,
+        priceLists,
+        activePage: 'catalog',
+        layout: AdminLayout,
+        title: 'Create Product - IMS Admin'
+    });
+    return c.html(html);
+});
+
+adminRoutes.post('/products', async (c) => {
+    const tenantId = c.get('tenantId');
+    const catalog = c.ctx.get('domain.catalog');
+    const body = await c.req.parseBody();
+
+    try {
+        await catalog.useCases.createProduct.execute(tenantId, {
+            name: body.name,
+            sku: body.sku,
+            description: body.description,
+            price: parseFloat(body.price),
+            costPrice: body.costPrice ? parseFloat(body.costPrice) : undefined,
+            categoryId: body.categoryId || undefined,
+            type: body.type
+        });
+        return c.redirect('/admin/catalog');
+    } catch (e) {
+        return c.text(e.message, 400);
+    }
+});
+
 // Categories
 adminRoutes.get('/categories', async (c) => {
     const user = c.get('user');
@@ -105,6 +274,23 @@ adminRoutes.get('/categories', async (c) => {
     return c.html(html);
 });
 
+adminRoutes.get('/categories/new', async (c) => {
+    const user = c.get('user');
+    const tenantId = c.get('tenantId');
+    const catalog = c.ctx.get('domain.catalog');
+
+    const { items: categories } = await catalog.useCases.listCategories.execute(tenantId, { limit: 100 });
+
+    const html = await renderPage(CreateCategoryPage, {
+        user,
+        categories,
+        activePage: 'categories',
+        layout: AdminLayout,
+        title: 'New Category - IMS Admin'
+    });
+    return c.html(html);
+});
+
 adminRoutes.post('/categories', async (c) => {
     const tenantId = c.get('tenantId');
     const catalog = c.ctx.get('domain.catalog');
@@ -120,6 +306,32 @@ adminRoutes.post('/categories', async (c) => {
     } catch (e) {
         return c.text(e.message, 400);
     }
+});
+
+adminRoutes.get('/categories/:id', async (c) => {
+    const user = c.get('user');
+    const tenantId = c.get('tenantId');
+    const categoryId = c.req.param('id');
+    const catalog = c.ctx.get('domain.catalog');
+
+    // Currently we rely on listCategories to find the category or assume getCategory exists?
+    // Let's assume listCategories for now or see if repo has findById.
+    // Domain usually exposes getCategory useCase or we use repo.
+    const category = await catalog.repositories.category.findById(tenantId, categoryId);
+    if (!category) return c.text('Category not found', 404);
+
+    const { items: allCats } = await catalog.useCases.listCategories.execute(tenantId, { limit: 100 });
+    const subCategories = allCats.filter(cat => cat.parentId === categoryId);
+
+    const html = await renderPage(CategoryDetailPage, {
+        user,
+        category,
+        subCategories,
+        activePage: 'categories',
+        layout: AdminLayout,
+        title: `${category.name} - IMS Admin`
+    });
+    return c.html(html);
 });
 
 // Price Lists
@@ -142,6 +354,18 @@ adminRoutes.get('/price-lists', async (c) => {
     return c.html(html);
 });
 
+adminRoutes.get('/price-lists/new', async (c) => {
+    const user = c.get('user');
+
+    const html = await renderPage(CreatePriceListPage, {
+        user,
+        activePage: 'price-lists',
+        layout: AdminLayout,
+        title: 'New Price List - IMS Admin'
+    });
+    return c.html(html);
+});
+
 adminRoutes.post('/price-lists', async (c) => {
     const tenantId = c.get('tenantId');
     const catalog = c.ctx.get('domain.catalog');
@@ -160,6 +384,25 @@ adminRoutes.post('/price-lists', async (c) => {
     }
 });
 
+adminRoutes.get('/price-lists/:id', async (c) => {
+    const user = c.get('user');
+    const tenantId = c.get('tenantId');
+    const plId = c.req.param('id');
+    const catalog = c.ctx.get('domain.catalog');
+
+    const priceList = await catalog.repositories.priceList.findById(tenantId, plId);
+    if (!priceList) return c.text('Price List not found', 404);
+
+    const html = await renderPage(PriceListDetailPage, {
+        user,
+        priceList,
+        activePage: 'price-lists',
+        layout: AdminLayout,
+        title: `${priceList.name} - IMS Admin`
+    });
+    return c.html(html);
+});
+
 // --- Procurement Routes ---
 
 adminRoutes.get('/suppliers', async (c) => {
@@ -175,6 +418,18 @@ adminRoutes.get('/suppliers', async (c) => {
         activePage: 'suppliers',
         layout: AdminLayout,
         title: 'Suppliers - IMS Admin'
+    });
+    return c.html(html);
+});
+
+adminRoutes.get('/suppliers/new', async (c) => {
+    const user = c.get('user');
+
+    const html = await renderPage(CreateSupplierPage, {
+        user,
+        activePage: 'suppliers',
+        layout: AdminLayout,
+        title: 'New Supplier - IMS Admin'
     });
     return c.html(html);
 });
@@ -899,6 +1154,30 @@ adminRoutes.get('/users', async (c) => {
     }
 });
 
+adminRoutes.get('/users/:id', async (c) => {
+    const user = c.get('user');
+    const tenantId = c.get('tenantId');
+    const userId = c.req.param('id');
+    const ac = c.ctx.get('domain.accessControl');
+
+    // Currently assume listUsers or we might have getUser?
+    // Repo usually has findById.
+    const userData = await ac.repositories.user.findById(tenantId, userId);
+    if (!userData) return c.text('User not found', 404);
+
+    const roles = await ac.useCases.listRoles.execute(tenantId);
+
+    const html = await renderPage(UserDetailPage, {
+        user,
+        userData,
+        roles,
+        activePage: 'users',
+        layout: AdminLayout,
+        title: `${userData.name} - IMS Admin`
+    });
+    return c.html(html);
+});
+
 adminRoutes.get('/roles', async (c) => {
     const user = c.get('user');
     const tenantId = c.get('tenantId');
@@ -912,6 +1191,54 @@ adminRoutes.get('/roles', async (c) => {
         activePage: 'roles',
         layout: AdminLayout,
         title: 'Roles - IMS Admin'
+    });
+    return c.html(html);
+});
+
+adminRoutes.get('/roles/new', async (c) => {
+    const user = c.get('user');
+
+    const html = await renderPage(CreateRolePage, {
+        user,
+        activePage: 'roles',
+        layout: AdminLayout,
+        title: 'New Role - IMS Admin'
+    });
+    return c.html(html);
+});
+
+adminRoutes.post('/roles', async (c) => {
+    const tenantId = c.get('tenantId');
+    const ac = c.ctx.get('domain.accessControl');
+    const body = await c.req.parseBody();
+
+    try {
+        await ac.useCases.createRole.execute(tenantId, {
+            name: body.name,
+            permissions: []
+        });
+        return c.redirect('/admin/roles');
+    } catch (e) {
+        return c.text(e.message, 400);
+    }
+});
+
+adminRoutes.get('/roles/:id', async (c) => {
+    const user = c.get('user');
+    const tenantId = c.get('tenantId');
+    const roleId = c.req.param('id');
+    const ac = c.ctx.get('domain.accessControl');
+
+    // Role repo findById
+    const role = await ac.repositories.role.findById(tenantId, roleId);
+    if (!role) return c.text('Role not found', 404);
+
+    const html = await renderPage(RoleDetailPage, {
+        user,
+        role,
+        activePage: 'roles',
+        layout: AdminLayout,
+        title: `${role.name} - IMS Admin`
     });
     return c.html(html);
 });

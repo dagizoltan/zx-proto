@@ -17,7 +17,7 @@ export const CatalogPage = ({ user, products, nextCursor, currentUrl, query = ''
                 />
                 <button type="submit" class="btn btn-secondary">Search</button>
             </form>
-            <button class="btn btn-primary" id="btn-create-product">Add Product</button>
+            <a href="/admin/products/new" class="btn btn-primary">Add Product</a>
         </div>
       </div>
 
@@ -26,6 +26,7 @@ export const CatalogPage = ({ user, products, nextCursor, currentUrl, query = ''
             <table>
                 <thead>
                     <tr>
+                        <th>ID</th>
                         <th>SKU</th>
                         <th>Name</th>
                         <th>Type</th>
@@ -38,6 +39,7 @@ export const CatalogPage = ({ user, products, nextCursor, currentUrl, query = ''
                 <tbody>
                     {products.map(product => (
                         <tr key={product.id}>
+                            <td class="font-mono text-sm">{product.id.slice(0, 8)}...</td>
                             <td class="font-mono text-sm">{product.sku}</td>
                             <td class="font-medium">{product.name}</td>
                             <td>
@@ -51,12 +53,12 @@ export const CatalogPage = ({ user, products, nextCursor, currentUrl, query = ''
                                 </span>
                             </td>
                             <td>
-                                <a href={`/admin/products/${product.id}`} class="btn btn-sm btn-secondary">Edit</a>
+                                <a href={`/admin/products/${product.id}`} class="btn btn-sm btn-secondary">View</a>
                             </td>
                         </tr>
                     ))}
                     {products.length === 0 && (
-                        <tr><td colspan="7" class="text-center text-muted">No products found.</td></tr>
+                        <tr><td colspan="8" class="text-center text-muted">No products found.</td></tr>
                     )}
                 </tbody>
             </table>
