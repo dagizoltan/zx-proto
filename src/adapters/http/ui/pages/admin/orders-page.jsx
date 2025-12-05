@@ -6,6 +6,7 @@ export const OrdersPage = ({ user, orders, nextCursor, currentUrl }) => {
     <div class="orders-page">
       <div class="page-header">
         <h1>Orders</h1>
+        <a href="/admin/orders/new" class="btn btn-primary">New Order</a>
       </div>
 
       <div class="card p-0">

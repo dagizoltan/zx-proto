@@ -10,8 +10,11 @@ import { RolesPage } from '../pages/admin/roles-page.jsx';
 import { CreateRolePage } from '../pages/admin/create-role-page.jsx';
 import { RoleDetailPage } from '../pages/admin/role-detail-page.jsx';
 import { UserDetailPage } from '../pages/admin/user-detail-page.jsx';
+import { CreateUserPage } from '../pages/admin/create-user-page.jsx';
 import { CustomersPage } from '../pages/admin/customers-page.jsx';
+import { CreateCustomerPage } from '../pages/admin/create-customer-page.jsx';
 import { CustomerDetailPage } from '../pages/admin/customer-detail-page.jsx';
+import { CreateOrderPage } from '../pages/admin/create-order-page.jsx';
 import { SuppliersPage } from '../pages/admin/procurement/suppliers-page.jsx';
 import { CreateSupplierPage } from '../pages/admin/procurement/create-supplier-page.jsx';
 import { SupplierDetailPage } from '../pages/admin/procurement/supplier-detail-page.jsx';
@@ -982,6 +985,83 @@ adminRoutes.get('/orders', async (c) => {
     return c.html(html);
 });
 
+adminRoutes.get('/orders/new', async (c) => {
+    try {
+        const user = c.get('user');
+        const tenantId = c.get('tenantId');
+        const ac = c.ctx.get('domain.accessControl');
+        const catalog = c.ctx.get('domain.catalog');
+
+        // Get Customers (approximate)
+        const { items: allUsers } = await ac.useCases.listUsers.execute(tenantId, { limit: 100 });
+
+        // Get Products
+        // catalog.useCases.listProducts returns array directly in some implementations or { items }?
+        // Let's check the memory or other routes. catalog route uses: await catalog.useCases.listProducts.execute(tenantId, page, 50);
+        // And it assigns it to `products`.
+        // In other routes (CreateProductPage), it uses `const { items: categories }`.
+        // Let's check `catalog-page.jsx` usage.
+        // In `/catalog`, `products` is passed to `CatalogPage`.
+
+        // Let's inspect listProducts return type by checking what `catalog-page` expects or just console.log.
+        // Assuming based on `/catalog` route: `products = await catalog.useCases.listProducts.execute(tenantId, page, 50);`
+        // If that returns { items: [] }, then `products` is that object.
+        // Wait, in `/catalog`, it does: `products = await catalog.useCases.listProducts...` then passes `products` to `CatalogPage`.
+        // If I look at `CatalogPage` (not visible here), standard is `{ items, nextCursor }`.
+
+        // However, in my `/orders/new` code, I did: `const { items: products } = await catalog.useCases.listProducts.execute(tenantId, 1, 100);`
+        // The args `1, 100` might be wrong if it expects `{ limit, cursor }` or just `page, limit`.
+        // The `/catalog` route uses `execute(tenantId, page, 50)`. So it seems to be positional arguments for page/limit?
+        // BUT `listCategories` uses `{ limit: 50, cursor }`.
+        // Let's try to align with `/catalog` usage: `execute(tenantId, 1, 100)`.
+
+        // But if `execute` returns the array directly (legacy?) or `{ items }`?
+        // Let's try to be safe.
+        const productsResult = await catalog.useCases.listProducts.execute(tenantId, 1, 100);
+        const products = Array.isArray(productsResult) ? productsResult : (productsResult.items || []);
+
+        const html = await renderPage(CreateOrderPage, {
+            user,
+            customers: allUsers,
+            products,
+            activePage: 'orders',
+            layout: AdminLayout,
+            title: 'New Order - IMS Admin'
+        });
+        return c.html(html);
+    } catch (e) {
+        return c.text('Error loading Create Order Page: ' + e.message + '\n' + e.stack, 500);
+    }
+});
+
+adminRoutes.post('/orders', async (c) => {
+    const tenantId = c.get('tenantId');
+    const orders = c.ctx.get('domain.orders');
+    const body = await c.req.parseBody();
+
+    const items = [];
+    const indices = new Set(Object.keys(body).filter(k => k.startsWith('items[')).map(k => k.match(/items\[(\d+)\]/)[1]));
+
+    for (const i of indices) {
+        const qty = parseInt(body[`items[${i}][quantity]`]);
+        if (qty > 0) {
+            items.push({
+                productId: body[`items[${i}][productId]`],
+                quantity: qty
+            });
+        }
+    }
+
+    if (items.length === 0) return c.text('No items selected', 400);
+
+    try {
+        await orders.useCases.createOrder.execute(tenantId, body.userId, items);
+        return c.redirect('/admin/orders');
+    } catch (e) {
+        return c.text(e.message, 400);
+    }
+});
+
 adminRoutes.get('/products/:id', async (c) => {
   const user = c.get('user');
   const tenantId = c.get('tenantId');
@@ -1154,6 +1234,46 @@ adminRoutes.get('/users', async (c) => {
     }
 });
 
+adminRoutes.get('/users/new', async (c) => {
+    const user = c.get('user');
+    const tenantId = c.get('tenantId');
+    const ac = c.ctx.get('domain.accessControl');
+    const roles = await ac.useCases.listRoles.execute(tenantId);
+
+    const html = await renderPage(CreateUserPage, {
+        user,
+        roles,
+        activePage: 'users',
+        layout: AdminLayout,
+        title: 'New User - IMS Admin'
+    });
+    return c.html(html);
+});
+
+adminRoutes.post('/users', async (c) => {
+    const tenantId = c.get('tenantId');
+    const ac = c.ctx.get('domain.accessControl');
+    const body = await c.req.parseBody();
+
+    try {
+        const newUser = await ac.useCases.registerUser.execute(tenantId, {
+            name: body.name,
+            email: body.email,
+            password: body.password
+        });
+
+        if (body.roleId) {
+            await ac.useCases.assignRole.execute(tenantId, {
+                userId: newUser.id,
+                roleIds: [body.roleId]
+            });
+        }
+        return c.redirect('/admin/users');
+    } catch (e) {
+        return c.text(e.message, 400);
+    }
+});
+
 adminRoutes.get('/users/:id', async (c) => {
     const user = c.get('user');
     const tenantId = c.get('tenantId');
@@ -1258,6 +1378,46 @@ adminRoutes.get('/customers', async (c) => {
         title: 'Customers - IMS Admin'
     });
     return c.html(html);
+});
+
+adminRoutes.get('/customers/new', async (c) => {
+    const user = c.get('user');
+    const html = await renderPage(CreateCustomerPage, {
+        user,
+        activePage: 'customers',
+        layout: AdminLayout,
+        title: 'New Customer - IMS Admin'
+    });
+    return c.html(html);
+});
+
+adminRoutes.post('/customers', async (c) => {
+    const tenantId = c.get('tenantId');
+    const ac = c.ctx.get('domain.accessControl');
+    const body = await c.req.parseBody();
+
+    try {
+        const newUser = await ac.useCases.registerUser.execute(tenantId, {
+            name: body.name,
+            email: body.email,
+            password: body.password
+        });
+
+        // Find customer role
+        const roles = await ac.useCases.listRoles.execute(tenantId);
+        const customerRole = roles.find(r => r.name.toLowerCase() === 'customer');
+
+        if (customerRole) {
+            await ac.useCases.assignRole.execute(tenantId, {
+                userId: newUser.id,
+                roleIds: [customerRole.id]
+            });
+        }
+
+        return c.redirect('/admin/customers');
+    } catch (e) {
+        return c.text(e.message, 400);
+    }
 });
 
 adminRoutes.get('/customers/:id', async (c) => {

@@ -5,6 +5,7 @@ export const CustomersPage = ({ customers = [] }) => {
     <div>
       <div class="page-header">
         <h1>Customers</h1>
+        <a href="/admin/customers/new" class="btn btn-primary">New Customer</a>
       </div>
 
       <div class="card p-0">
