@@ -27,7 +27,10 @@ export const createListWorkOrders = ({ woRepository }) => {
 
 export const createCompleteWorkOrder = ({ woRepository, bomRepository, inventoryService }) => {
   const execute = async (tenantId, woId, completionData) => {
-    // completionData: { locationId } (where to put finished goods and take parts from)
+    // completionData: { locationId, inputLocationId }
+    // locationId = Output Location (Finished Goods)
+    // inputLocationId = Input Location (Raw Materials). Defaults to Output if not provided.
+
     const wo = await woRepository.findById(tenantId, woId);
     if (!wo) throw new Error('Work Order not found');
     if (wo.status === 'COMPLETED') throw new Error('Work Order already completed');
@@ -35,24 +38,29 @@ export const createCompleteWorkOrder = ({ woRepository, bomRepository, inventory
     const bom = await bomRepository.findById(tenantId, wo.bomId);
     if (!bom) throw new Error('Associated BOM not found');
 
+    const outputLocationId = completionData.locationId;
+    const inputLocationId = completionData.inputLocationId || outputLocationId;
+
+    if (!outputLocationId) throw new Error('Output location is required');
+
     // 1. Consume Raw Materials (Deduct Stock)
     for (const component of bom.components) {
       const requiredQty = component.quantity * wo.quantity;
 
-      // Assumption: adjustStock handles negative quantities
-      await inventoryService.updateStock.execute(tenantId, {
+      // Use correct consumeStock use case
+      await inventoryService.consumeStock.execute(tenantId, {
         productId: component.productId,
-        locationId: completionData.locationId,
-        quantity: -requiredQty,
+        locationId: inputLocationId, // Use input location
+        quantity: requiredQty,
         reason: `Consumed for WO ${wo.code}`,
-        type: 'adjustment'
+        userId: completionData.userId || null
       });
     }
 
     // 2. Produce Finished Good (Add Stock)
     await inventoryService.receiveStock.execute(tenantId, {
       productId: bom.productId,
-      locationId: completionData.locationId,
+      locationId: outputLocationId, // Use output location
       quantity: wo.quantity,
       batchId: null,
       reason: `Produced by WO ${wo.code}`
