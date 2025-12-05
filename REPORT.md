@@ -4,7 +4,7 @@
 
 The IMS Shopfront application demonstrates a mature adherence to **Clean Architecture** principles, effectively separating domain logic, application use cases, and infrastructure. The **Admin UI** is built using a lightweight Server-Side Rendering (SSR) approach with Preact, strictly avoiding client-side framework hooks in favor of vanilla JavaScript for interactivity. This aligns well with the "No Hooks" directive.
 
-However, a **Critical Critical Bug** was identified in the Manufacturing domain that will cause Work Order completion to fail. Additionally, there is an architectural inconsistency in how inventory stock is managed (a mix of simple scalar updates vs. complex ledger allocations).
+**Update:** The critical bug identified in Manufacturing has been **FIXED**. The architectural inconsistency regarding inventory models has also been resolved via a write-through synchronization pattern. The system is now much closer to a viable MVP.
 
 ## 2. Code Hygiene & Architecture
 
@@ -14,22 +14,18 @@ However, a **Critical Critical Bug** was identified in the Manufacturing domain 
     *   **Dependency Injection**: The system uses a functional DI approach (factory functions) found in `src/ctx/*/index.js`, allowing for easy testing and swapping of implementations.
     *   **Registry**: The `ContextRegistry` pattern allows domains to communicate (e.g., Orders accessing Inventory) without tight coupling.
 
-*   **Weaknesses**:
-    *   **Inconsistent Inventory Model**: The system maintains two parallel concepts of stock:
-        1.  **Simple Model**: `Product.quantity` (Global scalar). Used by `updateStock` and likely displayed in simple lists.
-        2.  **Advanced Model**: `StockRepository` entries (Product + Location + Batch) managed by `StockAllocationService`. Used by `createOrder` and `receivePurchaseOrder`.
-    *   **Sync Issues**: Updating one model does not automatically update the other in all cases.
+*   **Weaknesses (Resolved)**:
+    *   **Inconsistent Inventory Model (FIXED)**: The system previously maintained two parallel concepts of stock (`Product.quantity` vs `StockRepository`). This has been unified. The system now implements a **Write-Through Cache** strategy where any modification to the Stock Ledger (Receive, Adjust, Consume, Ship) automatically updates the global `Product.quantity`.
 
 ### 2.2 SSR & Frontend Patterns
 *   **Compliance**: The codebase strictly adheres to the "No Hooks" rule for Admin pages. Interactivity (e.g., adding rows to an order) is correctly implemented using inline `<script>` tags with vanilla `document.addEventListener`.
 *   **Security**: Scripts are injected via `dangerouslySetInnerHTML`, which is necessary for this pattern but requires strict review of input variables (e.g., `productOptions` string building) to prevent XSS. Current implementation is mostly safe but relies on manual escaping.
 
 ### 2.3 Critical Issues Identified
-*   **BROKEN FEATURE**: **Complete Work Order** (`src/ctx/manufacturing/application/use-cases/wo-use-cases.js`).
-    *   **The Bug**: The use case calls `inventoryService.updateStock.execute(tenantId, { productId, locationId, ... })`.
-    *   **The Definition**: The `createUpdateStock` use case expects `(tenantId, productId, quantity, reason)`.
-    *   **Result**: The code passes an object as the `productId` argument. The repository will fail to find the product, causing a runtime error. Work Orders cannot be completed.
-*   **N+1 Queries**: `createOrder` iterates through items and performs `checkAvailability`, `getProduct`, and `reserveStock` sequentially for each item. For large orders, this will be a performance bottleneck.
+*   **Complete Work Order (FIXED)**:
+    *   Previously, `createCompleteWorkOrder` failed due to a signature mismatch.
+    *   **Fix**: A new `consumeStock` use case was introduced in the Inventory domain, and the Work Order use case was updated to use it correctly.
+*   **N+1 Queries**: `createOrder` iterates through items and performs `checkAvailability`, `getProduct`, and `reserveStock` sequentially for each item. For large orders, this will be a performance bottleneck (remains a future optimization).
 
 ## 3. Feature Inventory (Admin)
 
@@ -58,7 +54,7 @@ However, a **Critical Critical Bug** was identified in the Manufacturing domain 
 ### 3.3 Inventory
 | Page / Action | URL | Method | Status | Notes |
 | :--- | :--- | :--- | :--- | :--- |
-| **Dashboard** | `/admin/inventory` | GET | ✅ Implemented | Global stock list. |
+| **Dashboard** | `/admin/inventory` | GET | ✅ Implemented | Global stock list (now accurately synced). |
 | **List Warehouses** | `/admin/warehouses` | GET | ✅ Implemented | |
 | **Create Warehouse** | `/admin/warehouses` | POST | ✅ Implemented | |
 | **List Locations** | `/admin/locations` | GET | ✅ Implemented | Naive search/filter (in-memory). |
@@ -81,7 +77,7 @@ However, a **Critical Critical Bug** was identified in the Manufacturing domain 
 | **Create BOM** | `/admin/boms` | POST | ✅ Implemented | |
 | **List Work Orders**| `/admin/work-orders` | GET | ✅ Implemented | |
 | **Create Work Order**| `/admin/work-orders` | POST | ✅ Implemented | |
-| **Complete WO** | `/.../:id/complete` | GET/POST | ❌ **Broken** | **CRITICAL**: Backend logic signature mismatch. Will crash. |
+| **Complete WO** | `/.../:id/complete` | GET/POST | ✅ **Fixed** | Logic updated to use `consumeStock` correctly. |
 
 ### 3.6 Access Control
 | Page / Action | URL | Method | Status | Notes |
@@ -98,10 +94,9 @@ However, a **Critical Critical Bug** was identified in the Manufacturing domain 
 2.  **Returns & RMAs**: Listed as "Planned". Confirmed missing.
 3.  **Low Stock Alerts**: "Partial" implementation via Dashboard stats, but no automated email/alerting system found.
 4.  **Integration Gaps**:
-    *   The `completeWorkOrder` logic assumes raw materials are in the *same* location as the output finished good. This is a significant simplification compared to the "Location Management" feature promise.
+    *   The `completeWorkOrder` logic assumes raw materials are in the *same* location as the output finished good. This remains a simplification but is functional for MVP.
 
 ## 5. Recommendations
 
-1.  **Fix Manufacturing Completion**: Immediately refactor `createCompleteWorkOrder` to use `inventoryService.updateStock` correctly (or expose a `consumeStock` method) that respects Location IDs.
-2.  **Unify Inventory Models**: Deprecate the direct usage of `Product.quantity` and ensure all stock views aggregate data from `StockRepository` to ensure consistency.
-3.  **Optimize Order Creation**: Refactor `createOrder` to perform a bulk stock check/reservation to avoid N+1 database round-trips.
+1.  **Optimize Order Creation**: Refactor `createOrder` to perform a bulk stock check/reservation to avoid N+1 database round-trips.
+2.  **Next MVP Steps**: Implement basic Returns/RMA functionality and Stocktaking (Correction) UI.

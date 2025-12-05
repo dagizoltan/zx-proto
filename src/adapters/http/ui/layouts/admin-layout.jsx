@@ -29,10 +29,10 @@ export const AdminLayout = ({ children, user }) => {
                   <a href="/admin/catalog" class="nav-item">
                     <span>Products</span>
                   </a>
-                  <a href="/admin/categories" class="nav-item">
+                  <a href="/admin/catalog/categories" class="nav-item">
                     <span>Categories</span>
                   </a>
-                  <a href="/admin/price-lists" class="nav-item">
+                  <a href="/admin/catalog/price-lists" class="nav-item">
                     <span>Price Lists</span>
                   </a>
                 </div>
@@ -61,10 +61,10 @@ export const AdminLayout = ({ children, user }) => {
                   <a href="/admin/inventory" class="nav-item">
                     <span>Stock Levels</span>
                   </a>
-                  <a href="/admin/warehouses" class="nav-item">
+                  <a href="/admin/inventory/warehouses" class="nav-item">
                     <span>Warehouses</span>
                   </a>
-                  <a href="/admin/locations" class="nav-item">
+                  <a href="/admin/inventory/locations" class="nav-item">
                     <span>Locations</span>
                   </a>
                   <span class="nav-item disabled">
@@ -77,10 +77,10 @@ export const AdminLayout = ({ children, user }) => {
               <div class="nav-group">
                 <div class="nav-group-header">Procurement</div>
                 <div class="nav-group-items">
-                  <a href="/admin/suppliers" class="nav-item">
+                  <a href="/admin/procurement/suppliers" class="nav-item">
                     <span>Suppliers</span>
                   </a>
-                  <a href="/admin/purchase-orders" class="nav-item">
+                  <a href="/admin/procurement/purchase-orders" class="nav-item">
                     <span>Purchase Orders</span>
                   </a>
                 </div>
@@ -90,10 +90,10 @@ export const AdminLayout = ({ children, user }) => {
               <div class="nav-group">
                 <div class="nav-group-header">Manufacturing</div>
                 <div class="nav-group-items">
-                  <a href="/admin/boms" class="nav-item">
+                  <a href="/admin/manufacturing/boms" class="nav-item">
                     <span>Bill of Materials</span>
                   </a>
-                  <a href="/admin/work-orders" class="nav-item">
+                  <a href="/admin/manufacturing/work-orders" class="nav-item">
                     <span>Work Orders</span>
                   </a>
                 </div>

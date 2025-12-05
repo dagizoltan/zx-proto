@@ -46,11 +46,11 @@ export const CreateBOMPage = ({ user, products }) => {
     <div class="create-bom-page">
       <div class="header-actions">
         <h1>New Bill of Materials</h1>
-        <a href="/admin/boms" class="btn-secondary">Cancel</a>
+        <a href="/admin/manufacturing/boms" class="btn-secondary">Cancel</a>
       </div>
 
       <div class="card">
-        <form method="POST" action="/admin/boms">
+        <form method="POST" action="/admin/manufacturing/boms">
           <div class="form-group">
             <label>Name</label>
             <input type="text" name="name" required placeholder="e.g. Standard Table Assembly" />

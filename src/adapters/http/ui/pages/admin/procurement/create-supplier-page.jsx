@@ -8,7 +8,7 @@ export const CreateSupplierPage = ({ user }) => {
       </div>
 
       <div class="card">
-        <form method="POST" action="/admin/suppliers">
+        <form method="POST" action="/admin/procurement/suppliers">
             <div class="form-group mb-4">
               <label>Name</label>
               <input type="text" name="name" required placeholder="Acme Corp" />
@@ -27,7 +27,7 @@ export const CreateSupplierPage = ({ user }) => {
             </div>
 
             <div class="flex justify-end gap-2">
-                <a href="/admin/suppliers" class="btn btn-secondary">Cancel</a>
+                <a href="/admin/procurement/suppliers" class="btn btn-secondary">Cancel</a>
                 <button type="submit" class="btn btn-primary">Create Supplier</button>
             </div>
         </form>

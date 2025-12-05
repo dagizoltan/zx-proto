@@ -8,7 +8,7 @@ export const CreateLocationPage = ({ user, warehouses, locations }) => {
       </div>
 
       <div class="card">
-        <form method="POST" action="/admin/locations">
+        <form method="POST" action="/admin/inventory/locations">
             <div class="form-group mb-4">
                 <label>Code</label>
                 <input type="text" name="code" required placeholder="A1-01" />
@@ -41,7 +41,7 @@ export const CreateLocationPage = ({ user, warehouses, locations }) => {
             </div>
 
             <div class="flex justify-end gap-2">
-                <a href="/admin/locations" class="btn btn-secondary">Cancel</a>
+                <a href="/admin/inventory/locations" class="btn btn-secondary">Cancel</a>
                 <button type="submit" class="btn btn-primary">Create Location</button>
             </div>
         </form>

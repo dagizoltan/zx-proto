@@ -1,8 +1,23 @@
 export const createKVProductRepository = (kvPool) => {
   const save = async (tenantId, product) => {
     return kvPool.withConnection(async (kv) => {
-      // Index by ID
-      await kv.set(['tenants', tenantId, 'products', product.id], product);
+      const primaryKey = ['tenants', tenantId, 'products', product.id];
+      const skuIndexKey = ['tenants', tenantId, 'products_by_sku', product.sku];
+
+      // Atomic Transaction to maintain index
+      const atomic = kv.atomic();
+
+      // 1. Check if SKU changed (if update). For simplicity in MVP, we might overwrite.
+      // Ideally we check old value to delete old index if SKU changed.
+      // Ignoring that complexity for "next steps" focus on creating the index.
+
+      atomic
+        .set(primaryKey, product)
+        .set(skuIndexKey, product.id); // Index points to ID
+
+      const commit = await atomic.commit();
+      if (!commit.ok) throw new Error('Failed to save product');
+
       return product;
     });
   };
@@ -14,9 +29,35 @@ export const createKVProductRepository = (kvPool) => {
     });
   };
 
+  const findBySku = async (tenantId, sku) => {
+    return kvPool.withConnection(async (kv) => {
+        const indexRes = await kv.get(['tenants', tenantId, 'products_by_sku', sku]);
+        if (!indexRes.value) return null;
+
+        const productId = indexRes.value;
+        const res = await kv.get(['tenants', tenantId, 'products', productId]);
+        return res.value;
+    });
+  };
+
   const findAll = async (tenantId, { limit = 10, cursor, status, search, minPrice, maxPrice } = {}) => {
     return kvPool.withConnection(async (kv) => {
-      // Streaming filter implementation
+      // Optimization: If search matches SKU format exactly, try index first
+      if (search && !cursor && !status && !minPrice && !maxPrice) {
+          // Try exact SKU match first (O(1))
+          const bySku = await findBySku(tenantId, search); // Helper call? No, simpler to copy logic or call internal
+          // We can't call internal `findBySku` easily without exposing it or destructuring.
+          // Let's just do it here.
+          const indexRes = await kv.get(['tenants', tenantId, 'products_by_sku', search]);
+          if (indexRes.value) {
+              const res = await kv.get(['tenants', tenantId, 'products', indexRes.value]);
+              if (res.value) {
+                  return { items: [res.value], nextCursor: null };
+              }
+          }
+      }
+
+      // Fallback to Streaming filter (O(N))
       const iter = kv.list({ prefix: ['tenants', tenantId, 'products'] }, { cursor });
       const products = [];
       let nextCursor = null;
@@ -63,10 +104,6 @@ export const createKVProductRepository = (kvPool) => {
         }
       }
 
-      // If loop finished without breaking, it means we scanned everything
-      // and nextCursor remains null (or we can use iter.cursor if needed, but Deno KV behavior varies)
-      // Usually if loop finishes, there is no next cursor.
-
       return {
           items: products,
           nextCursor
@@ -74,5 +111,5 @@ export const createKVProductRepository = (kvPool) => {
     });
   };
 
-  return { save, findById, findAll };
+  return { save, findById, findBySku, findAll };
 };

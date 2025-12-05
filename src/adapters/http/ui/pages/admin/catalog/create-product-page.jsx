@@ -1,6 +1,6 @@
 import { h } from 'preact';
 
-export const CreateProductPage = ({ user, categories, priceLists }) => {
+export const CreateProductPage = ({ user, categories, priceLists, error, values = {} }) => {
   return (
     <div class="create-product-page">
       <div class="page-header">
@@ -8,30 +8,35 @@ export const CreateProductPage = ({ user, categories, priceLists }) => {
       </div>
 
       <div class="card">
-        <form method="POST" action="/admin/products">
+        {error && (
+            <div class="alert alert-danger mb-4">
+                {error}
+            </div>
+        )}
+        <form method="POST" action="/admin/catalog/products">
             <div class="form-group mb-4">
                 <label>Name</label>
-                <input type="text" name="name" required placeholder="Product Name" />
+                <input type="text" name="name" required placeholder="Product Name" value={values.name} />
             </div>
 
             <div class="form-group mb-4">
                 <label>SKU</label>
-                <input type="text" name="sku" required placeholder="SKU-123" />
+                <input type="text" name="sku" required placeholder="SKU-123" value={values.sku} />
             </div>
 
             <div class="form-group mb-4">
                 <label>Description</label>
-                <textarea name="description" rows="3"></textarea>
+                <textarea name="description" rows="3">{values.description}</textarea>
             </div>
 
             <div class="grid grid-cols-2 gap-4 mb-4">
                 <div class="form-group">
                     <label>Price</label>
-                    <input type="number" step="0.01" name="price" required placeholder="0.00" />
+                    <input type="number" step="0.01" name="price" required placeholder="0.00" value={values.price} />
                 </div>
                 <div class="form-group">
                     <label>Cost Price</label>
-                    <input type="number" step="0.01" name="costPrice" placeholder="0.00" />
+                    <input type="number" step="0.01" name="costPrice" placeholder="0.00" value={values.costPrice} />
                 </div>
             </div>
 
@@ -39,16 +44,18 @@ export const CreateProductPage = ({ user, categories, priceLists }) => {
                 <label>Category</label>
                 <select name="categoryId">
                     <option value="">None</option>
-                    {categories.map(c => <option value={c.id}>{c.name}</option>)}
+                    {categories.map(c => (
+                        <option value={c.id} selected={values.categoryId === c.id}>{c.name}</option>
+                    ))}
                 </select>
             </div>
 
             <div class="form-group mb-4">
                 <label>Type</label>
                 <select name="type">
-                    <option value="SIMPLE">Simple</option>
-                    <option value="CONFIGURABLE">Configurable</option>
-                    <option value="VARIANT">Variant</option>
+                    <option value="SIMPLE" selected={values.type === 'SIMPLE'}>Simple</option>
+                    <option value="CONFIGURABLE" selected={values.type === 'CONFIGURABLE'}>Configurable</option>
+                    <option value="VARIANT" selected={values.type === 'VARIANT'}>Variant</option>
                 </select>
             </div>
 

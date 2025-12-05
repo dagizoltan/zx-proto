@@ -5,7 +5,7 @@ export const LocationsPage = ({ locations = [], warehouses = [] }) => {
     <div>
       <div class="page-header">
         <h1>Locations</h1>
-        <a href="/admin/locations/new" class="btn btn-primary">Add Location</a>
+        <a href="/admin/inventory/locations/new" class="btn btn-primary">Add Location</a>
       </div>
 
       <div class="card p-0">
@@ -33,7 +33,7 @@ export const LocationsPage = ({ locations = [], warehouses = [] }) => {
                                 <td>{wh ? wh.name : l.warehouseId}</td>
                                 <td class="text-muted">{parent ? parent.code : '-'}</td>
                                 <td>
-                                    <a href={`/admin/locations/${l.id}`} class="btn btn-sm btn-secondary">View</a>
+                                    <a href={`/admin/inventory/locations/${l.id}`} class="btn btn-sm btn-secondary">View</a>
                                 </td>
                             </tr>
                         );
