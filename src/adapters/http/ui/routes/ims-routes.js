@@ -1,6 +1,8 @@
 import { Hono } from 'hono';
 import { renderPage } from '../renderer.js';
 import { DashboardPage } from '../pages/ims/dashboard-page.jsx';
+import { MePage } from '../pages/ims/me-page.jsx';
+import { SettingsPage } from '../pages/ims/settings-page.jsx';
 import { AdminLayout } from '../layouts/admin-layout.jsx';
 import { authMiddleware } from '../middleware/auth-middleware.js';
 
@@ -38,6 +40,44 @@ imsRoutes.get('/dashboard', async (c) => {
     orders: recentOrders,
     layout: AdminLayout,
     title: 'Dashboard - IMS Admin'
+  });
+
+  return c.html(html);
+});
+
+imsRoutes.get('/settings', async (c) => {
+  const user = c.get('user');
+  const config = c.ctx.config;
+
+  // Filter sensitive config
+  const safeConfig = {};
+  const sensitiveKeys = ['secret', 'key', 'password', 'token', 'credential'];
+
+  for (const [key, value] of Object.entries(config)) {
+      if (sensitiveKeys.some(s => key.toLowerCase().includes(s))) {
+          safeConfig[key] = '********';
+      } else {
+          safeConfig[key] = value;
+      }
+  }
+
+  const html = await renderPage(SettingsPage, {
+    user,
+    config: safeConfig,
+    layout: AdminLayout,
+    title: 'Settings - IMS Admin'
+  });
+
+  return c.html(html);
+});
+
+imsRoutes.get('/me', async (c) => {
+  const user = c.get('user');
+
+  const html = await renderPage(MePage, {
+    user,
+    layout: AdminLayout,
+    title: 'My Profile - IMS Admin'
   });
 
   return c.html(html);

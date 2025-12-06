@@ -6,9 +6,9 @@ export const WorkOrderDetailPage = ({ user, wo, bom }) => {
       <div class="page-header">
         <h1>{wo.code}</h1>
         <div class="actions">
-            <a href="/ims/work-orders" class="btn btn-secondary">Back to List</a>
+            <a href="/ims/manufacturing/work-orders" class="btn btn-secondary">Back to List</a>
             {['PLANNED', 'IN_PROGRESS'].includes(wo.status) && (
-                <form method="POST" action={`/ims/work-orders/${wo.id}/complete`} style="display:inline">
+                <form method="POST" action={`/ims/manufacturing/work-orders/${wo.id}/complete`} style="display:inline">
                     <button class="btn btn-primary">Complete Work Order</button>
                 </form>
             )}
@@ -39,7 +39,7 @@ export const WorkOrderDetailPage = ({ user, wo, bom }) => {
               </div>
               <div class="mb-2">
                   <label class="text-muted">BOM Used</label>
-                  <div><a href={`/ims/boms/${wo.bomId}`}>{bom ? bom.name : 'Unknown BOM'}</a></div>
+                  <div><a href={`/ims/manufacturing/boms/${wo.bomId}`}>{bom ? bom.name : 'Unknown BOM'}</a></div>
               </div>
               <div class="mb-2">
                   <label class="text-muted">Quantity</label>

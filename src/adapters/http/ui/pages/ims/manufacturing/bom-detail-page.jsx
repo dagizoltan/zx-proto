@@ -6,8 +6,8 @@ export const BOMDetailPage = ({ user, bom }) => {
       <div class="page-header">
         <h1>{bom.name}</h1>
         <div class="actions">
-            <a href="/ims/boms" class="btn btn-secondary">Back to List</a>
-            <a href="/ims/work-orders/new" class="btn btn-primary">Create Work Order</a>
+            <a href="/ims/manufacturing/boms" class="btn btn-secondary">Back to List</a>
+            <a href="/ims/manufacturing/work-orders/new" class="btn btn-primary">Create Work Order</a>
         </div>
       </div>
 

@@ -135,9 +135,9 @@ export const AdminLayout = ({ children, user }) => {
                   <a href="/ims/roles" class="nav-item">
                     <span>Roles</span>
                   </a>
-                  <span class="nav-item disabled">
-                    <span>Settings (F)</span>
-                  </span>
+                  <a href="/ims/settings" class="nav-item">
+                    <span>Settings</span>
+                  </a>
                   <span class="nav-item disabled">
                     <span>Audit Log (F)</span>
                   </span>
@@ -155,7 +155,9 @@ export const AdminLayout = ({ children, user }) => {
             <header class="admin-header">
               <h1>IMS Shopfront Admin</h1>
               <div class="admin-user">
-                <span>{user.name || user.email}</span>
+                <a href="/ims/me" class="mr-2" style="color: inherit; text-decoration: none;">
+                    <span>{user.name || user.email}</span>
+                </a>
                 <a href="/logout" class="btn btn-sm btn-secondary" style="margin-left: 1rem;">Logout</a>
               </div>
             </header>

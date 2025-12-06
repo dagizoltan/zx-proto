@@ -5,7 +5,7 @@ export const BOMsPage = ({ user, boms }) => {
     <div class="boms-page">
       <div class="page-header">
         <h1>Bills of Materials</h1>
-        <a href="/ims/boms/new" class="btn btn-primary">Create BOM</a>
+        <a href="/ims/manufacturing/boms/new" class="btn btn-primary">Create BOM</a>
       </div>
 
       <div class="card p-0">
@@ -25,12 +25,12 @@ export const BOMsPage = ({ user, boms }) => {
               {boms.map(bom => (
                 <tr>
                   <td class="font-mono text-sm">{bom.id.slice(0, 8)}...</td>
-                  <td><a href={`/ims/boms/${bom.id}`}>{bom.name}</a></td>
+                  <td><a href={`/ims/manufacturing/boms/${bom.id}`}>{bom.name}</a></td>
                   <td>{bom.productName || 'Unknown'}</td>
                   <td>{bom.components.length} items</td>
                   <td>${(bom.laborCost || 0).toFixed(2)}</td>
                   <td>
-                    <a href={`/ims/boms/${bom.id}`} class="btn btn-sm btn-secondary">View</a>
+                    <a href={`/ims/manufacturing/boms/${bom.id}`} class="btn btn-sm btn-secondary">View</a>
                   </td>
                 </tr>
               ))}
