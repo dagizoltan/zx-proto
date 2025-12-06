@@ -43,8 +43,14 @@ export const seedOrders = async (ctx, tenantId, products, customers) => {
 
                 if (r > 0.2) {
                     // Ship
+                    // CLEANUP items to ensure strict shape
+                    const shipmentItems = order.items.map(i => ({ productId: i.productId, quantity: i.quantity }));
+
                     await orders.useCases.createShipment.execute(tenantId, {
-                        orderId: order.id, items: order.items, carrier: 'UPS', trackingNumber: `1Z${Random.int(100000,999999)}`
+                        orderId: order.id,
+                        items: shipmentItems,
+                        carrier: 'UPS',
+                        trackingNumber: `1Z${Random.int(100000,999999)}`
                     });
 
                     if (r > 0.3) {
@@ -57,7 +63,11 @@ export const seedOrders = async (ctx, tenantId, products, customers) => {
             }
 
         } catch (e) {
-            // Out of stock etc.
+            // Log specific errors for debugging, but keep going
+            // Ignore "insufficient stock" as that's expected in random seeding
+            if (!e.message.includes('Insufficient stock')) {
+                console.error(`   ❌ Order/Shipment Error (Order ${i}): ${e.message}`);
+            }
         }
 
         ops++;
