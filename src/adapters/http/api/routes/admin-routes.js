@@ -1,13 +1,13 @@
 import { Hono } from 'hono';
 import { authMiddleware } from '../middleware/auth-middleware.js';
 
-export const adminRoutes = new Hono();
+export const imsRoutes = new Hono();
 
 // Apply Auth Middleware to all admin routes
-adminRoutes.use('*', authMiddleware);
+imsRoutes.use('*', authMiddleware);
 
-// Middleware to check Admin/Manager role
-adminRoutes.use('*', async (c, next) => {
+// Middleware to check ims/Manager role
+imsRoutes.use('*', async (c, next) => {
     const user = c.get('user');
     const tenantId = c.get('tenantId');
     const ac = c.ctx.get('domain.access-control');
@@ -39,7 +39,7 @@ adminRoutes.use('*', async (c, next) => {
 
 // --- User Management ---
 
-adminRoutes.get('/users', async (c) => {
+imsRoutes.get('/users', async (c) => {
   const tenantId = c.get('tenantId');
   const { limit, cursor, q: search } = c.req.query();
   const ac = c.ctx.get('domain.access-control');
@@ -52,7 +52,7 @@ adminRoutes.get('/users', async (c) => {
   return c.json(result);
 });
 
-adminRoutes.post('/users/:id/roles', async (c) => {
+imsRoutes.post('/users/:id/roles', async (c) => {
     const tenantId = c.get('tenantId');
     const userId = c.req.param('id');
     const { roleIds } = await c.req.json();
@@ -68,14 +68,14 @@ adminRoutes.post('/users/:id/roles', async (c) => {
 
 // --- Role Management ---
 
-adminRoutes.get('/roles', async (c) => {
+imsRoutes.get('/roles', async (c) => {
     const tenantId = c.get('tenantId');
     const ac = c.ctx.get('domain.access-control');
     const roles = await ac.useCases.listRoles.execute(tenantId);
     return c.json(roles);
 });
 
-adminRoutes.post('/roles', async (c) => {
+imsRoutes.post('/roles', async (c) => {
     const tenantId = c.get('tenantId');
     const data = await c.req.json();
     const ac = c.ctx.get('domain.access-control');
@@ -85,7 +85,7 @@ adminRoutes.post('/roles', async (c) => {
 });
 
 // --- CRM (Customers) ---
-adminRoutes.get('/customers', async (c) => {
+imsRoutes.get('/customers', async (c) => {
     const tenantId = c.get('tenantId');
     const { limit, cursor, q: search } = c.req.query();
     const ac = c.ctx.get('domain.access-control');
@@ -98,7 +98,7 @@ adminRoutes.get('/customers', async (c) => {
     return c.json(result);
 });
 
-adminRoutes.get('/customers/:id', async (c) => {
+imsRoutes.get('/customers/:id', async (c) => {
     const tenantId = c.get('tenantId');
     const userId = c.req.param('id');
     const ac = c.ctx.get('domain.access-control');

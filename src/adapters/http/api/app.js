@@ -3,7 +3,7 @@ import { cors } from 'hono/middleware.ts';
 import { authRoutes } from './routes/auth-routes.js';
 import { productRoutes } from './routes/product-routes.js';
 import { orderRoutes } from './routes/order-routes.js';
-import { adminRoutes } from './routes/admin-routes.js';
+import { imsRoutes } from './routes/admin-routes.js';
 import { errorHandler } from '../middleware/error-handler.js';
 
 export const createAPIApp = () => {
@@ -27,7 +27,7 @@ export const createAPIApp = () => {
   api.route('/auth', authRoutes);
   api.route('/products', productRoutes);
   api.route('/orders', orderRoutes);
-  api.route('/admin', adminRoutes);
+  api.route('/admin', imsRoutes);
 
   return api;
 };

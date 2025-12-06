@@ -18,7 +18,7 @@ export const AdminLayout = ({ children, user }) => {
             </div>
             <nav class="admin-nav" id="admin-nav">
               {/* General - Top Level */}
-              <a href="/admin/dashboard" class="nav-item">
+              <a href="/ims/dashboard" class="nav-item">
                 <span>Dashboard</span>
               </a>
 
@@ -26,13 +26,13 @@ export const AdminLayout = ({ children, user }) => {
               <div class="nav-group">
                 <div class="nav-group-header">Catalog</div>
                 <div class="nav-group-items">
-                  <a href="/admin/catalog" class="nav-item">
+                  <a href="/ims/catalog" class="nav-item">
                     <span>Products</span>
                   </a>
-                  <a href="/admin/catalog/categories" class="nav-item">
+                  <a href="/ims/catalog/categories" class="nav-item">
                     <span>Categories</span>
                   </a>
-                  <a href="/admin/catalog/price-lists" class="nav-item">
+                  <a href="/ims/catalog/price-lists" class="nav-item">
                     <span>Price Lists</span>
                   </a>
                 </div>
@@ -42,10 +42,10 @@ export const AdminLayout = ({ children, user }) => {
               <div class="nav-group">
                 <div class="nav-group-header">Sales</div>
                 <div class="nav-group-items">
-                  <a href="/admin/orders" class="nav-item">
+                  <a href="/ims/orders" class="nav-item">
                     <span>Orders</span>
                   </a>
-                  <a href="/admin/shipments" class="nav-item">
+                  <a href="/ims/shipments" class="nav-item">
                     <span>Shipments</span>
                   </a>
                   <span class="nav-item disabled">
@@ -58,13 +58,13 @@ export const AdminLayout = ({ children, user }) => {
               <div class="nav-group">
                 <div class="nav-group-header">Inventory</div>
                 <div class="nav-group-items">
-                  <a href="/admin/inventory" class="nav-item">
+                  <a href="/ims/inventory" class="nav-item">
                     <span>Stock Levels</span>
                   </a>
-                  <a href="/admin/inventory/warehouses" class="nav-item">
+                  <a href="/ims/inventory/warehouses" class="nav-item">
                     <span>Warehouses</span>
                   </a>
-                  <a href="/admin/inventory/locations" class="nav-item">
+                  <a href="/ims/inventory/locations" class="nav-item">
                     <span>Locations</span>
                   </a>
                   <span class="nav-item disabled">
@@ -77,10 +77,10 @@ export const AdminLayout = ({ children, user }) => {
               <div class="nav-group">
                 <div class="nav-group-header">Procurement</div>
                 <div class="nav-group-items">
-                  <a href="/admin/procurement/suppliers" class="nav-item">
+                  <a href="/ims/procurement/suppliers" class="nav-item">
                     <span>Suppliers</span>
                   </a>
-                  <a href="/admin/procurement/purchase-orders" class="nav-item">
+                  <a href="/ims/procurement/purchase-orders" class="nav-item">
                     <span>Purchase Orders</span>
                   </a>
                 </div>
@@ -90,10 +90,10 @@ export const AdminLayout = ({ children, user }) => {
               <div class="nav-group">
                 <div class="nav-group-header">Manufacturing</div>
                 <div class="nav-group-items">
-                  <a href="/admin/manufacturing/boms" class="nav-item">
+                  <a href="/ims/manufacturing/boms" class="nav-item">
                     <span>Bill of Materials</span>
                   </a>
-                  <a href="/admin/manufacturing/work-orders" class="nav-item">
+                  <a href="/ims/manufacturing/work-orders" class="nav-item">
                     <span>Work Orders</span>
                   </a>
                 </div>
@@ -103,7 +103,7 @@ export const AdminLayout = ({ children, user }) => {
               <div class="nav-group">
                 <div class="nav-group-header">CRM</div>
                 <div class="nav-group-items">
-                  <a href="/admin/customers" class="nav-item">
+                  <a href="/ims/customers" class="nav-item">
                     <span>Customers</span>
                   </a>
                   <span class="nav-item disabled">
@@ -129,10 +129,10 @@ export const AdminLayout = ({ children, user }) => {
               <div class="nav-group">
                 <div class="nav-group-header">System</div>
                 <div class="nav-group-items">
-                  <a href="/admin/users" class="nav-item">
+                  <a href="/ims/users" class="nav-item">
                     <span>Users</span>
                   </a>
-                  <a href="/admin/roles" class="nav-item">
+                  <a href="/ims/roles" class="nav-item">
                     <span>Roles</span>
                   </a>
                   <span class="nav-item disabled">

@@ -20,7 +20,7 @@ export const MainLayout = ({ children, user, title }) => {
               <a href="/">Home</a>
               <a href="/products">Products</a>
               {user && <a href="/orders">My Orders</a>}
-              {user?.roles?.includes('admin') && <a href="/admin/dashboard">Admin</a>}
+              {user?.roles?.includes('admin') && <a href="/ims/dashboard">Admin</a>}
             </nav>
 
             <div class="header-actions">
