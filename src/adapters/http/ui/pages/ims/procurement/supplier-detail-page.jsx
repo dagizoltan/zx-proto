@@ -6,7 +6,7 @@ export const SupplierDetailPage = ({ user, supplier, purchaseOrders }) => {
       <div class="page-header">
         <h1>{supplier.name}</h1>
         <div class="actions">
-            <a href="/ims/suppliers" class="btn btn-secondary">Back to List</a>
+            <a href="/ims/procurement/suppliers" class="btn btn-secondary">Back to List</a>
             <button class="btn btn-primary">Edit Supplier</button>
         </div>
       </div>
@@ -49,12 +49,12 @@ export const SupplierDetailPage = ({ user, supplier, purchaseOrders }) => {
                 <tbody>
                     {purchaseOrders.map(po => (
                         <tr>
-                            <td><a href={`/ims/purchase-orders/${po.id}`}>{po.code}</a></td>
+                            <td><a href={`/ims/procurement/purchase-orders/${po.id}`}>{po.code}</a></td>
                             <td><span class={`badge badge-${po.status.toLowerCase()}`}>{po.status}</span></td>
                             <td>{new Date(po.createdAt).toLocaleDateString()}</td>
                             <td>${po.totalCost.toFixed(2)}</td>
                             <td>
-                                <a href={`/ims/purchase-orders/${po.id}`} class="btn btn-sm btn-secondary">View</a>
+                                <a href={`/ims/procurement/purchase-orders/${po.id}`} class="btn btn-sm btn-secondary">View</a>
                             </td>
                         </tr>
                     ))}

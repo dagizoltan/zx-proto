@@ -6,9 +6,9 @@ export const PurchaseOrderDetailPage = ({ user, po }) => {
       <div class="page-header">
         <h1>{po.code}</h1>
         <div class="actions">
-            <a href="/ims/purchase-orders" class="btn btn-secondary">Back to List</a>
+            <a href="/ims/procurement/purchase-orders" class="btn btn-secondary">Back to List</a>
             {['DRAFT', 'ISSUED', 'PARTIAL'].includes(po.status) && (
-                <a href={`/ims/purchase-orders/${po.id}/receive`} class="btn btn-primary">Receive Items</a>
+                <a href={`/ims/procurement/purchase-orders/${po.id}/receive`} class="btn btn-primary">Receive Items</a>
             )}
         </div>
       </div>

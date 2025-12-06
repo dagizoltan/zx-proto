@@ -3,8 +3,44 @@ import { renderPage } from '../../renderer.js';
 import { AdminLayout } from '../../layouts/admin-layout.jsx';
 import { ShipmentsPage } from '../../pages/ims/shipments/shipments-page.jsx';
 import { ShipmentDetailPage } from '../../pages/ims/shipments/shipment-detail-page.jsx';
+import { SelectOrderPage } from '../../pages/ims/shipments/select-order-page.jsx';
 
 export const shipmentRoutes = new Hono();
+
+// New Shipment (Select Order)
+shipmentRoutes.get('/new', async (c) => {
+    const user = c.get('user');
+    const tenantId = c.get('tenantId');
+    const orders = c.ctx.get('domain.orders');
+    const accessControl = c.ctx.get('domain.accessControl');
+
+    // Fetch orders that are PAID or PARTIALLY_SHIPPED
+    // Ideally we would have a filter for this in listOrders
+    const { items: allOrders } = await orders.useCases.listOrders.execute(tenantId, { limit: 100 });
+    const shippableOrders = allOrders.filter(o => o.status === 'PAID' || o.status === 'PARTIALLY_SHIPPED');
+
+    // Enrich with customer names
+    // Optimization: In a real scenario, fetch only necessary users or use a cache.
+    // For now, we iterate, but acknowledge this could be improved with batching.
+    for (const o of shippableOrders) {
+        if (o.userId) {
+             try {
+                const customer = await accessControl.useCases.getCustomerProfile.execute(tenantId, o.userId);
+                o.customerName = customer.name || customer.email;
+             } catch (e) {
+                o.customerName = 'Unknown';
+             }
+        }
+    }
+
+    const html = await renderPage(SelectOrderPage, {
+        user,
+        orders: shippableOrders,
+        layout: AdminLayout,
+        title: 'New Shipment - IMS Admin'
+    });
+    return c.html(html);
+});
 
 // List Shipments
 shipmentRoutes.get('/', async (c) => {

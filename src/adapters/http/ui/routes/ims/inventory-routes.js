@@ -8,6 +8,8 @@ import { WarehouseDetailPage } from '../../pages/ims/inventory/warehouse-detail-
 import { LocationsPage } from '../../pages/ims/inventory/locations-page.jsx';
 import { CreateLocationPage } from '../../pages/ims/inventory/create-location-page.jsx';
 import { LocationDetailPage } from '../../pages/ims/inventory/location-detail-page.jsx';
+import { TransferStockPage } from '../../pages/ims/inventory/transfer-stock-page.jsx';
+import { ReceiveStockPage } from '../../pages/ims/inventory/receive-stock-page.jsx';
 
 export const inventoryRoutes = new Hono();
 
@@ -30,6 +32,93 @@ inventoryRoutes.get('/', async (c) => {
   });
 
   return c.html(html);
+});
+
+// Transfer Stock
+inventoryRoutes.get('/transfer', async (c) => {
+    const user = c.get('user');
+    const tenantId = c.get('tenantId');
+    const inventory = c.ctx.get('domain.inventory');
+
+    const { items: products } = await inventory.useCases.listAllProducts.execute(tenantId, { limit: 100 });
+    const warehouses = await inventory.repositories.warehouse.findAll(tenantId);
+    let allLocations = [];
+    for (const w of warehouses) {
+        const locs = await inventory.repositories.location.findByWarehouseId(tenantId, w.id);
+        allLocations = allLocations.concat(locs);
+    }
+
+    const html = await renderPage(TransferStockPage, {
+        user,
+        products,
+        locations: allLocations,
+        layout: AdminLayout,
+        title: 'Transfer Stock - IMS Admin'
+    });
+    return c.html(html);
+});
+
+inventoryRoutes.post('/transfer', async (c) => {
+    const tenantId = c.get('tenantId');
+    const inventory = c.ctx.get('domain.inventory');
+    const body = await c.req.parseBody();
+
+    try {
+        await inventory.useCases.moveStock.execute(tenantId, {
+            productId: body.productId,
+            fromLocationId: body.fromLocationId,
+            toLocationId: body.toLocationId,
+            quantity: parseInt(body.quantity),
+            reason: body.reason
+        });
+        return c.redirect('/ims/inventory');
+    } catch (e) {
+        return c.text(e.message, 400);
+    }
+});
+
+// Receive Stock
+inventoryRoutes.get('/receive', async (c) => {
+    const user = c.get('user');
+    const tenantId = c.get('tenantId');
+    const inventory = c.ctx.get('domain.inventory');
+
+    const { items: products } = await inventory.useCases.listAllProducts.execute(tenantId, { limit: 100 });
+    const warehouses = await inventory.repositories.warehouse.findAll(tenantId);
+    let allLocations = [];
+    for (const w of warehouses) {
+        const locs = await inventory.repositories.location.findByWarehouseId(tenantId, w.id);
+        allLocations = allLocations.concat(locs);
+    }
+
+    const html = await renderPage(ReceiveStockPage, {
+        user,
+        products,
+        locations: allLocations,
+        layout: AdminLayout,
+        title: 'Receive Stock - IMS Admin'
+    });
+    return c.html(html);
+});
+
+inventoryRoutes.post('/receive', async (c) => {
+    const tenantId = c.get('tenantId');
+    const inventory = c.ctx.get('domain.inventory');
+    const body = await c.req.parseBody();
+
+    try {
+        // Using receiveStockRobust as noted in memory/AGENTS.md
+        await inventory.useCases.receiveStockRobust.execute(tenantId, {
+            productId: body.productId,
+            locationId: body.locationId,
+            quantity: parseInt(body.quantity),
+            batchNumber: body.batchNumber,
+            expiryDate: body.expiryDate ? new Date(body.expiryDate).toISOString() : undefined
+        });
+        return c.redirect('/ims/inventory');
+    } catch (e) {
+        return c.text(e.message, 400);
+    }
 });
 
 // Warehouses

@@ -109,37 +109,69 @@ orderRoutes.post('/', async (c) => {
     }
 });
 
-// Order Detail
-orderRoutes.get('/:id', async (c) => {
-  const user = c.get('user');
-  const tenantId = c.get('tenantId');
-  const orderId = c.req.param('id');
-  const orders = c.ctx.get('domain.orders');
-  const catalog = c.ctx.get('domain.catalog');
+// Create Shipment UI (Linked from Order)
+orderRoutes.get('/:id/shipments/new', async (c) => {
+    const user = c.get('user');
+    const tenantId = c.get('tenantId');
+    const orderId = c.req.param('id');
+    const orders = c.ctx.get('domain.orders');
+    const catalog = c.ctx.get('domain.catalog');
 
-  const order = await orders.useCases.getOrder.execute(tenantId, orderId);
-  if (!order) return c.text('Order not found', 404);
+    const order = await orders.useCases.getOrder.execute(tenantId, orderId);
+    if (!order) return c.text('Order not found', 404);
 
-  // Enrich items with product details
-  for (const item of order.items) {
-      if (!item.productName) {
-          const product = await catalog.useCases.getProduct.execute(tenantId, item.productId).catch(() => null);
-          item.productName = product ? product.name : 'Unknown Product';
-      }
-  }
+    for (const item of order.items) {
+        if (!item.productName) {
+            const p = await catalog.useCases.getProduct.execute(tenantId, item.productId).catch(() => null);
+            item.productName = p ? p.name : 'Unknown Product';
+            item.sku = p ? p.sku : '';
+        }
+    }
 
-  // Fetch Shipments
-  const { items: shipments } = await orders.useCases.listShipments.execute(tenantId, { orderId });
+    const html = await renderPage(CreateShipmentPage, {
+        user,
+        order,
+        orderItems: order.items,
+        activePage: 'orders',
+        layout: AdminLayout,
+        title: 'New Shipment - IMS Admin'
+    });
+    return c.html(html);
+});
 
-  const html = await renderPage(OrderDetailPage, {
-    user,
-    order,
-    shipments,
-    layout: AdminLayout,
-    title: `Order #${order.id} - IMS Admin`
-  });
+orderRoutes.post('/:id/shipments', async (c) => {
+    const tenantId = c.get('tenantId');
+    const orderId = c.req.param('id');
+    const orders = c.ctx.get('domain.orders');
+    const body = await c.req.parseBody();
 
-  return c.html(html);
+    const items = [];
+    const indices = new Set(Object.keys(body).filter(k => k.startsWith('items[')).map(k => k.match(/items\[(\d+)\]/)[1]));
+
+    for (const i of indices) {
+        const qty = parseInt(body[`items[${i}][quantity]`]);
+        if (qty > 0) {
+            items.push({
+                productId: body[`items[${i}][productId]`],
+                quantity: qty
+            });
+        }
+    }
+
+    if (items.length === 0) return c.text('No items selected for shipment', 400);
+
+    try {
+        await orders.useCases.createShipment.execute(tenantId, {
+            orderId,
+            carrier: body.carrier,
+            trackingNumber: body.trackingNumber,
+            code: `SH-${Date.now()}`,
+            items
+        });
+        return c.redirect(`/ims/orders/${orderId}`);
+    } catch (e) {
+        return c.text(e.message, 400);
+    }
 });
 
 // Pick List
@@ -219,67 +251,35 @@ orderRoutes.post('/:id/status', async (c) => {
   }
 });
 
-// Create Shipment UI (Linked from Order)
-orderRoutes.get('/:id/shipments/new', async (c) => {
-    const user = c.get('user');
-    const tenantId = c.get('tenantId');
-    const orderId = c.req.param('id');
-    const orders = c.ctx.get('domain.orders');
-    const catalog = c.ctx.get('domain.catalog');
+// Order Detail
+orderRoutes.get('/:id', async (c) => {
+  const user = c.get('user');
+  const tenantId = c.get('tenantId');
+  const orderId = c.req.param('id');
+  const orders = c.ctx.get('domain.orders');
+  const catalog = c.ctx.get('domain.catalog');
 
-    const order = await orders.useCases.getOrder.execute(tenantId, orderId);
-    if (!order) return c.text('Order not found', 404);
+  const order = await orders.useCases.getOrder.execute(tenantId, orderId);
+  if (!order) return c.text('Order not found', 404);
 
-    for (const item of order.items) {
-        if (!item.productName) {
-            const p = await catalog.useCases.getProduct.execute(tenantId, item.productId).catch(() => null);
-            item.productName = p ? p.name : 'Unknown Product';
-            item.sku = p ? p.sku : '';
-        }
-    }
+  // Enrich items with product details
+  for (const item of order.items) {
+      if (!item.productName) {
+          const product = await catalog.useCases.getProduct.execute(tenantId, item.productId).catch(() => null);
+          item.productName = product ? product.name : 'Unknown Product';
+      }
+  }
 
-    const html = await renderPage(CreateShipmentPage, {
-        user,
-        order,
-        orderItems: order.items,
-        activePage: 'orders',
-        layout: AdminLayout,
-        title: 'New Shipment - IMS Admin'
-    });
-    return c.html(html);
-});
+  // Fetch Shipments
+  const { items: shipments } = await orders.useCases.listShipments.execute(tenantId, { orderId });
 
-orderRoutes.post('/:id/shipments', async (c) => {
-    const tenantId = c.get('tenantId');
-    const orderId = c.req.param('id');
-    const orders = c.ctx.get('domain.orders');
-    const body = await c.req.parseBody();
+  const html = await renderPage(OrderDetailPage, {
+    user,
+    order,
+    shipments,
+    layout: AdminLayout,
+    title: `Order #${order.id} - IMS Admin`
+  });
 
-    const items = [];
-    const indices = new Set(Object.keys(body).filter(k => k.startsWith('items[')).map(k => k.match(/items\[(\d+)\]/)[1]));
-
-    for (const i of indices) {
-        const qty = parseInt(body[`items[${i}][quantity]`]);
-        if (qty > 0) {
-            items.push({
-                productId: body[`items[${i}][productId]`],
-                quantity: qty
-            });
-        }
-    }
-
-    if (items.length === 0) return c.text('No items selected for shipment', 400);
-
-    try {
-        await orders.useCases.createShipment.execute(tenantId, {
-            orderId,
-            carrier: body.carrier,
-            trackingNumber: body.trackingNumber,
-            code: `SH-${Date.now()}`,
-            items
-        });
-        return c.redirect(`/ims/orders/${orderId}`);
-    } catch (e) {
-        return c.text(e.message, 400);
-    }
+  return c.html(html);
 });

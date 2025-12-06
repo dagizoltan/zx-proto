@@ -5,11 +5,11 @@ export const ReceivePurchaseOrderPage = ({ user, po, locations }) => {
     <div class="receive-po-page">
       <div class="header-actions">
         <h1>Receive PO: {po.code}</h1>
-        <a href="/ims/purchase-orders" class="btn-secondary">Cancel</a>
+        <a href="/ims/procurement/purchase-orders" class="btn-secondary">Cancel</a>
       </div>
 
       <div class="card">
-        <form method="POST" action={`/ims/purchase-orders/${po.id}/receive`}>
+        <form method="POST" action={`/ims/procurement/purchase-orders/${po.id}/receive`}>
 
           <div class="form-group">
             <label>Destination Location</label>

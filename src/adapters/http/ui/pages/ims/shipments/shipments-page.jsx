@@ -6,6 +6,7 @@ export const ShipmentsPage = ({ user, shipments, nextCursor, currentUrl }) => {
     <div class="shipments-page">
       <div class="page-header">
         <h1>Shipments</h1>
+        <a href="/ims/shipments/new" class="btn btn-primary">Create Shipment</a>
       </div>
 
       <div class="card p-0">

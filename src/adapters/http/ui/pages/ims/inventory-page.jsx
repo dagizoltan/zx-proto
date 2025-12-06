@@ -7,8 +7,8 @@ export const InventoryPage = ({ user, products, nextCursor, currentUrl }) => {
       <div class="page-header">
         <h1>Inventory Management</h1>
         <div class="actions">
-            <button class="btn btn-secondary" style="margin-right: 0.5rem;">Transfer Stock</button>
-            <button class="btn btn-primary">Receive Stock</button>
+            <a href="/ims/inventory/transfer" class="btn btn-secondary" style="margin-right: 0.5rem;">Transfer Stock</a>
+            <a href="/ims/inventory/receive" class="btn btn-primary">Receive Stock</a>
         </div>
       </div>
 

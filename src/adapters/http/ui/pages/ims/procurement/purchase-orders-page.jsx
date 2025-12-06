@@ -5,7 +5,7 @@ export const PurchaseOrdersPage = ({ user, purchaseOrders }) => {
     <div class="purchase-orders-page">
       <div class="page-header">
         <h1>Purchase Orders</h1>
-        <a href="/ims/purchase-orders/new" class="btn btn-primary">Create PO</a>
+        <a href="/ims/procurement/purchase-orders/new" class="btn btn-primary">Create PO</a>
       </div>
 
       <div class="card p-0">
@@ -26,7 +26,7 @@ export const PurchaseOrdersPage = ({ user, purchaseOrders }) => {
               {purchaseOrders.map(po => (
                 <tr>
                   <td class="font-mono text-sm">{po.id.slice(0, 8)}...</td>
-                  <td><a href={`/ims/purchase-orders/${po.id}`}>{po.code}</a></td>
+                  <td><a href={`/ims/procurement/purchase-orders/${po.id}`}>{po.code}</a></td>
                   <td><span class={`badge badge-${po.status.toLowerCase()}`}>{po.status}</span></td>
                   <td>{po.supplierName || 'Unknown'}</td>
                   <td>${po.totalCost.toFixed(2)}</td>
