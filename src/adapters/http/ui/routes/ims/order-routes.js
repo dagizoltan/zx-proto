@@ -170,7 +170,29 @@ orderRoutes.post('/:id/shipments', async (c) => {
         });
         return c.redirect(`/ims/orders/${orderId}`);
     } catch (e) {
-        return c.text(e.message, 400);
+        const order = await orders.useCases.getOrder.execute(tenantId, orderId);
+        // Enrich items if order found, to render page again
+        const catalog = c.ctx.get('domain.catalog');
+        if (order) {
+             for (const item of order.items) {
+                if (!item.productName) {
+                    const p = await catalog.useCases.getProduct.execute(tenantId, item.productId).catch(() => null);
+                    item.productName = p ? p.name : 'Unknown Product';
+                    item.sku = p ? p.sku : '';
+                }
+            }
+        }
+
+        const html = await renderPage(CreateShipmentPage, {
+            user: c.get('user'),
+            order,
+            orderItems: order ? order.items : [],
+            activePage: 'orders',
+            layout: AdminLayout,
+            title: 'New Shipment - IMS Admin',
+            error: e.message
+        });
+        return c.html(html, 400);
     }
 });
 

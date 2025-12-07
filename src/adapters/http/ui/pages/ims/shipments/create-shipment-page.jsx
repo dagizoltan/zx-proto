@@ -1,6 +1,6 @@
 import { h } from 'preact';
 
-export const CreateShipmentPage = ({ user, order, orderItems, activePage }) => {
+export const CreateShipmentPage = ({ user, order, orderItems, activePage, error }) => {
   return (
     <div class="create-shipment-page">
       <div class="page-header">
@@ -9,6 +9,11 @@ export const CreateShipmentPage = ({ user, order, orderItems, activePage }) => {
       </div>
 
       <div class="card">
+        {error && (
+            <div class="alert alert-danger mb-4">
+                {error}
+            </div>
+        )}
         <form method="POST" action={`/ims/orders/${order.id}/shipments`}>
           <div class="form-group">
             <label for="trackingNumber">Tracking Number</label>

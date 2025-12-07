@@ -47,7 +47,9 @@ imsRoutes.get('/dashboard', async (c) => {
 
 imsRoutes.get('/settings', async (c) => {
   const user = c.get('user');
-  const config = c.ctx.config || {};
+  // c.ctx is the Context Registry. We need to get the 'config' service from it.
+  const configService = c.ctx.get('config');
+  const config = configService ? configService.getAll() : {};
 
   // Filter sensitive config
   const safeConfig = {};
