@@ -47,7 +47,7 @@ imsRoutes.get('/dashboard', async (c) => {
 
 imsRoutes.get('/settings', async (c) => {
   const user = c.get('user');
-  const config = c.ctx.config;
+  const config = c.ctx.config || {};
 
   // Filter sensitive config
   const safeConfig = {};

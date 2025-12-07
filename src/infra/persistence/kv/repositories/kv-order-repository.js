@@ -12,6 +12,8 @@ export const createKVOrderRepository = (kvPool) => {
 
   const findById = async (tenantId, id) => {
     return kvPool.withConnection(async (kv) => {
+      if (!tenantId || typeof tenantId !== 'string') throw new Error('Invalid tenantId in findById');
+      if (!id || typeof id !== 'string') throw new Error('Invalid id in findById');
       const res = await kv.get(['tenants', tenantId, 'orders', id]);
       return res.value;
     });
