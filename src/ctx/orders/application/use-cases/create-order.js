@@ -9,33 +9,41 @@ export const createCreateOrder = ({ orderRepository, obs, registry, eventBus }) 
     // Access other domains through registry
     const inventory = registry.get('domain.inventory');
 
-    // Optimization: Bulk Fetch Products (Not fully implemented in catalog yet, but we can parallelize)
-    // We still need prices to calculate total.
-
     // 1. Prepare Enriched Items (Price Lookup)
     let calculatedTotal = 0;
     const enrichedItems = [];
     const stockReservationRequest = [];
 
-    // Use Promise.all for fetching products (reduce N+1 latency)
-    const products = await Promise.all(items.map(async item => {
-        const p = await inventory.useCases.getProduct.execute(tenantId, item.productId);
-        if (!p) throw new Error(`Product ${item.productId} not found`);
-        return { ...p, requestedQty: item.quantity };
-    }));
+    // FIX: N+1 Query in Order Creation
+    // Use batch fetch instead of mapping through Promise.all with individual gets.
+    // Map requests to unique product IDs
+    const productIds = [...new Set(items.map(item => item.productId))];
+    const fetchedProducts = await inventory.useCases.getProductsBatch.execute(tenantId, productIds);
 
-    for (const product of products) {
-        const itemTotal = product.price * product.requestedQty;
+    // Create lookup map
+    const productMap = new Map();
+    fetchedProducts.forEach(p => productMap.set(p.id, p));
+
+    // Validate all products exist
+    for (const item of items) {
+        if (!productMap.has(item.productId)) {
+            throw new Error(`Product ${item.productId} not found`);
+        }
+    }
+
+    for (const item of items) {
+        const product = productMap.get(item.productId);
+        const itemTotal = product.price * item.quantity;
         calculatedTotal += itemTotal;
         enrichedItems.push({
             productId: product.id,
-            quantity: product.requestedQty,
+            quantity: item.quantity,
             price: product.price,
             name: product.name
         });
         stockReservationRequest.push({
             productId: product.id,
-            quantity: product.requestedQty
+            quantity: item.quantity
         });
     }
 
@@ -50,10 +58,6 @@ export const createCreateOrder = ({ orderRepository, obs, registry, eventBus }) 
     });
 
     // 3. Reserve Stock (Atomic Batch)
-    // We do this BEFORE saving the order to DB to prevent "Order exists, but Stock failed" state (Overselling risk is handled by atomic allocation).
-    // Risk: "Stock Reserved, but Order Save Fails" (Orphaned Reservation).
-    // Mitigation: We use a compensating transaction (Release) in the catch block.
-
     try {
         await inventory.useCases.reserveStock.executeBatch(
             tenantId,
@@ -68,20 +72,15 @@ export const createCreateOrder = ({ orderRepository, obs, registry, eventBus }) 
     try {
         await orderRepository.save(tenantId, order);
     } catch (e) {
-        // CRITICAL: Rollback Stock Reservation
         console.error('Order save failed, releasing stock...', e);
         try {
-             // We can use the generic release logic which finds allocations by Order ID
-             // Wait, the movements are saved. So release logic works.
              await inventory.useCases.cancelStockReservation.execute(tenantId, order.id);
         } catch (releaseError) {
              console.error('CRITICAL: Failed to release stock after order save failure. Orphaned stock.', releaseError);
-             // In enterprise system, this logs to an alert queue for manual intervention.
         }
         throw new Error('Order creation failed during save. Please try again.');
     }
 
-    // Publish event
     if (eventBus) {
         await eventBus.publish('order.created', { ...order, tenantId });
     }

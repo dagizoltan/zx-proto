@@ -2,6 +2,12 @@ import { create, verify, getNumericDate } from "https://deno.land/x/djwt@v3.0.1/
 
 export const createJwtTokenProvider = (config) => {
   const secret = config.get('security.jwt.secret') || 'default-secret';
+
+  // CRITICAL FIX: Enforce strong secret in production
+  if (config.environment === 'production' && secret === 'default-secret') {
+      throw new Error('CRITICAL SECURITY: Cannot use default JWT secret in production. Please set SECURITY_JWT_SECRET environment variable.');
+  }
+
   const keyPromise = crypto.subtle.importKey(
     "raw",
     new TextEncoder().encode(secret),

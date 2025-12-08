@@ -22,6 +22,7 @@ import { createListStockMovements } from './application/use-cases/list-stock-mov
 import { createCreateWarehouse } from './application/use-cases/create-warehouse.js';
 import { createCreateLocation } from './application/use-cases/create-location.js';
 import { createConsumeStock } from './application/use-cases/consume-stock.js';
+import { createGetProductsBatch } from './application/use-cases/get-products-batch.js';
 
 export const createInventoryContext = async (deps) => {
   const { persistence, config, obs, messaging, registry } = deps;
@@ -61,6 +62,10 @@ export const createInventoryContext = async (deps) => {
 
   const getProduct = createGetProduct({
     productRepository,
+  });
+
+  const getProductsBatch = createGetProductsBatch({
+      productRepository
   });
 
   const reserveStock = createReserveStock({
@@ -106,8 +111,6 @@ export const createInventoryContext = async (deps) => {
   });
 
   // WRAPPER USE CASES for Cross-Domain Service Calls
-  // This ensures that when 'inventory.useCases' is injected into other domains,
-  // they can access these robust methods via a consistent interface.
   const executeProduction = {
       execute: async (...args) => stockAllocationService.executeProduction(...args)
   };
@@ -143,6 +146,7 @@ export const createInventoryContext = async (deps) => {
       updateStock,
       checkAvailability,
       getProduct,
+      getProductsBatch, // Export new use case
       reserveStock,
       listAllProducts,
       receiveStock,
@@ -153,7 +157,6 @@ export const createInventoryContext = async (deps) => {
       listStockMovements,
       createWarehouse,
       createLocation,
-      // Exposed Robust Methods
       executeProduction,
       receiveStockRobust
     },

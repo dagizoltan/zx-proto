@@ -7,14 +7,34 @@ export const createUpdateOrderStatus = ({ orderRepository, registry, obs, eventB
 
     const oldStatus = order.status;
 
-    // State Machine Validation & Actions
-    if (newStatus === 'SHIPPED') {
-        if (oldStatus !== 'PAID' && oldStatus !== 'CREATED') { // Allowing CREATED -> SHIPPED for simplicity if skipping payment
-            throw new Error(`Cannot ship order in ${oldStatus} status`);
+    // Strict State Machine
+    const VALID_TRANSITIONS = {
+      'CREATED': ['PAID', 'CANCELLED'],
+      'PAID': ['SHIPPED', 'PARTIALLY_SHIPPED', 'CANCELLED'],
+      'PARTIALLY_SHIPPED': ['SHIPPED', 'CANCELLED', 'DELIVERED'], // Added DELIVERED just in case
+      'SHIPPED': ['DELIVERED'],
+      'DELIVERED': [], // Terminal
+      'CANCELLED': []  // Terminal
+    };
+
+    const allowed = VALID_TRANSITIONS[oldStatus] || [];
+    if (!allowed.includes(newStatus)) {
+        // Allow idempotent updates (same status)
+        if (oldStatus !== newStatus) {
+            throw new Error(
+                `Invalid status transition: ${oldStatus} -> ${newStatus}. ` +
+                `Valid transitions: ${allowed.join(', ') || 'none'}`
+            );
         }
+    }
+
+    // Actions based on transition
+    if (newStatus === 'SHIPPED' && oldStatus !== 'SHIPPED') {
+        // Ensure strictly correct logic. Previous code allowed CREATED -> SHIPPED. Now blocked.
         await inventory.useCases.confirmStockShipment.execute(tenantId, orderId);
-    } else if (newStatus === 'CANCELLED') {
+    } else if (newStatus === 'CANCELLED' && oldStatus !== 'CANCELLED') {
         if (oldStatus === 'SHIPPED' || oldStatus === 'DELIVERED') {
+             // Already blocked by State Machine, but double check logic
              throw new Error(`Cannot cancel order in ${oldStatus} status`);
         }
         await inventory.useCases.cancelStockReservation.execute(tenantId, orderId);

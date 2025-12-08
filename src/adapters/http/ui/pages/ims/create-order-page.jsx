@@ -11,6 +11,7 @@ export const CreateOrderPage = ({ user, customers, products, error, values = {} 
     document.addEventListener('DOMContentLoaded', () => {
       const tableBody = document.querySelector('#items-table tbody');
       const addBtn = document.getElementById('add-item-btn');
+      const form = document.querySelector('form');
       const productOptions = \`${productOptions}\`;
 
       // Read safely from JSON script tag
@@ -60,6 +61,48 @@ export const CreateOrderPage = ({ user, customers, products, error, values = {} 
         if (e.target.classList.contains('remove-row')) {
           e.target.closest('tr').remove();
         }
+      });
+
+      // FIX #13: Client-side Validation
+      form.addEventListener('submit', (e) => {
+          const formData = new FormData(form);
+
+          if (!formData.get('userId')) {
+              e.preventDefault();
+              alert('Please select a customer.');
+              return;
+          }
+
+          const rows = document.querySelectorAll('#items-table tbody tr');
+          if (rows.length === 0) {
+              e.preventDefault();
+              alert('Please add at least one item to the order.');
+              return;
+          }
+
+          // Check for duplicate products? Optional but good.
+          // Check for empty product selections
+          let hasEmptyProduct = false;
+          let hasInvalidQty = false;
+
+          rows.forEach(row => {
+              const select = row.querySelector('select');
+              const input = row.querySelector('input[type="number"]');
+              if (!select.value) hasEmptyProduct = true;
+              if (input.value < 1) hasInvalidQty = true;
+          });
+
+          if (hasEmptyProduct) {
+              e.preventDefault();
+              alert('Please select a product for all items.');
+              return;
+          }
+
+          if (hasInvalidQty) {
+              e.preventDefault();
+              alert('Quantity must be at least 1.');
+              return;
+          }
       });
     });
   `;

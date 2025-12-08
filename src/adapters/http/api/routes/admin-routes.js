@@ -101,10 +101,10 @@ imsRoutes.get('/customers', async (c) => {
 imsRoutes.get('/customers/:id', async (c) => {
     const tenantId = c.get('tenantId');
     const userId = c.req.param('id');
-    const ac = c.ctx.get('domain.access-control');
+    const queries = c.ctx.get('domain.queries');
 
     try {
-        const result = await ac.useCases.getCustomerProfile.execute(tenantId, userId);
+        const result = await queries.useCases.getCustomerProfile.execute(tenantId, userId);
         return c.json(result);
     } catch (error) {
         if (error.message === 'Customer not found') {

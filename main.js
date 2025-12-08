@@ -18,6 +18,7 @@ import { createOrdersContext } from './src/ctx/orders/index.js';
 import { createCatalogContext } from './src/ctx/catalog/index.js';
 import { createProcurementContext } from './src/ctx/procurement/index.js';
 import { createManufacturingContext } from './src/ctx/manufacturing/index.js';
+import { createQueriesContext } from './src/ctx/queries/index.js';
 
 async function bootstrap() {
   console.log('🚀 IMS Shopfront - Starting...\n');
@@ -73,6 +74,10 @@ async function bootstrap() {
     .registerDomain('manufacturing', createManufacturingContext, [
         'infra.persistence',
         'domain.inventory'
+    ])
+    .registerDomain('queries', createQueriesContext, [
+        'domain.accessControl',
+        'domain.orders'
     ]);
 
   // 5. Initialize all contexts (resolves dependency graph)
@@ -116,7 +121,6 @@ async function bootstrap() {
   };
 
   Deno.addSignalListener('SIGINT', shutdown);
-  // Deno.addSignalListener('SIGTERM', shutdown); // SIGTERM not supported on all platforms/Deno versions seamlessly, but usually good practice.
 }
 
 // Run

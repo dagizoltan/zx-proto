@@ -12,7 +12,7 @@ shipmentRoutes.get('/new', async (c) => {
     const user = c.get('user');
     const tenantId = c.get('tenantId');
     const orders = c.ctx.get('domain.orders');
-    const accessControl = c.ctx.get('domain.accessControl');
+    const queries = c.ctx.get('domain.queries');
 
     // Fetch orders that are PAID or PARTIALLY_SHIPPED
     // Ideally we would have a filter for this in listOrders
@@ -25,8 +25,8 @@ shipmentRoutes.get('/new', async (c) => {
     for (const o of shippableOrders) {
         if (o.userId) {
              try {
-                const customer = await accessControl.useCases.getCustomerProfile.execute(tenantId, o.userId);
-                o.customerName = customer.name || customer.email;
+                const result = await queries.useCases.getCustomerProfile.execute(tenantId, o.userId);
+                o.customerName = result.user?.name || result.user?.email || 'Unknown';
              } catch (e) {
                 o.customerName = 'Unknown';
              }

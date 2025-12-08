@@ -225,10 +225,10 @@ accessControlRoutes.get('/customers/:id', async (c) => {
     const user = c.get('user');
     const tenantId = c.get('tenantId');
     const customerId = c.req.param('id');
-    const ac = c.ctx.get('domain.accessControl');
+    const queries = c.ctx.get('domain.queries');
 
     try {
-        const customerData = await ac.useCases.getCustomerProfile.execute(tenantId, customerId);
+        const customerData = await queries.useCases.getCustomerProfile.execute(tenantId, customerId);
         const html = await renderPage(CustomerDetailPage, {
             user,
             customer: customerData,
