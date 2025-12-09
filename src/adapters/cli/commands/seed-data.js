@@ -13,12 +13,14 @@ import { createOrdersContext } from '../../../ctx/orders/index.js';
 import { createCatalogContext } from '../../../ctx/catalog/index.js';
 import { createProcurementContext } from '../../../ctx/procurement/index.js';
 import { createManufacturingContext } from '../../../ctx/manufacturing/index.js';
+import { createSystemContext } from '../../../ctx/system/index.js';
 
 import { seedAccessControl } from './seeders/access-control-seeder.js';
 import { seedCatalog } from './seeders/catalog-seeder.js';
 import { seedInventory } from './seeders/inventory-seeder.js';
 import { seedProcurementAndManufacturing } from './seeders/procurement-seeder.js';
 import { seedOrders } from './seeders/order-seeder.js';
+import { seedNotifications } from './seeders/notification-seeder.js';
 import { Log } from './seeders/utils.js';
 
 async function bootstrap() {
@@ -42,7 +44,8 @@ async function bootstrap() {
     .registerDomain('orders', createOrdersContext, ['infra.persistence', 'infra.obs', 'infra.messaging', 'domain.inventory', 'domain.access-control'])
     .registerDomain('catalog', createCatalogContext, ['infra.persistence', 'infra.obs', 'domain.inventory'])
     .registerDomain('procurement', createProcurementContext, ['infra.persistence', 'domain.inventory'])
-    .registerDomain('manufacturing', createManufacturingContext, ['infra.persistence', 'domain.inventory']);
+    .registerDomain('manufacturing', createManufacturingContext, ['infra.persistence', 'domain.inventory'])
+    .registerDomain('system', createSystemContext, ['infra.persistence', 'infra.messaging']);
 
   await ctx.initialize(config);
   const persistence = ctx.get('infra.persistence');
@@ -65,6 +68,7 @@ async function bootstrap() {
   const locationIds = await seedInventory(ctx, tenantId, products);
   await seedProcurementAndManufacturing(ctx, tenantId, locationIds);
   await seedOrders(ctx, tenantId, products, customers);
+  await seedNotifications(ctx, tenantId);
 
   Log.step('🎉 Enterprise Seeding Complete!');
   Deno.exit(0);
