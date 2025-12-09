@@ -4,7 +4,8 @@ const LOG_LEVELS = {
   SUCCESS: 2,
   WARN: 3,
   ERROR: 4,
-  AUDIT: 5,
+  ACTIVITY: 5,
+  AUDIT: 6,
 };
 
 export const createObs = (kvPool, minLevel = 'INFO', eventBus = null) => {
@@ -35,8 +36,19 @@ export const createObs = (kvPool, minLevel = 'INFO', eventBus = null) => {
 
     try {
       await kvPool.withConnection(async (kv) => {
+        let key;
+        const tenantId = metadata.tenantId;
+
+        if (tenantId) {
+            // Tenant-scoped logs: ['tenants', tenantId, 'logs', level, timestamp, traceId]
+            key = ['tenants', tenantId, 'logs', level.toLowerCase(), logEntry.timestamp, logEntry.trace_id];
+        } else {
+            // Global logs (fallback): ['logs', level, timestamp, traceId]
+            key = ['logs', level.toLowerCase(), logEntry.timestamp, logEntry.trace_id];
+        }
+
         await kv.set(
-          ['logs', level.toLowerCase(), logEntry.timestamp, logEntry.trace_id],
+          key,
           logEntry,
           { expireIn: 30 * 24 * 60 * 60 * 1000 } // 30 days
         );
@@ -123,6 +135,7 @@ export const createObs = (kvPool, minLevel = 'INFO', eventBus = null) => {
     success: (msg, meta) => log('SUCCESS', msg, meta),
     warn: (msg, meta) => log('WARN', msg, meta),
     error: (msg, meta) => log('ERROR', msg, meta),
+    activity: (msg, meta) => log('ACTIVITY', msg, meta),
     audit: (msg, meta) => log('AUDIT', msg, meta),
     metric,
     traceSpan: trace,

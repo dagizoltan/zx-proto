@@ -13,6 +13,8 @@ import { inventoryRoutes } from './routes/inventory.routes.js';
 import { procurementRoutes } from './routes/procurement.routes.js';
 import { manufacturingRoutes } from './routes/manufacturing.routes.js';
 import { shipmentsRoutes } from './routes/shipments.routes.js';
+import { observabilityRoutes } from './routes/observability.routes.js';
+import { communicationRoutes } from './routes/communication.routes.js';
 
 export const createAPIApp = () => {
   const api = new Hono();
@@ -44,6 +46,8 @@ export const createAPIApp = () => {
   api.route('/procurement', procurementRoutes);
   api.route('/manufacturing', manufacturingRoutes);
   api.route('/shipments', shipmentsRoutes);
+  api.route('/observability', observabilityRoutes);
+  api.route('/communication', communicationRoutes);
 
   return api;
 };

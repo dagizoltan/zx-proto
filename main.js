@@ -20,6 +20,8 @@ import { createProcurementContext } from './src/ctx/procurement/index.js';
 import { createManufacturingContext } from './src/ctx/manufacturing/index.js';
 import { createSystemContext } from './src/ctx/system/index.js';
 import { createQueriesContext } from './src/ctx/queries/index.js';
+import { createObservabilityContext } from './src/ctx/observability/index.js';
+import { createCommunicationContext } from './src/ctx/communication/index.js';
 
 async function bootstrap() {
   console.log('🚀 IMS Shopfront - Starting...\n');
@@ -78,6 +80,13 @@ async function bootstrap() {
         'domain.inventory'
     ])
     .registerDomain('system', createSystemContext, [
+        'infra.persistence',
+        'infra.messaging'
+    ])
+    .registerDomain('observability', createObservabilityContext, [
+        'infra.persistence'
+    ])
+    .registerDomain('communication', createCommunicationContext, [
         'infra.persistence',
         'infra.messaging'
     ])

@@ -18,8 +18,5 @@ systemRoutes.get('/roles/:id', handlers.roleDetailHandler);
 // Settings
 systemRoutes.get('/settings', handlers.settingsHandler);
 
-// Notifications
-systemRoutes.get('/notifications', handlers.notificationsPageHandler);
-
-// Audit Logs
-systemRoutes.get('/audit-logs', handlers.auditLogsPageHandler);
+// Notifications -> Moved to Communication Hub
+// Audit Logs -> Moved to Observability

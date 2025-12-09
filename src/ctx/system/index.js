@@ -1,40 +1,22 @@
-import { createKVNotificationRepository } from '../../infra/persistence/kv/repositories/kv-notification-repository.js';
-import { createKVAuditRepository } from '../../infra/persistence/kv/repositories/kv-audit-repository.js';
-import { createNotificationService } from './domain/services/notification-service.js';
-import { createSystemEventsListener } from './application/listeners/system-events-listener.js';
-import { createListAuditLogs } from './application/use-cases/list-audit-logs.js';
+// Refactored System Context
+// Notifications moved to Communication
+// Audit moved to Observability
 
 export const createSystemContext = (deps) => {
-  const kvPool = deps.persistence.kvPool;
+  // const kvPool = deps.persistence.kvPool;
 
-  // Repositories
-  const notificationRepo = createKVNotificationRepository(kvPool);
-  const auditRepo = createKVAuditRepository(kvPool);
+  // Currently System context primarily holds Users/Roles/Settings which are handled by Access Control or direct handlers
+  // If we have specific System settings logic, it goes here.
 
-  // Services
-  const notificationService = createNotificationService({ notificationRepo });
+  // For now, this might be empty or just holding future system-wide config logic.
+  // Access Control (Users/Roles) is its own domain `src/ctx/access-control`.
 
-  // Event Listeners
-  if (deps.messaging && deps.messaging.eventBus) {
-      const listener = createSystemEventsListener({
-          notificationService,
-          auditRepository: auditRepo,
-          eventBus: deps.messaging.eventBus
-      });
-      listener.setupSubscriptions();
-  }
+  // The UI routes for Users/Roles were in `system-routes.js` but used handlers from `system.handlers.js`.
+  // We need to ensure those handlers don't break if they relied on system context services.
+  // Checking handlers... likely they use Access Control services.
 
   return {
-    repositories: {
-      notification: notificationRepo,
-      audit: auditRepo
-    },
-    useCases: {
-      // Expose service methods directly as use cases for simplicity in this domain
-      // or wrap them if strictly following Clean Architecture.
-      // For now, exposing the service is cleaner for "System" utilities.
-      notifications: notificationService,
-      listAuditLogs: createListAuditLogs({ auditRepository: auditRepo })
-    }
+    repositories: {},
+    useCases: {}
   };
 };

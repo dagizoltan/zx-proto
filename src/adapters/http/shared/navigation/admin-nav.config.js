@@ -25,6 +25,34 @@ export const adminNavigation = {
     },
 
     {
+      id: 'communication',
+      label: 'Communication',
+      items: [
+        {
+          id: 'feed',
+          label: 'Feed',
+          href: '/ims/communication/feed',
+          icon: 'Activity',
+          roles: ['admin', 'manager', 'warehouse_staff']
+        },
+        {
+          id: 'messages',
+          label: 'Messages',
+          href: '/ims/communication/messages',
+          icon: 'MessageSquare',
+          roles: ['admin', 'manager']
+        },
+        {
+          id: 'notifications',
+          label: 'Notifications',
+          href: '/ims/communication/notifications',
+          icon: 'Bell',
+          roles: ['admin', 'manager']
+        }
+      ]
+    },
+
+    {
       id: 'catalog',
       label: 'Catalog',
       items: [
@@ -185,6 +213,34 @@ export const adminNavigation = {
     },
 
     {
+      id: 'observability',
+      label: 'Observability',
+      items: [
+         {
+             id: 'logs',
+             label: 'System Logs',
+             href: '/ims/observability/logs',
+             icon: 'Terminal',
+             roles: ['admin']
+         },
+         {
+             id: 'activity',
+             label: 'User Activity',
+             href: '/ims/observability/activity',
+             icon: 'MousePointer',
+             roles: ['admin', 'manager']
+         },
+         {
+             id: 'audit',
+             label: 'Audit Trail',
+             href: '/ims/observability/audit',
+             icon: 'FileSearch',
+             roles: ['admin']
+         }
+      ]
+    },
+
+    {
       id: 'reports',
       label: 'Reports',
       items: [
@@ -230,21 +286,6 @@ export const adminNavigation = {
           label: 'Settings',
           href: '/ims/system/settings',
           icon: 'Settings',
-          roles: ['admin']
-        },
-        {
-          id: 'notifications',
-          label: 'Notifications',
-          href: '/ims/system/notifications',
-          icon: 'Bell',
-          roles: ['admin', 'manager']
-        },
-        {
-          id: 'audit-log',
-          label: 'Audit Log',
-          href: '/ims/system/audit-logs',
-          icon: 'FileSearch',
-          disabled: false,
           roles: ['admin']
         }
       ]

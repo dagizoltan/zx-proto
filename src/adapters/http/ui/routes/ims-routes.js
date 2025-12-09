@@ -14,6 +14,8 @@ import { manufacturingRoutes } from './ims/manufacturing-routes.js';
 import { shipmentRoutes } from './ims/shipment-routes.js';
 import { systemRoutes } from './ims/system-routes.js';
 import { crmRoutes } from './ims/crm-routes.js';
+import { observabilityRoutes } from './ims/observability-routes.js';
+import { communicationRoutes } from './ims/communication-routes.js';
 
 export const imsRoutes = new Hono();
 
@@ -28,6 +30,8 @@ imsRoutes.route('/manufacturing', manufacturingRoutes);
 imsRoutes.route('/shipments', shipmentRoutes); 
 imsRoutes.route('/system', systemRoutes);
 imsRoutes.route('/crm', crmRoutes);
+imsRoutes.route('/observability', observabilityRoutes);
+imsRoutes.route('/communication', communicationRoutes);
 
 imsRoutes.get('/dashboard', async (c) => {
   const user = c.get('user');

@@ -14,13 +14,16 @@ import { createCatalogContext } from '../../../ctx/catalog/index.js';
 import { createProcurementContext } from '../../../ctx/procurement/index.js';
 import { createManufacturingContext } from '../../../ctx/manufacturing/index.js';
 import { createSystemContext } from '../../../ctx/system/index.js';
+import { createObservabilityContext } from '../../../ctx/observability/index.js';
+import { createCommunicationContext } from '../../../ctx/communication/index.js';
 
 import { seedAccessControl } from './seeders/access-control-seeder.js';
 import { seedCatalog } from './seeders/catalog-seeder.js';
 import { seedInventory } from './seeders/inventory-seeder.js';
 import { seedProcurementAndManufacturing } from './seeders/procurement-seeder.js';
 import { seedOrders } from './seeders/order-seeder.js';
-import { seedNotifications } from './seeders/notification-seeder.js';
+import { seedCommunication } from './seeders/communication-seeder.js';
+import { seedObservability } from './seeders/observability-seeder.js';
 import { Log } from './seeders/utils.js';
 
 async function bootstrap() {
@@ -45,7 +48,9 @@ async function bootstrap() {
     .registerDomain('catalog', createCatalogContext, ['infra.persistence', 'infra.obs', 'domain.inventory'])
     .registerDomain('procurement', createProcurementContext, ['infra.persistence', 'domain.inventory'])
     .registerDomain('manufacturing', createManufacturingContext, ['infra.persistence', 'domain.inventory'])
-    .registerDomain('system', createSystemContext, ['infra.persistence', 'infra.messaging']);
+    .registerDomain('system', createSystemContext, ['infra.persistence', 'infra.messaging'])
+    .registerDomain('observability', createObservabilityContext, ['infra.persistence'])
+    .registerDomain('communication', createCommunicationContext, ['infra.persistence', 'infra.messaging']);
 
   await ctx.initialize(config);
   const persistence = ctx.get('infra.persistence');
@@ -68,7 +73,10 @@ async function bootstrap() {
   const locationIds = await seedInventory(ctx, tenantId, products);
   await seedProcurementAndManufacturing(ctx, tenantId, locationIds);
   await seedOrders(ctx, tenantId, products, customers);
-  await seedNotifications(ctx, tenantId);
+
+  // New Seeders
+  await seedCommunication(tenantId, ctx.get('domain.communication').useCases);
+  await seedObservability(tenantId, { obs: ctx.get('infra.obs') });
 
   Log.step('🎉 Enterprise Seeding Complete!');
   Deno.exit(0);
