@@ -1,5 +1,5 @@
 export const listLogsHandler = async (c) => {
-    const { listLogs } = c.ctx.observability.useCases;
+    const { listLogs } = c.ctx.get('domain.observability').useCases;
     const { level, cursor, limit } = c.req.query();
 
     // Default level if not provided? Or maybe allow 'all' if we support it later.
@@ -17,7 +17,7 @@ export const listLogsHandler = async (c) => {
 };
 
 export const listActivityLogsHandler = async (c) => {
-    const { listActivityLogs } = c.ctx.observability.useCases;
+    const { listActivityLogs } = c.ctx.get('domain.observability').useCases;
     const { cursor, limit } = c.req.query();
     const queryLimit = limit ? parseInt(limit) : 50;
 
@@ -30,7 +30,7 @@ export const listActivityLogsHandler = async (c) => {
 };
 
 export const listAuditLogsHandler = async (c) => {
-    const { listAuditLogs } = c.ctx.observability.useCases;
+    const { listAuditLogs } = c.ctx.get('domain.observability').useCases;
     const { cursor, limit } = c.req.query();
     const queryLimit = limit ? parseInt(limit) : 50;
 

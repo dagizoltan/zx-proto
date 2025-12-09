@@ -4,7 +4,7 @@ import { AdminLayout } from '../../layouts/admin-layout.jsx';
 
 // Handlers
 export const feedHandler = async (c) => {
-    const { getFeed } = c.ctx.communication.useCases;
+    const { getFeed } = c.ctx.get('domain.communication').useCases;
     const { items } = await getFeed(c.get('tenantId'), { limit: 20 });
     return c.html(await renderPage(CommunicationPage, {
         activeTab: 'feed',
@@ -15,7 +15,7 @@ export const feedHandler = async (c) => {
 };
 
 export const messagesHandler = async (c) => {
-    const { listMessages } = c.ctx.communication.useCases;
+    const { listMessages } = c.ctx.get('domain.communication').useCases;
     const { items } = await listMessages(c.get('tenantId'), { limit: 20 });
     return c.html(await renderPage(CommunicationPage, {
         activeTab: 'messages',
@@ -26,7 +26,7 @@ export const messagesHandler = async (c) => {
 };
 
 export const notificationsHandler = async (c) => {
-    const { notifications } = c.ctx.communication.useCases;
+    const { notifications } = c.ctx.get('domain.communication').useCases;
     const { items } = await notifications.list(c.get('tenantId'), { limit: 50 });
     return c.html(await renderPage(CommunicationPage, {
         activeTab: 'notifications',
