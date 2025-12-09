@@ -90,6 +90,44 @@ export const createSystemEventsListener = ({ notificationService, eventBus }) =>
              });
         });
 
+        // --- Access Control ---
+        eventBus.subscribe('access_control.user_registered', async (payload) => {
+             await notificationService.notify(payload.tenantId, {
+                 level: 'SUCCESS',
+                 title: 'User Registered',
+                 message: `Successfully registered user "${payload.name}" (${payload.email}).`,
+                 link: `/ims/system/users/${payload.id}`
+             });
+        });
+
+        eventBus.subscribe('access_control.role_created', async (payload) => {
+             await notificationService.notify(payload.tenantId, {
+                 level: 'SUCCESS',
+                 title: 'Role Created',
+                 message: `Successfully created role "${payload.name}".`,
+                 link: `/ims/system/roles/${payload.id}`
+             });
+        });
+
+        // --- Inventory Structure ---
+        eventBus.subscribe('inventory.warehouse_created', async (payload) => {
+             await notificationService.notify(payload.tenantId, {
+                 level: 'SUCCESS',
+                 title: 'Warehouse Created',
+                 message: `Successfully created warehouse "${payload.name}".`,
+                 link: `/ims/inventory/warehouses/${payload.id}`
+             });
+        });
+
+        eventBus.subscribe('inventory.location_created', async (payload) => {
+             await notificationService.notify(payload.tenantId, {
+                 level: 'SUCCESS',
+                 title: 'Location Created',
+                 message: `Successfully created location "${payload.name}".`,
+                 link: `/ims/inventory/locations/${payload.id}`
+             });
+        });
+
         // --- Orders ---
         eventBus.subscribe('order.created', async (payload) => {
              await notificationService.notify(payload.tenantId, {

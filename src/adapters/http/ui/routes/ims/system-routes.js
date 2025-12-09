@@ -20,3 +20,6 @@ systemRoutes.get('/settings', handlers.settingsHandler);
 
 // Notifications
 systemRoutes.get('/notifications', handlers.notificationsPageHandler);
+
+// Audit Logs
+systemRoutes.get('/audit-logs', handlers.auditLogsPageHandler);

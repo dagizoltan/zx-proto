@@ -8,6 +8,7 @@ import { CreateRolePage } from '../pages/ims/create-role-page.jsx';
 import { RoleDetailPage } from '../pages/ims/role-detail-page.jsx';
 import { SettingsPage } from '../pages/ims/settings-page.jsx';
 import { NotificationsPage } from '../pages/ims/system/notifications-page.jsx';
+import { AuditLogsPage } from '../pages/ims/system/audit-logs-page.jsx';
 
 // Users
 export const listUsersHandler = async (c) => {
@@ -187,6 +188,26 @@ export const settingsHandler = async (c) => {
       activePage: 'settings',
       layout: AdminLayout,
       title: 'Settings - IMS Admin'
+  });
+  return c.html(html);
+};
+
+// Audit Logs
+export const auditLogsPageHandler = async (c) => {
+  const user = c.get('user');
+  const tenantId = c.get('tenantId');
+  const system = c.ctx.get('domain.system');
+  const cursor = c.req.query('cursor');
+
+  const { items: logs, nextCursor } = await system.useCases.listAuditLogs.execute(tenantId, { limit: 50, cursor });
+
+  const html = await renderPage(AuditLogsPage, {
+      user,
+      logs,
+      nextCursor,
+      activePage: 'audit-logs',
+      layout: AdminLayout,
+      title: 'Audit Logs - IMS Admin'
   });
   return c.html(html);
 };

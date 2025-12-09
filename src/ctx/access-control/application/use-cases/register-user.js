@@ -1,6 +1,6 @@
 import { createUser } from '../../domain/entities/user.js';
 
-export const createRegisterUser = ({ userRepository, authService, obs }) => {
+export const createRegisterUser = ({ userRepository, authService, obs, eventBus }) => {
   const execute = async (tenantId, { email, password, name }) => {
     const existing = await userRepository.findByEmail(tenantId, email);
     if (existing) {
@@ -18,6 +18,15 @@ export const createRegisterUser = ({ userRepository, authService, obs }) => {
     });
 
     await userRepository.save(tenantId, user);
+
+    if (eventBus) {
+        await eventBus.publish('access_control.user_registered', {
+            id: user.id,
+            name: user.name,
+            email: user.email,
+            tenantId
+        });
+    }
 
     return user;
   };

@@ -14,7 +14,8 @@ import {
   createRoleHandler,
   subscribeNotificationsHandler,
   listNotificationsHandler,
-  markNotificationReadHandler
+  markNotificationReadHandler,
+  listAuditLogsHandler
 } from '../handlers/system/index.js';
 
 export const systemRoutes = new Hono();
@@ -53,3 +54,6 @@ systemRoutes.post(
 systemRoutes.get('/notifications/stream', subscribeNotificationsHandler);
 systemRoutes.get('/notifications', listNotificationsHandler);
 systemRoutes.patch('/notifications/:id/read', markNotificationReadHandler);
+
+// Audit Logs
+systemRoutes.get('/audit-logs', listAuditLogsHandler);

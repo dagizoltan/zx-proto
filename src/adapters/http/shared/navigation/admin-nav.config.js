@@ -242,9 +242,9 @@ export const adminNavigation = {
         {
           id: 'audit-log',
           label: 'Audit Log',
-          href: '/ims/system/audit',
+          href: '/ims/system/audit-logs',
           icon: 'FileSearch',
-          disabled: true,
+          disabled: false,
           roles: ['admin']
         }
       ]

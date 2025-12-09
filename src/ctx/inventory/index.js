@@ -102,12 +102,14 @@ export const createInventoryContext = async (deps) => {
   });
 
   const createWarehouse = createCreateWarehouse({
-      warehouseRepository
+      warehouseRepository,
+      eventBus
   });
 
   const createLocation = createCreateLocation({
       locationRepository,
-      warehouseRepository
+      warehouseRepository,
+      eventBus
   });
 
   // WRAPPER USE CASES for Cross-Domain Service Calls

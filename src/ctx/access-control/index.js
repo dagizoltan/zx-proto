@@ -11,7 +11,8 @@ import { createCreateRole } from './application/use-cases/create-role.js';
 import { createAssignRoleToUser } from './application/use-cases/assign-role.js';
 
 export const createAccessControlContext = async (deps) => {
-  const { persistence, config, obs, registry, security } = deps;
+  const { persistence, config, obs, registry, security, messaging } = deps;
+  const { eventBus } = messaging || {};
 
   // Repositories
   const userRepository = createKVUserRepository(persistence.kvPool);
@@ -32,6 +33,7 @@ export const createAccessControlContext = async (deps) => {
     userRepository,
     authService,
     obs,
+    eventBus
   });
 
   const checkPermission = createCheckPermission({
@@ -41,7 +43,7 @@ export const createAccessControlContext = async (deps) => {
 
   const listUsers = createListUsers({ userRepository });
   const listRoles = createListRoles({ roleRepository });
-  const createRole = createCreateRole({ roleRepository, obs });
+  const createRole = createCreateRole({ roleRepository, obs, eventBus });
   const assignRole = createAssignRoleToUser({ userRepository, roleRepository, obs });
 
   return {
