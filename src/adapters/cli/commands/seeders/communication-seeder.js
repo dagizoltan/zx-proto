@@ -1,5 +1,5 @@
 // Communication Seeder
-export const seedCommunication = async (tenantId, { feed, messages, notifications }) => {
+export const seedCommunication = async (tenantId, { postFeedItem, sendMessage, notifications }) => {
     console.log('🌱 Seeding Communication Data...');
 
     // Seed Feed
@@ -21,14 +21,17 @@ export const seedCommunication = async (tenantId, { feed, messages, notification
     ];
 
     for (const item of feedItems) {
-        await feed.postItem(tenantId, item);
+        // Was feed.postItem, now postFeedItem
+        await postFeedItem(tenantId, item);
     }
 
     // Seed Messages
     // Assuming we have a user 'admin' (usually ID is unknown here without lookup, but we can fake interactions or skip)
     // We'll skip specific user-to-user messages for now unless we look up IDs,
     // or we can create a broadcast message.
-    await messages.sendMessage(tenantId, {
+
+    // Was messages.sendMessage, now sendMessage
+    await sendMessage(tenantId, {
         from: 'system',
         to: 'all',
         content: 'Hello everyone! Please check the new feed.'
