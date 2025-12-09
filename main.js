@@ -76,7 +76,7 @@ async function bootstrap() {
         'domain.inventory'
     ])
     .registerDomain('queries', createQueriesContext, [
-        'domain.accessControl',
+        'domain.access-control',
         'domain.orders'
     ]);
 
