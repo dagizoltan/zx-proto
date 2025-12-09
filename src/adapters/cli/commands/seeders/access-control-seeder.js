@@ -20,7 +20,13 @@ export const seedAccessControl = async (ctx, tenantId) => {
         } catch (e) {
             // Fetch if exists
             const all = await ac.useCases.listRoles.execute(tenantId);
-            roleIds[name] = all.find(r => r.name === name)?.id;
+            const existing = all.find(r => r.name === name);
+            if (existing) {
+                roleIds[name] = existing.id;
+            } else {
+                console.error(`Failed to create role ${name}:`, e);
+                throw e;
+            }
         }
     }
 
@@ -41,7 +47,17 @@ export const seedAccessControl = async (ctx, tenantId) => {
             });
             await ac.useCases.assignRole.execute(tenantId, { userId: user.id, roleIds: [roleIds[u.role]] });
         } catch (e) {
-            // Ignore if exists
+            // Check if error is "User already exists"
+            if (e.message.includes('already exists')) {
+                // Ensure role is assigned even if exists
+                const existing = await ac.repositories.user.findByEmail(tenantId, u.email);
+                if (existing) {
+                    await ac.useCases.assignRole.execute(tenantId, { userId: existing.id, roleIds: [roleIds[u.role]] });
+                }
+            } else {
+                console.error(`Failed to create user ${u.email}:`, e);
+                throw e; // Fail hard on core users
+            }
         }
     }
 
