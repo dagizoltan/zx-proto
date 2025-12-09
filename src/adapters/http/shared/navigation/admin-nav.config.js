@@ -31,7 +31,7 @@ export const adminNavigation = {
         {
           id: 'products',
           label: 'Products',
-          href: '/ims/catalog',
+          href: '/ims/catalog/products',
           icon: 'Package',
           roles: ['admin', 'manager', 'warehouse_staff']
         },
@@ -214,21 +214,21 @@ export const adminNavigation = {
         {
           id: 'users',
           label: 'Users',
-          href: '/ims/users',
+          href: '/ims/system/users',
           icon: 'User',
           roles: ['admin']
         },
         {
           id: 'roles',
           label: 'Roles',
-          href: '/ims/roles',
+          href: '/ims/system/roles',
           icon: 'Shield',
           roles: ['admin']
         },
         {
           id: 'settings',
           label: 'Settings',
-          href: '/ims/settings',
+          href: '/ims/system/settings',
           icon: 'Settings',
           roles: ['admin']
         },
