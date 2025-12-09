@@ -39,7 +39,7 @@ async function bootstrap() {
     .registerInfra('obs', createObsContext, ['infra.persistence', 'infra.messaging'])
     .registerInfra('security', createSecurityContext, [])
     .registerInfra('realtime', createRealtimeContext, ['infra.messaging'])
-    .registerDomain('access-control', createAccessControlContext, ['infra.persistence', 'infra.obs', 'infra.security'])
+    .registerDomain('access-control', createAccessControlContext, ['infra.persistence', 'infra.obs', 'infra.security', 'infra.messaging'])
     .registerDomain('inventory', createInventoryContext, ['infra.persistence', 'infra.obs', 'infra.messaging', 'domain.access-control'])
     .registerDomain('orders', createOrdersContext, ['infra.persistence', 'infra.obs', 'infra.messaging', 'domain.inventory', 'domain.access-control'])
     .registerDomain('catalog', createCatalogContext, ['infra.persistence', 'infra.obs', 'domain.inventory'])

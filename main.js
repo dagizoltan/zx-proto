@@ -49,6 +49,7 @@ async function bootstrap() {
       'infra.persistence',
       'infra.obs',
       'infra.security',
+      'infra.messaging',
     ])
     .registerDomain('inventory', createInventoryContext, [
       'infra.persistence',
