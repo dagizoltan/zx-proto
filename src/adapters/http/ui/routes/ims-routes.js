@@ -36,17 +36,15 @@ imsRoutes.route('/communication', communicationRoutes);
 imsRoutes.get('/dashboard', async (c) => {
   const user = c.get('user');
   const tenantId = c.get('tenantId');
-  const orders = c.ctx.get('domain.orders');
+  const queries = c.ctx.get('domain.queries');
 
-  const stats = await orders.useCases.getDashboardStats.execute(tenantId);
-  const { items: recentOrders } = await orders.useCases.listOrders.execute(tenantId, { limit: 5 });
+  const stats = await queries.useCases.getDashboardStats.execute(tenantId);
 
   const html = await renderPage(DashboardPage, {
     user,
-    stats,
-    orders: recentOrders,
+    stats, // Now contains { orders, inventory, procurement, manufacturing }
     layout: AdminLayout,
-    activePage: '/ims/dashboard', // Helps navigation highlighting if URL mismatch
+    activePage: '/ims/dashboard',
     title: 'Dashboard - IMS Admin'
   });
 
