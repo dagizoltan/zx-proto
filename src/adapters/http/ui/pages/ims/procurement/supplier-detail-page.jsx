@@ -36,6 +36,21 @@ export const SupplierDetailPage = ({ user, supplier, purchaseOrders }) => {
         </div>
       </div>
 
+      <div class="stat-grid">
+        <div class="stat-card">
+            <h3>Total Orders</h3>
+            <div class="stat-value">{purchaseOrders.length}</div>
+        </div>
+        <div class="stat-card">
+            <h3>Total Spent</h3>
+            <div class="stat-value">${purchaseOrders.reduce((acc, po) => acc + po.totalCost, 0).toFixed(2)}</div>
+        </div>
+        <div class="stat-card">
+            <h3>Open Orders</h3>
+            <div class="stat-value">{purchaseOrders.filter(po => po.status !== 'COMPLETED' && po.status !== 'CANCELLED').length}</div>
+        </div>
+      </div>
+
       <h3>Purchase Orders</h3>
       <div class="card p-0">
         <div class="table-container">

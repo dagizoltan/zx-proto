@@ -27,6 +27,17 @@ export const BOMDetailPage = ({ user, bom }) => {
         </div>
       </div>
 
+      <div class="stat-grid">
+        <div class="stat-card">
+            <h3>Component Count</h3>
+            <div class="stat-value">{bom.components.length}</div>
+        </div>
+        <div class="stat-card">
+            <h3>Total Quantity Required</h3>
+            <div class="stat-value">{bom.components.reduce((acc, c) => acc + c.quantity, 0)}</div>
+        </div>
+      </div>
+
       <h3>Components (Raw Materials)</h3>
       <div class="card p-0">
         <div class="table-container">

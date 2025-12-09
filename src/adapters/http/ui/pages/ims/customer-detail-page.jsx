@@ -30,6 +30,12 @@ export const CustomerDetailPage = ({ customer }) => {
                 ${orders.reduce((acc, o) => acc + o.total, 0).toFixed(2)}
             </div>
         </div>
+        <div class="stat-card">
+            <h3>Avg. Order Value</h3>
+            <div class="stat-value">
+                ${orders.length > 0 ? (orders.reduce((acc, o) => acc + o.total, 0) / orders.length).toFixed(2) : '0.00'}
+            </div>
+        </div>
       </div>
 
       <h2>Order History</h2>

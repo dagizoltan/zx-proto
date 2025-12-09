@@ -25,6 +25,10 @@ export const ShipmentDetailPage = ({ user, shipment, items, order }) => {
           <h3>Shipped Date</h3>
           <div class="stat-value text-lg">{new Date(shipment.shippedAt).toLocaleString()}</div>
         </div>
+        <div class="stat-card">
+          <h3>Total Items</h3>
+          <div class="stat-value">{items.reduce((acc, i) => acc + i.quantity, 0)}</div>
+        </div>
       </div>
 
       <div class="card p-0">

@@ -45,6 +45,25 @@ export const PurchaseOrderDetailPage = ({ user, po }) => {
           </div>
       </div>
 
+      <div class="stat-grid">
+        <div class="stat-card">
+            <h3>Items Ordered</h3>
+            <div class="stat-value">{po.items.reduce((acc, i) => acc + i.quantity, 0)}</div>
+        </div>
+        <div class="stat-card">
+            <h3>Items Received</h3>
+            <div class={`stat-value ${po.items.some(i => i.receivedQuantity < i.quantity) ? 'text-warning' : 'text-success'}`}>
+                {po.items.reduce((acc, i) => acc + (i.receivedQuantity || 0), 0)}
+            </div>
+        </div>
+        <div class="stat-card">
+            <h3>Completion</h3>
+            <div class="stat-value">
+                {Math.round((po.items.reduce((acc, i) => acc + (i.receivedQuantity || 0), 0) / po.items.reduce((acc, i) => acc + i.quantity, 0)) * 100)}%
+            </div>
+        </div>
+      </div>
+
       <h3>Line Items</h3>
       <div class="card p-0">
         <div class="table-container">

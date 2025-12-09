@@ -21,6 +21,10 @@ export const ProductDetailPage = ({ user, product, movements, stock, nextCursor,
           <div class="stat-value">${product.price.toFixed(2)}</div>
         </div>
         <div class="stat-card">
+          <h3>Total Value</h3>
+          <div class="stat-value">${(stock * product.price).toFixed(2)}</div>
+        </div>
+        <div class="stat-card">
           <h3>Category</h3>
           <div class="stat-value text-xl">{product.category}</div>
         </div>

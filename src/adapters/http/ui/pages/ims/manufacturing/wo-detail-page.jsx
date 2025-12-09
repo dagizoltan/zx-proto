@@ -50,6 +50,22 @@ export const WorkOrderDetailPage = ({ user, wo, bom }) => {
               </div>
           </div>
       </div>
+
+      <div class="stat-grid">
+        <div class="stat-card">
+            <h3>Planned Quantity</h3>
+            <div class="stat-value">{wo.quantity}</div>
+        </div>
+        <div class="stat-card">
+            <h3>Completed Quantity</h3>
+             {/* Assuming wo might track completed quantity in future, for now using placeholder or 0 if not present */}
+            <div class="stat-value">{wo.completedQuantity || 0}</div>
+        </div>
+        <div class="stat-card">
+             <h3>Progress</h3>
+             <div class="stat-value">{wo.completedQuantity ? Math.round((wo.completedQuantity / wo.quantity) * 100) : 0}%</div>
+        </div>
+      </div>
     </div>
   );
 };

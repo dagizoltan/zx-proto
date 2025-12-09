@@ -29,6 +29,21 @@ export const OrderDetailPage = ({ user, order, layout, title, shipments = [] }) 
         </div>
       </div>
 
+      <div class="stat-grid">
+        <div class="stat-card">
+            <h3>Total Amount</h3>
+            <div class="stat-value">${order.total.toFixed(2)}</div>
+        </div>
+        <div class="stat-card">
+            <h3>Items Count</h3>
+            <div class="stat-value">{order.items.reduce((acc, item) => acc + item.quantity, 0)}</div>
+        </div>
+        <div class="stat-card">
+            <h3>Date Created</h3>
+            <div class="stat-value text-xl">{new Date(order.createdAt).toLocaleDateString()}</div>
+        </div>
+      </div>
+
       <div class="card p-0 mb-6">
         <div class="table-container">
             <table>
