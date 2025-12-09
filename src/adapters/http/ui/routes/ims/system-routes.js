@@ -7,18 +7,16 @@ import { UserDetailPage } from '../../pages/ims/user-detail-page.jsx';
 import { RolesPage } from '../../pages/ims/roles-page.jsx';
 import { CreateRolePage } from '../../pages/ims/create-role-page.jsx';
 import { RoleDetailPage } from '../../pages/ims/role-detail-page.jsx';
-import { CustomersPage } from '../../pages/ims/customers-page.jsx';
-import { CreateCustomerPage } from '../../pages/ims/create-customer-page.jsx';
-import { CustomerDetailPage } from '../../pages/ims/customer-detail-page.jsx';
+import { SettingsPage } from '../../pages/ims/settings-page.jsx';
 
-export const accessControlRoutes = new Hono();
+export const systemRoutes = new Hono();
 
 // Users
-accessControlRoutes.get('/users', async (c) => {
+systemRoutes.get('/users', async (c) => {
     try {
         const user = c.get('user');
         const tenantId = c.get('tenantId');
-        const ac = c.ctx.get('domain.accessControl');
+        const ac = c.ctx.get('domain.access-control');
 
         const { items: users } = await ac.useCases.listUsers.execute(tenantId, { limit: 50 });
         const roles = await ac.useCases.listRoles.execute(tenantId);
@@ -37,10 +35,10 @@ accessControlRoutes.get('/users', async (c) => {
     }
 });
 
-accessControlRoutes.get('/users/new', async (c) => {
+systemRoutes.get('/users/new', async (c) => {
     const user = c.get('user');
     const tenantId = c.get('tenantId');
-    const ac = c.ctx.get('domain.accessControl');
+    const ac = c.ctx.get('domain.access-control');
     const roles = await ac.useCases.listRoles.execute(tenantId);
 
     const html = await renderPage(CreateUserPage, {
@@ -53,9 +51,9 @@ accessControlRoutes.get('/users/new', async (c) => {
     return c.html(html);
 });
 
-accessControlRoutes.post('/users', async (c) => {
+systemRoutes.post('/users', async (c) => {
     const tenantId = c.get('tenantId');
-    const ac = c.ctx.get('domain.accessControl');
+    const ac = c.ctx.get('domain.access-control');
     const body = await c.req.parseBody();
 
     try {
@@ -71,17 +69,17 @@ accessControlRoutes.post('/users', async (c) => {
                 roleIds: [body.roleId]
             });
         }
-        return c.redirect('/ims/users');
+        return c.redirect('/ims/system/users');
     } catch (e) {
         return c.text(e.message, 400);
     }
 });
 
-accessControlRoutes.get('/users/:id', async (c) => {
+systemRoutes.get('/users/:id', async (c) => {
     const user = c.get('user');
     const tenantId = c.get('tenantId');
     const userId = c.req.param('id');
-    const ac = c.ctx.get('domain.accessControl');
+    const ac = c.ctx.get('domain.access-control');
 
     const userData = await ac.repositories.user.findById(tenantId, userId);
     if (!userData) return c.text('User not found', 404);
@@ -100,10 +98,10 @@ accessControlRoutes.get('/users/:id', async (c) => {
 });
 
 // Roles
-accessControlRoutes.get('/roles', async (c) => {
+systemRoutes.get('/roles', async (c) => {
     const user = c.get('user');
     const tenantId = c.get('tenantId');
-    const ac = c.ctx.get('domain.accessControl');
+    const ac = c.ctx.get('domain.access-control');
 
     const roles = await ac.useCases.listRoles.execute(tenantId);
 
@@ -117,7 +115,7 @@ accessControlRoutes.get('/roles', async (c) => {
     return c.html(html);
 });
 
-accessControlRoutes.get('/roles/new', async (c) => {
+systemRoutes.get('/roles/new', async (c) => {
     const user = c.get('user');
 
     const html = await renderPage(CreateRolePage, {
@@ -129,9 +127,9 @@ accessControlRoutes.get('/roles/new', async (c) => {
     return c.html(html);
 });
 
-accessControlRoutes.post('/roles', async (c) => {
+systemRoutes.post('/roles', async (c) => {
     const tenantId = c.get('tenantId');
-    const ac = c.ctx.get('domain.accessControl');
+    const ac = c.ctx.get('domain.access-control');
     const body = await c.req.parseBody();
 
     try {
@@ -139,17 +137,17 @@ accessControlRoutes.post('/roles', async (c) => {
             name: body.name,
             permissions: []
         });
-        return c.redirect('/ims/roles');
+        return c.redirect('/ims/system/roles');
     } catch (e) {
         return c.text(e.message, 400);
     }
 });
 
-accessControlRoutes.get('/roles/:id', async (c) => {
+systemRoutes.get('/roles/:id', async (c) => {
     const user = c.get('user');
     const tenantId = c.get('tenantId');
     const roleId = c.req.param('id');
-    const ac = c.ctx.get('domain.accessControl');
+    const ac = c.ctx.get('domain.access-control');
 
     const role = await ac.repositories.role.findById(tenantId, roleId);
     if (!role) return c.text('Role not found', 404);
@@ -164,13 +162,15 @@ accessControlRoutes.get('/roles/:id', async (c) => {
     return c.html(html);
 });
 
-// Customers
-accessControlRoutes.get('/customers', async (c) => {
-    const user = c.get('user');
-    const tenantId = c.get('tenantId');
-    const ac = c.ctx.get('domain.accessControl');
+// Settings
+systemRoutes.get('/settings', async (c) => {
+  const user = c.get('user');
+  const configService = c.ctx.get('config');
+  const config = configService ? configService.getAll() : {};
 
-    const { items: customers } = await ac.useCases.listUsers.execute(tenantId, { limit: 50 });
+  // Filter sensitive config
+  const safeConfig = {};
+  const sensitiveKeys = ['secret', 'key', 'password', 'token', 'credential'];
 
     const html = await renderPage(CustomersPage, {
         user,

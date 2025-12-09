@@ -108,5 +108,9 @@ export const createKVProductRepository = (kvPool) => {
     });
   };
 
+<<<<<<< HEAD
   return { save, findById, findByIds, findBySku, findAll, getWithVersion };
+=======
+  return { save, findById, findByIds, findBySku, findAll };
+>>>>>>> fix-critical-bugs-and-refactor-routing-11322124717493770469
 };

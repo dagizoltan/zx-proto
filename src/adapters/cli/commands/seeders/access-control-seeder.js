@@ -2,7 +2,7 @@ import { Random, Log } from './utils.js';
 
 export const seedAccessControl = async (ctx, tenantId) => {
     Log.step('Seeding Access Control (Roles & Users)');
-    const ac = ctx.get('domain.accessControl');
+    const ac = ctx.get('domain.access-control');
 
     // 1. Roles
     const roles = ['admin', 'manager', 'warehouse_staff', 'customer'];

@@ -44,7 +44,7 @@ async function bootstrap() {
   // 4. Register domain contexts
   console.log('🏗️  Registering domain contexts...');
   ctx
-    .registerDomain('accessControl', createAccessControlContext, [
+    .registerDomain('access-control', createAccessControlContext, [
       'infra.persistence',
       'infra.obs',
       'infra.security',
@@ -53,14 +53,14 @@ async function bootstrap() {
       'infra.persistence',
       'infra.obs',
       'infra.messaging',
-      'domain.accessControl',
+      'domain.access-control',
     ])
     .registerDomain('orders', createOrdersContext, [
       'infra.persistence',
       'infra.obs',
       'infra.messaging',
       'domain.inventory',
-      'domain.accessControl',
+      'domain.access-control',
     ])
     .registerDomain('catalog', createCatalogContext, [
       'infra.persistence',

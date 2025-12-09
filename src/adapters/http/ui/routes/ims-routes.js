@@ -2,7 +2,6 @@ import { Hono } from 'hono';
 import { renderPage } from '../renderer.js';
 import { DashboardPage } from '../pages/ims/dashboard-page.jsx';
 import { MePage } from '../pages/ims/me-page.jsx';
-import { SettingsPage } from '../pages/ims/settings-page.jsx';
 import { AdminLayout } from '../layouts/admin-layout.jsx';
 import { authMiddleware } from '../middleware/auth-middleware.js';
 
@@ -11,8 +10,9 @@ import { orderRoutes } from './ims/order-routes.js';
 import { inventoryRoutes } from './ims/inventory-routes.js';
 import { procurementRoutes } from './ims/procurement-routes.js';
 import { manufacturingRoutes } from './ims/manufacturing-routes.js';
-import { accessControlRoutes } from './ims/access-control-routes.js';
 import { shipmentRoutes } from './ims/shipment-routes.js';
+import { systemRoutes } from './ims/system-routes.js';
+import { crmRoutes } from './ims/crm-routes.js';
 
 export const imsRoutes = new Hono();
 
@@ -24,7 +24,8 @@ imsRoutes.route('/inventory', inventoryRoutes);
 imsRoutes.route('/procurement', procurementRoutes);
 imsRoutes.route('/manufacturing', manufacturingRoutes);
 imsRoutes.route('/shipments', shipmentRoutes); 
-imsRoutes.route('/', accessControlRoutes); 
+imsRoutes.route('/system', systemRoutes);
+imsRoutes.route('/crm', crmRoutes);
 
 imsRoutes.get('/dashboard', async (c) => {
   const user = c.get('user');
@@ -40,34 +41,6 @@ imsRoutes.get('/dashboard', async (c) => {
     orders: recentOrders,
     layout: AdminLayout,
     title: 'Dashboard - IMS Admin'
-  });
-
-  return c.html(html);
-});
-
-imsRoutes.get('/settings', async (c) => {
-  const user = c.get('user');
-  // c.ctx is the Context Registry. We need to get the 'config' service from it.
-  const configService = c.ctx.get('config');
-  const config = configService ? configService.getAll() : {};
-
-  // Filter sensitive config
-  const safeConfig = {};
-  const sensitiveKeys = ['secret', 'key', 'password', 'token', 'credential'];
-
-  for (const [key, value] of Object.entries(config)) {
-      if (sensitiveKeys.some(s => key.toLowerCase().includes(s))) {
-          safeConfig[key] = '********';
-      } else {
-          safeConfig[key] = value;
-      }
-  }
-
-  const html = await renderPage(SettingsPage, {
-    user,
-    config: safeConfig,
-    layout: AdminLayout,
-    title: 'Settings - IMS Admin'
   });
 
   return c.html(html);

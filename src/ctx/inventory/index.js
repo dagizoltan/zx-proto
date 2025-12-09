@@ -121,7 +121,7 @@ export const createInventoryContext = async (deps) => {
 
   // Access other contexts when needed
   const checkUserPermission = async (tenantId, userId, action) => {
-    const accessControl = registry.get('domain.accessControl');
+    const accessControl = registry.get('domain.access-control');
     return accessControl.useCases.checkPermission.execute(tenantId, userId, 'inventory', action);
   };
 

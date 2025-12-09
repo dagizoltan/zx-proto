@@ -16,7 +16,7 @@ authRoutes.get('/login', async (c) => {
 
 authRoutes.post('/login', async (c) => {
   const { email, password } = await c.req.parseBody();
-  const accessControl = c.ctx.get('domain.accessControl');
+  const accessControl = c.ctx.get('domain.access-control');
   const tenantId = c.get('tenantId');
 
   try {
@@ -54,7 +54,7 @@ authRoutes.get('/register', async (c) => {
 
 authRoutes.post('/register', async (c) => {
   const { email, password, name } = await c.req.parseBody();
-  const accessControl = c.ctx.get('domain.accessControl');
+  const accessControl = c.ctx.get('domain.access-control');
   const tenantId = c.get('tenantId');
 
   try {
