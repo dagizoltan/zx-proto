@@ -53,44 +53,17 @@ const getBadgeClass = (level) => {
     }
 };
 
-const Tabs = ({ activeTab }) => {
-    const tabs = [
-        { id: 'logs', label: 'System Logs', href: '/ims/observability/logs' },
-        { id: 'activity', label: 'User Activity', href: '/ims/observability/activity' },
-        { id: 'audit', label: 'Audit Trail', href: '/ims/observability/audit' }
-    ];
-
-    return (
-        <div style="margin-bottom: var(--space-6); border-bottom: 1px solid var(--color-border); display: flex; gap: var(--space-4);">
-            {tabs.map(tab => (
-                <a
-                    href={tab.href}
-                    style={`
-                        padding: var(--space-2) 0;
-                        border-bottom: 2px solid ${activeTab === tab.id ? 'var(--color-primary)' : 'transparent'};
-                        color: ${activeTab === tab.id ? 'var(--color-primary)' : 'var(--color-text-muted)'};
-                        font-weight: 500;
-                        text-decoration: none;
-                    `}
-                >
-                    {tab.label}
-                </a>
-            ))}
-        </div>
-    );
-};
-
 export const LogsPage = ({ title, activeTab, logs, nextCursor }) => {
     return (
         <div class="logs-page">
             <div class="page-header">
                 <h1>{title}</h1>
                 <div style="font-size: var(--font-size-sm); color: var(--color-text-muted);">
-                    <a href="/ims" style="color: var(--color-text-muted);">Home</a> / {title}
+                    <a href="/ims" style="color: var(--color-text-muted);">Home</a> / Observability / {title}
                 </div>
             </div>
 
-            <Tabs activeTab={activeTab} />
+            {/* Removed Tabs. Rendering only the active content. */}
 
             <LogTable logs={logs} />
 

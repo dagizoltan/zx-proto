@@ -2,46 +2,83 @@
 export const seedCommunication = async (tenantId, { postFeedItem, sendMessage, notifications }) => {
     console.log('🌱 Seeding Communication Data...');
 
-    // Seed Feed
+    // --- Seed Feed ---
     const feedItems = [
         {
             title: 'Welcome to the New System',
             message: 'We have updated the system with a new communication hub and observability tools.',
             type: 'MANUAL',
             author: 'Admin',
-            createdAt: new Date(Date.now() - 86400000 * 2).toISOString() // 2 days ago
+            createdAt: new Date(Date.now() - 86400000 * 2).toISOString()
         },
         {
             title: 'Maintenance Scheduled',
-            message: 'System maintenance scheduled for this weekend.',
+            message: 'System maintenance scheduled for this weekend. Expect downtime from 2 AM to 4 AM UTC.',
             type: 'MANUAL',
             author: 'IT Dept',
-            createdAt: new Date(Date.now() - 3600000).toISOString() // 1 hour ago
+            createdAt: new Date(Date.now() - 3600000).toISOString()
+        },
+        // Generate more random feed items
+        ...Array.from({ length: 15 }).map((_, i) => ({
+            title: `System Event #${i + 1}`,
+            message: `Automated system check completed successfully. Module ${String.fromCharCode(65 + i)} is operational.`,
+            type: 'SYSTEM',
+            author: 'System',
+            createdAt: new Date(Date.now() - 3600000 * (i + 2)).toISOString()
+        })),
+        {
+            title: 'Quarterly Town Hall',
+            message: 'Join us for the quarterly town hall meeting next Friday.',
+            type: 'MANUAL',
+            author: 'HR',
+            createdAt: new Date(Date.now() - 86400000 * 5).toISOString()
         }
     ];
 
     for (const item of feedItems) {
-        // Was feed.postItem, now postFeedItem
         await postFeedItem(tenantId, item);
     }
 
-    // Seed Messages
-    // Assuming we have a user 'admin' (usually ID is unknown here without lookup, but we can fake interactions or skip)
-    // We'll skip specific user-to-user messages for now unless we look up IDs,
-    // or we can create a broadcast message.
+    // --- Seed Messages ---
+    const messagesData = [
+        {
+            from: 'system',
+            to: 'all',
+            content: 'Hello everyone! Please check the new feed.'
+        },
+        {
+            from: 'admin',
+            to: 'manager',
+            content: 'Can you review the latest Q3 report?'
+        },
+        {
+            from: 'support',
+            to: 'admin',
+            content: 'Customer #420 is requesting a refund.'
+        },
+        ...Array.from({ length: 8 }).map((_, i) => ({
+            from: i % 2 === 0 ? 'alice' : 'bob',
+            to: 'team',
+            content: `Update on project phase ${i}: We are making good progress.`
+        }))
+    ];
 
-    // Was messages.sendMessage, now sendMessage
-    await sendMessage(tenantId, {
-        from: 'system',
-        to: 'all',
-        content: 'Hello everyone! Please check the new feed.'
-    });
+    for (const msg of messagesData) {
+        await sendMessage(tenantId, msg);
+    }
 
-    // Seed Notifications
+    // --- Seed Notifications ---
     const notifs = [
         { level: 'INFO', title: 'System Update', message: 'Version 2.0 is live.' },
         { level: 'WARN', title: 'Low Stock', message: 'Product X is running low.', link: '/ims/inventory' },
-        { level: 'SUCCESS', title: 'Backup Complete', message: 'Daily backup finished successfully.' }
+        { level: 'SUCCESS', title: 'Backup Complete', message: 'Daily backup finished successfully.' },
+        { level: 'ERROR', title: 'Failed Login', message: 'Multiple failed login attempts detected from IP 192.168.1.100' },
+        ...Array.from({ length: 12 }).map((_, i) => ({
+            level: ['INFO', 'SUCCESS', 'WARN'][i % 3],
+            title: `Routine Check ${i}`,
+            message: `Routine system check ${i} completed. Status: OK.`,
+            link: i % 2 === 0 ? '/ims/system/settings' : null
+        }))
     ];
 
     for (const n of notifs) {
