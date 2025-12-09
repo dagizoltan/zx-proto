@@ -7,7 +7,7 @@
 
 .admin-sidebar {
   width: 260px;
-  background-color: #1e293b; /* Dark slate */
+  background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%); /* Dark gradient */
   color: var(--color-text-inverted);
   display: flex;
   flex-direction: column;
@@ -15,12 +15,15 @@
   transition: transform 0.3s ease;
   height: 100%;
   overflow: hidden; /* Contain inner scroll */
+  box-shadow: var(--shadow-lg);
+  z-index: 10;
 }
 
 .sidebar-header {
   padding: var(--space-4) var(--space-6);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
   flex-shrink: 0;
+  background: rgba(255, 255, 255, 0.03); /* Subtle glass hint */
 }
 
 .sidebar-header h2 {
@@ -59,8 +62,8 @@
 
 .sidebar-footer {
   padding: var(--space-4) var(--space-6);
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
-  background-color: rgba(0, 0, 0, 0.1);
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  background: rgba(0, 0, 0, 0.2);
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
@@ -119,19 +122,21 @@
   display: flex;
   flex-direction: column;
   min-width: 0; /* Prevent flex blowout */
-  background-color: var(--color-bg-body);
+  /* background removed to show body gradient */
   height: 100%;
   overflow: hidden; /* Contain scroll */
 }
 
 .admin-header {
-  background-color: var(--color-bg-surface);
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
   padding: var(--space-4) var(--space-6);
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border-bottom: 1px solid var(--color-border);
+  border-bottom: var(--glass-border);
   flex-shrink: 0;
+  box-shadow: 0 4px 6px -1px rgba(0,0,0,0.02);
 }
 
 .admin-header h1 {
@@ -168,18 +173,20 @@
   font-family: monospace;
 }
 
-/* Cards - FLATTENED */
+/* Cards - GLASS */
 .card {
-  background: var(--color-bg-surface);
-  border-radius: 0; /* Flat */
-  border: none; /* No borders */
-  /* box-shadow removed via variable */
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  border-radius: var(--radius-lg);
+  border: var(--glass-border);
+  box-shadow: var(--glass-shadow);
   padding: var(--space-6);
   margin-bottom: var(--space-6);
 }
 
 .card.p-0 {
   padding: 0;
+  overflow: hidden; /* Clip inner content like tables */
 }
 
 .stat-grid {
@@ -190,16 +197,19 @@
 }
 
 .stat-card {
-  background: var(--color-bg-surface);
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
   padding: var(--space-6);
   border-radius: var(--radius-lg);
-  border: 1px solid var(--color-border); /* Keep border for stat cards to differentiate? Or make them flat too? */
-  /* User said "tabes should not have left and right borders". Stat cards might need definition. */
-  /* But generally "flat" implies minimalism. Let's make them flat too but with a subtle border? */
-  /* Or just flat white tile. */
-  border: none;
+  border: var(--glass-border);
+  box-shadow: var(--glass-shadow);
   display: flex;
   flex-direction: column;
+  transition: transform 0.2s ease;
+}
+
+.stat-card:hover {
+  transform: translateY(-2px);
 }
 
 .stat-card h3 {
@@ -220,18 +230,23 @@
 .stat-value.warn { color: var(--color-warning); }
 .stat-value.error { color: var(--color-error); }
 
-/* Tables - FLATTENED */
+/* Tables - GLASS CONTAINER */
 .table-container {
   width: 100%;
   overflow-x: auto;
-  background: var(--color-bg-surface);
-  box-shadow: none; /* No shadow */
-  border-radius: 0; /* No rounding */
-  /* No border */
+  background: transparent; /* Card handles the glass background */
+  box-shadow: none;
+  border-radius: 0;
 }
 
 .table-container table {
   margin-bottom: 0;
+  background: transparent;
+}
+
+/* Make table rows slightly glassy on hover? */
+tr:hover td {
+  background-color: rgba(255, 255, 255, 0.4);
 }
 
 /* Badges */
@@ -443,10 +458,13 @@ dialog::backdrop {
 }
 
 .toast {
-  background: var(--color-bg-surface);
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(8px);
   border-left: 4px solid var(--color-primary);
   border-radius: var(--radius-md);
-  box-shadow: var(--shadow-lg);
+  box-shadow: var(--glass-shadow);
+  border: var(--glass-border); /* Add border for glass look */
+  border-left-width: 4px; /* Maintain thick left border */
   padding: var(--space-4);
   display: flex;
   justify-content: space-between;
