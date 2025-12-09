@@ -29,7 +29,7 @@ export const AdminLayout = ({ children, user, currentPath }) => {
         <div class="admin-layout">
           <aside class="admin-sidebar">
             <div class="sidebar-header">
-              <h2>Admin Panel</h2>
+              <h2>zx ims</h2>
             </div>
             <nav class="admin-nav" id="admin-nav">
               {filteredNav.sections.map(section => (
