@@ -7,7 +7,7 @@ export const CatalogPage = ({ user, products, nextCursor, currentUrl, query = ''
       <div class="page-header">
         <h1>Catalog</h1>
         <div class="flex gap-2">
-            <form method="GET" action="/ims/catalog" class="flex gap-2">
+            <form method="GET" action="/ims/catalog/products" class="flex gap-2">
                 <input
                     type="search"
                     name="q"
@@ -18,6 +18,22 @@ export const CatalogPage = ({ user, products, nextCursor, currentUrl, query = ''
                 <button type="submit" class="btn btn-secondary">Search</button>
             </form>
             <a href="/ims/catalog/products/new" class="btn btn-primary">Add Product</a>
+        </div>
+      </div>
+
+      <div class="stat-grid">
+        <div class="stat-card">
+            <h3>Products on Page</h3>
+            <div class="stat-value">{products.length}</div>
+        </div>
+        <div class="stat-card">
+            <h3>Active</h3>
+            <div class="stat-value">{products.filter(p => p.status === 'ACTIVE').length}</div>
+        </div>
+        <div class="stat-card">
+            <h3>Low Stock</h3>
+             {/* Assuming quantity is available on product list object, typically it is enriched */}
+            <div class="stat-value warn">{products.filter(p => p.quantity < 10).length}</div>
         </div>
       </div>
 

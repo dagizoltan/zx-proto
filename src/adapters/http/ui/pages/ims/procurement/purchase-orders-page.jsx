@@ -8,6 +8,21 @@ export const PurchaseOrdersPage = ({ user, purchaseOrders }) => {
         <a href="/ims/procurement/purchase-orders/new" class="btn btn-primary">Create PO</a>
       </div>
 
+      <div class="stat-grid">
+        <div class="stat-card">
+            <h3>Open POs</h3>
+            <div class="stat-value">{purchaseOrders.filter(po => ['DRAFT', 'ISSUED', 'PARTIAL'].includes(po.status)).length}</div>
+        </div>
+        <div class="stat-card">
+            <h3>Waiting Receipt</h3>
+            <div class="stat-value">{purchaseOrders.filter(po => ['ISSUED', 'PARTIAL'].includes(po.status)).length}</div>
+        </div>
+        <div class="stat-card">
+            <h3>Total Value (Page)</h3>
+            <div class="stat-value">${purchaseOrders.reduce((sum, po) => sum + po.totalCost, 0).toFixed(2)}</div>
+        </div>
+      </div>
+
       <div class="card p-0">
         <div class="table-container">
           <table>

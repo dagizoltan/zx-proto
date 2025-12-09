@@ -8,6 +8,17 @@ export const WorkOrdersPage = ({ user, workOrders }) => {
         <a href="/ims/manufacturing/work-orders/new" class="btn btn-primary">Create WO</a>
       </div>
 
+      <div class="stat-grid">
+        <div class="stat-card">
+            <h3>Active</h3>
+            <div class="stat-value">{workOrders.filter(wo => ['PLANNED', 'IN_PROGRESS'].includes(wo.status)).length}</div>
+        </div>
+        <div class="stat-card">
+            <h3>Completed</h3>
+            <div class="stat-value">{workOrders.filter(wo => wo.status === 'COMPLETED').length}</div>
+        </div>
+      </div>
+
       <div class="card p-0">
         <div class="table-container">
           <table>

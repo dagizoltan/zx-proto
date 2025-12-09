@@ -15,15 +15,15 @@ export const DashboardPage = ({ user, stats, orders }) => {
         </div>
         <div class="stat-card">
           <h3>Total Revenue</h3>
-          <div class="stat-value">${stats.revenue}</div>
+          <div class="stat-value">${stats.totalRevenue ? stats.totalRevenue.toFixed(2) : '0.00'}</div>
         </div>
         <div class="stat-card">
-          <h3>Active Products</h3>
-          <div class="stat-value">{stats.activeProducts || '-'}</div>
+          <h3>Pending Orders</h3>
+          <div class="stat-value">{stats.pendingOrders || 0}</div>
         </div>
         <div class="stat-card">
           <h3>Low Stock Items</h3>
-          <div class="stat-value warn">{stats.lowStockCount || '-'}</div>
+          <div class="stat-value warn">{stats.lowStockCount || 0}</div>
         </div>
       </div>
 

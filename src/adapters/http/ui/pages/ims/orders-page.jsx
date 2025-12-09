@@ -9,6 +9,21 @@ export const OrdersPage = ({ user, orders, nextCursor, currentUrl }) => {
         <a href="/ims/orders/new" class="btn btn-primary">New Order</a>
       </div>
 
+      <div class="stat-grid">
+        <div class="stat-card">
+            <h3>Orders (Page)</h3>
+            <div class="stat-value">{orders.length}</div>
+        </div>
+        <div class="stat-card">
+            <h3>Revenue (Page)</h3>
+            <div class="stat-value">${orders.reduce((sum, o) => sum + o.total, 0).toFixed(2)}</div>
+        </div>
+        <div class="stat-card">
+            <h3>Pending</h3>
+            <div class="stat-value">{orders.filter(o => ['CREATED', 'PAID', 'PARTIALLY_SHIPPED'].includes(o.status)).length}</div>
+        </div>
+      </div>
+
       <div class="card p-0">
         <div class="table-container">
             <table>

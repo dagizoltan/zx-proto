@@ -17,6 +17,21 @@ export const InventoryPage = ({ user, products, nextCursor, currentUrl }) => {
           <button class="btn btn-sm btn-secondary">Movements Log</button>
       </div>
 
+      <div class="stat-grid">
+        <div class="stat-card">
+            <h3>Products (Page)</h3>
+            <div class="stat-value">{products.length}</div>
+        </div>
+        <div class="stat-card">
+            <h3>Low Stock</h3>
+            <div class="stat-value warn">{products.filter(p => p.quantity < 10).length}</div>
+        </div>
+        <div class="stat-card">
+            <h3>Total Value (Page)</h3>
+            <div class="stat-value">${products.reduce((acc, p) => acc + (p.price * p.quantity), 0).toFixed(2)}</div>
+        </div>
+      </div>
+
       <div class="card p-0">
         <div class="table-container">
             <table>

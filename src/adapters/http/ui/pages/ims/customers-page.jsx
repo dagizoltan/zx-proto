@@ -8,6 +8,14 @@ export const CustomersPage = ({ customers = [] }) => {
         <a href="/ims/customers/new" class="btn btn-primary">New Customer</a>
       </div>
 
+      <div class="stat-grid">
+        <div class="stat-card">
+            <h3>Total Customers</h3>
+             {/* If pagination is used, this is just page count, but better than nothing */}
+            <div class="stat-value">{customers.length}</div>
+        </div>
+      </div>
+
       <div class="card p-0">
         <div class="table-container">
             <table>

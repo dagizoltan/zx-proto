@@ -9,6 +9,17 @@ export const ShipmentsPage = ({ user, shipments, nextCursor, currentUrl }) => {
         <a href="/ims/shipments/new" class="btn btn-primary">Create Shipment</a>
       </div>
 
+      <div class="stat-grid">
+        <div class="stat-card">
+            <h3>Pending</h3>
+            <div class="stat-value">{shipments.filter(s => s.status !== 'DELIVERED').length}</div>
+        </div>
+        <div class="stat-card">
+            <h3>Recent</h3>
+            <div class="stat-value">{shipments.length}</div>
+        </div>
+      </div>
+
       <div class="card p-0">
         <div class="table-container">
           <table class="table">
