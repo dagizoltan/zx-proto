@@ -36,9 +36,9 @@ export const adminNavigation = {
           roles: ['admin', 'manager', 'warehouse_staff']
         },
         {
-          id: 'messages',
-          label: 'Messages',
-          href: '/ims/communication/messages',
+          id: 'conversations',
+          label: 'Conversations',
+          href: '/ims/communication/conversations',
           icon: 'MessageSquare',
           roles: ['admin', 'manager']
         },

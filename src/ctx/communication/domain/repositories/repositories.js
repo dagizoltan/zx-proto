@@ -3,36 +3,17 @@ import { createBaseRepository } from '../../../../infra/persistence/kv/repositor
 export const createKVFeedRepository = (kvPool) => {
     const base = createBaseRepository(kvPool, 'feed', 'feed');
 
-    // We want a timeline, so default to sorting by timestamp (or created_at)
-    // The base repository typically sorts by ID unless we have a specific index.
-    // For a feed, we likely want `['tenants', tenantId, 'feed', timestamp_desc, id]`.
-
-    // Since base repo is generic, let's implement a specific list method for timeline.
+    // Key: ['tenants', tenantId, 'feed', timestamp_desc, id]
     const list = async (tenantId, { limit = 20, cursor } = {}) => {
          return kvPool.withConnection(async (kv) => {
-            // Using a secondary index-like structure for time-based retrieval?
-            // Or just store keys as: ['tenants', tenantId, 'feed', timestamp_desc]
-            // Let's assume keys are naturally time-ordered or we create an index.
-
-            // For simplicity in this KV setup, let's store feed items with ID,
-            // but rely on a secondary index for ordering if BaseRepo doesn't support it well.
-            // Actually, let's just make the PRIMARY key time-based for the feed:
-            // Key: ['tenants', tenantId, 'feed', timestamp_desc]
-
             const selector = {
                 prefix: ['tenants', tenantId, 'feed']
             };
-
-            // KV lists in lexicographical order.
-            // If we use timestamp_desc as part of the key, we get natural ordering.
-            // timestamp_desc = (Date.now() inverted).
-
             const iter = kv.list(selector, { limit, cursor });
             const items = [];
             for await (const res of iter) {
                 items.push(res.value);
             }
-
             return {
                 items,
                 nextCursor: items.length === limit ? iter.cursor : null
@@ -42,11 +23,9 @@ export const createKVFeedRepository = (kvPool) => {
 
     const save = async (tenantId, item) => {
         return kvPool.withConnection(async (kv) => {
-            // Construct a reverse timestamp key for ordering
             const timestamp = item.createdAt ? new Date(item.createdAt).getTime() : Date.now();
             const timestampDesc = Number.MAX_SAFE_INTEGER - timestamp;
             const key = ['tenants', tenantId, 'feed', timestampDesc, item.id];
-
             await kv.set(key, item);
             return item;
         });
@@ -55,30 +34,92 @@ export const createKVFeedRepository = (kvPool) => {
     return { list, save };
 };
 
-export const createKVMessageRepository = (kvPool) => {
-    const base = createBaseRepository(kvPool, 'messages', 'message');
+export const createKVConversationRepository = (kvPool) => {
+    // Stores conversation metadata: participants, lastMessage, updatedAt
+    // Key: ['tenants', tenantId, 'conversations', updatedAtDesc, conversationId]
 
-    // Similarly, messages usually need to be time-ordered.
-    // For now, let's reuse the base generic list (ID based) or implement custom if user wants specific ordering.
-    // User asked for "Simple text messages".
-
-    return {
-        ...base,
-        // Override save to ensure createdAt is set if missing
-        save: async (tenantId, item) => {
-             if (!item.createdAt) item.createdAt = new Date().toISOString();
-             return base.save(tenantId, item);
-        }
+    const list = async (tenantId, { limit = 20, cursor } = {}) => {
+        return kvPool.withConnection(async (kv) => {
+           const selector = {
+               prefix: ['tenants', tenantId, 'conversations']
+           };
+           const iter = kv.list(selector, { limit, cursor });
+           const items = [];
+           for await (const res of iter) {
+               items.push(res.value);
+           }
+           return {
+               items,
+               nextCursor: items.length === limit ? iter.cursor : null
+           };
+       });
     };
+
+    const save = async (tenantId, conversation) => {
+         return kvPool.withConnection(async (kv) => {
+             const timestamp = conversation.updatedAt ? new Date(conversation.updatedAt).getTime() : Date.now();
+             const timestampDesc = Number.MAX_SAFE_INTEGER - timestamp;
+             // We use updatedAtDesc so active conversations float to top
+             const key = ['tenants', tenantId, 'conversations', timestampDesc, conversation.id];
+
+             // Also need to be able to find by ID efficiently if we just have ID?
+             // KV doesn't support easy "find by ID if key has dynamic segments" without index.
+             // We might need a direct lookup key: ['tenants', tenantId, 'conversations_by_id', id] -> points to main key or data
+             // For simplicity, let's store data at BOTH or use just one if list is primary.
+             // Let's store direct lookup too for getById.
+
+             await kv.atomic()
+                .set(key, conversation)
+                .set(['tenants', tenantId, 'conversations_by_id', conversation.id], conversation)
+                .commit();
+             return conversation;
+         });
+    };
+
+    const findById = async (tenantId, id) => {
+         return kvPool.withConnection(async (kv) => {
+             const res = await kv.get(['tenants', tenantId, 'conversations_by_id', id]);
+             return res.value;
+         });
+    };
+
+    return { list, save, findById };
 };
 
-// Moving Notification Repository logic here
-export const createKVNotificationRepository = (kvPool) => {
-     // Re-implementing based on what system/domain/repositories/kv-notification-repo.js probably did
-     // or just copy it if I could read it (I can, it's in system).
-     // But essentially it's a base repo.
-     const base = createBaseRepository(kvPool, 'notifications', 'notification');
+export const createKVMessageRepository = (kvPool) => {
+    // Stores messages within a conversation
+    // Key: ['tenants', tenantId, 'messages', conversationId, timestamp, messageId]
 
-     // Notifications likely need to be sorted by date too.
+    const listByConversation = async (tenantId, conversationId, { limit = 50, cursor } = {}) => {
+        return kvPool.withConnection(async (kv) => {
+            const selector = {
+                prefix: ['tenants', tenantId, 'messages', conversationId]
+            };
+            const iter = kv.list(selector, { limit, cursor });
+            const items = [];
+            for await (const res of iter) {
+                items.push(res.value);
+            }
+            return {
+                items,
+                nextCursor: items.length === limit ? iter.cursor : null
+            };
+        });
+    };
+
+    const save = async (tenantId, message) => {
+        return kvPool.withConnection(async (kv) => {
+            const timestamp = message.createdAt ? new Date(message.createdAt).getTime() : Date.now();
+            const key = ['tenants', tenantId, 'messages', message.conversationId, timestamp, message.id];
+            await kv.set(key, message);
+            return message;
+        });
+    };
+
+    return { listByConversation, save };
+};
+
+export const createKVNotificationRepository = (kvPool) => {
+     const base = createBaseRepository(kvPool, 'notifications', 'notification');
      return base;
 };

@@ -1,5 +1,7 @@
 import { renderPage } from '../../renderer.js';
 import { CommunicationPage } from '../../pages/ims/communication/communication-page.jsx';
+import { ConversationsPage } from '../../pages/ims/communication/conversations-page.jsx';
+import { ConversationDetailPage } from '../../pages/ims/communication/conversation-detail-page.jsx';
 import { AdminLayout } from '../../layouts/admin-layout.jsx';
 
 // Handlers
@@ -15,14 +17,28 @@ export const feedHandler = async (c) => {
     }));
 };
 
-export const messagesHandler = async (c) => {
-    const { listMessages } = c.ctx.get('domain.communication').useCases;
-    const { items } = await listMessages(c.get('tenantId'), { limit: 20 });
-    return c.html(await renderPage(CommunicationPage, {
-        activeTab: 'messages',
-        messages: items,
+export const conversationsHandler = async (c) => {
+    const { listConversations } = c.ctx.get('domain.communication').useCases;
+    const { items } = await listConversations(c.get('tenantId'), { limit: 20 });
+    return c.html(await renderPage(ConversationsPage, {
+        conversations: items,
         layout: AdminLayout,
-        title: 'Messages - Communication',
+        title: 'Conversations - Communication',
+        user: c.get('user')
+    }));
+};
+
+export const conversationDetailHandler = async (c) => {
+    const { getConversation } = c.ctx.get('domain.communication').useCases;
+    const conversationId = c.req.param('id');
+    const conversation = await getConversation(c.get('tenantId'), conversationId);
+
+    if (!conversation) return c.text('Conversation not found', 404);
+
+    return c.html(await renderPage(ConversationDetailPage, {
+        conversation,
+        layout: AdminLayout,
+        title: `${conversation.subject || 'Conversation'} - Communication`,
         user: c.get('user')
     }));
 };

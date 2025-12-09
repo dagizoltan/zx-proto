@@ -5,8 +5,6 @@ export const createFeedService = ({ feedRepository }) => {
             return await feedRepository.list(tenantId, { limit, cursor });
         },
         postItem: async (tenantId, item) => {
-             // item: { id, type, title, message, author, link, createdAt }
-             // type: 'MANUAL' | 'SYSTEM'
              const feedItem = {
                  id: item.id || crypto.randomUUID(),
                  type: item.type || 'MANUAL',
@@ -22,39 +20,70 @@ export const createFeedService = ({ feedRepository }) => {
     };
 };
 
-// Message Service
-export const createMessageService = ({ messageRepository }) => {
+// Conversation Service
+export const createConversationService = ({ conversationRepository, messageRepository }) => {
     return {
-        listMessages: async (tenantId, { limit, cursor }) => {
-            // Base repo 'findAll'
-            return await messageRepository.findAll(tenantId, { limit, cursor });
+        listConversations: async (tenantId, { limit, cursor }) => {
+            return await conversationRepository.list(tenantId, { limit, cursor });
         },
-        sendMessage: async (tenantId, { from, to, content }) => {
+        getConversation: async (tenantId, conversationId) => {
+            const conversation = await conversationRepository.findById(tenantId, conversationId);
+            if (!conversation) return null;
+
+            const { items: messages } = await messageRepository.listByConversation(tenantId, conversationId, { limit: 100 }); // Simple limit for now
+            return {
+                ...conversation,
+                messages
+            };
+        },
+        sendMessage: async (tenantId, { conversationId, from, content, to }) => {
+            let conversation;
+
+            if (conversationId) {
+                conversation = await conversationRepository.findById(tenantId, conversationId);
+            }
+
+            // Start new conversation if ID not provided or not found
+            if (!conversation) {
+                 conversation = {
+                     id: conversationId || crypto.randomUUID(),
+                     participants: [from, ...(to ? (Array.isArray(to) ? to : [to]) : [])],
+                     subject: content.slice(0, 30) + (content.length > 30 ? '...' : ''),
+                     updatedAt: new Date().toISOString(),
+                     lastMessage: content,
+                     lastSender: from
+                 };
+            } else {
+                conversation.updatedAt = new Date().toISOString();
+                conversation.lastMessage = content;
+                conversation.lastSender = from;
+            }
+
             const message = {
                 id: crypto.randomUUID(),
-                from, // userId or 'system'
-                to,   // userId or 'all'
+                conversationId: conversation.id,
+                from,
                 content,
-                read: false,
                 createdAt: new Date().toISOString()
             };
-            return await messageRepository.save(tenantId, message);
+
+            await messageRepository.save(tenantId, message);
+            await conversationRepository.save(tenantId, conversation);
+
+            return message;
         }
     };
 };
 
-// Notification Service (Migrated)
+// Notification Service
 export const createNotificationService = ({ notificationRepo }) => {
   const notify = async (tenantId, notification) => {
     const notif = {
       id: crypto.randomUUID(),
-      ...notification, // { level, title, message, link }
+      ...notification,
       read: false,
       createdAt: new Date().toISOString()
     };
-
-    // In a real app we might push to SSE here too.
-    // For now just save to repo.
     return await notificationRepo.save(tenantId, notif);
   };
 

@@ -4,5 +4,9 @@ import * as handlers from '../../handlers/communication/hub.handlers.js';
 export const communicationRoutes = new Hono();
 
 communicationRoutes.get('/feed', handlers.feedHandler);
-communicationRoutes.get('/messages', handlers.messagesHandler);
+communicationRoutes.get('/conversations', handlers.conversationsHandler);
+communicationRoutes.get('/conversations/:id', handlers.conversationDetailHandler);
+// Keep legacy /messages redirect or drop it? Let's redirect for safety or just drop.
+// Dropping since we update nav.
+
 communicationRoutes.get('/notifications', handlers.notificationsHandler);

@@ -18,7 +18,6 @@ export const seedCommunication = async (tenantId, { postFeedItem, sendMessage, n
             author: 'IT Dept',
             createdAt: new Date(Date.now() - 3600000).toISOString()
         },
-        // Generate more random feed items
         ...Array.from({ length: 15 }).map((_, i) => ({
             title: `System Event #${i + 1}`,
             message: `Automated system check completed successfully. Module ${String.fromCharCode(65 + i)} is operational.`,
@@ -39,8 +38,9 @@ export const seedCommunication = async (tenantId, { postFeedItem, sendMessage, n
         await postFeedItem(tenantId, item);
     }
 
-    // --- Seed Messages ---
-    const messagesData = [
+    // --- Seed Conversations ---
+    // sendMessage handles starting conversations if no ID is passed
+    const conversationsData = [
         {
             from: 'system',
             to: 'all',
@@ -55,16 +55,49 @@ export const seedCommunication = async (tenantId, { postFeedItem, sendMessage, n
             from: 'support',
             to: 'admin',
             content: 'Customer #420 is requesting a refund.'
-        },
-        ...Array.from({ length: 8 }).map((_, i) => ({
-            from: i % 2 === 0 ? 'alice' : 'bob',
-            to: 'team',
-            content: `Update on project phase ${i}: We are making good progress.`
-        }))
+        }
     ];
 
-    for (const msg of messagesData) {
-        await sendMessage(tenantId, msg);
+    // Create some threads
+    for (const conv of conversationsData) {
+        // Start conversation
+        const msg = await sendMessage(tenantId, conv);
+
+        // Add a reply to the first one for demo
+        if (conv.from === 'admin') {
+            await sendMessage(tenantId, {
+                conversationId: msg.conversationId,
+                from: 'manager',
+                content: 'Sure, I will take a look this afternoon.'
+            });
+            await sendMessage(tenantId, {
+                conversationId: msg.conversationId,
+                from: 'admin',
+                content: 'Thanks, let me know if you spot any issues.'
+            });
+        }
+    }
+
+    // Generate more random conversations
+    const users = ['alice', 'bob', 'charlie', 'dave'];
+    for (let i = 0; i < 8; i++) {
+        const user1 = users[i % users.length];
+        const user2 = users[(i + 1) % users.length];
+
+        const msg = await sendMessage(tenantId, {
+            from: user1,
+            to: user2,
+            content: `Hey ${user2}, update on project phase ${i}?`
+        });
+
+        // Random replies
+        if (i % 2 === 0) {
+             await sendMessage(tenantId, {
+                conversationId: msg.conversationId,
+                from: user2,
+                content: `Working on it, ${user1}. Will accept PR shortly.`
+            });
+        }
     }
 
     // --- Seed Notifications ---
