@@ -2,14 +2,14 @@ import { h } from 'preact';
 
 const LogTable = ({ logs }) => {
     if (!logs || logs.length === 0) {
-        return <div class="card p-4 text-center text-muted">No logs found.</div>;
+        return <div class="card p-6 text-center text-muted">No logs found.</div>;
     }
 
     return (
         <div class="card p-0">
-            <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0">
-                    <thead class="table-light">
+            <div class="table-container">
+                <table>
+                    <thead>
                         <tr>
                             <th>Time</th>
                             <th>Level</th>
@@ -20,7 +20,7 @@ const LogTable = ({ logs }) => {
                     <tbody>
                         {logs.map(log => (
                             <tr>
-                                <td class="text-nowrap text-secondary" style="font-size: 0.85rem;">
+                                <td style="white-space: nowrap; color: var(--color-text-muted); font-size: 0.85rem;">
                                     {new Date(log.timestamp).toLocaleString()}
                                 </td>
                                 <td>
@@ -28,9 +28,9 @@ const LogTable = ({ logs }) => {
                                 </td>
                                 <td>{log.message}</td>
                                 <td>
-                                    <small class="text-muted font-monospace">
-                                        {JSON.stringify(log.metadata || {}).slice(0, 50)}...
-                                    </small>
+                                    <div style="font-family: monospace; font-size: 0.85em; color: var(--color-text-muted); max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                                        {JSON.stringify(log.metadata || {})}
+                                    </div>
                                 </td>
                             </tr>
                         ))}
@@ -43,56 +43,60 @@ const LogTable = ({ logs }) => {
 
 const getBadgeClass = (level) => {
     switch (level?.toUpperCase()) {
-        case 'ERROR': return 'bg-danger-subtle text-danger';
-        case 'WARN': return 'bg-warning-subtle text-warning-emphasis';
-        case 'SUCCESS': return 'bg-success-subtle text-success';
-        case 'INFO': return 'bg-info-subtle text-info-emphasis';
-        case 'ACTIVITY': return 'bg-primary-subtle text-primary';
-        case 'AUDIT': return 'bg-dark-subtle text-dark';
-        default: return 'bg-secondary-subtle text-secondary';
+        case 'ERROR': return 'badge-error';
+        case 'WARN': return 'badge-warning';
+        case 'SUCCESS': return 'badge-success';
+        case 'INFO': return 'badge-primary'; // Map info to primary/blue
+        case 'ACTIVITY': return 'badge-neutral';
+        case 'AUDIT': return 'badge-neutral'; // Dark/Neutral
+        default: return 'badge-neutral';
     }
+};
+
+const Tabs = ({ activeTab }) => {
+    const tabs = [
+        { id: 'logs', label: 'System Logs', href: '/ims/observability/logs' },
+        { id: 'activity', label: 'User Activity', href: '/ims/observability/activity' },
+        { id: 'audit', label: 'Audit Trail', href: '/ims/observability/audit' }
+    ];
+
+    return (
+        <div style="margin-bottom: var(--space-6); border-bottom: 1px solid var(--color-border); display: flex; gap: var(--space-4);">
+            {tabs.map(tab => (
+                <a
+                    href={tab.href}
+                    style={`
+                        padding: var(--space-2) 0;
+                        border-bottom: 2px solid ${activeTab === tab.id ? 'var(--color-primary)' : 'transparent'};
+                        color: ${activeTab === tab.id ? 'var(--color-primary)' : 'var(--color-text-muted)'};
+                        font-weight: 500;
+                        text-decoration: none;
+                    `}
+                >
+                    {tab.label}
+                </a>
+            ))}
+        </div>
+    );
 };
 
 export const LogsPage = ({ title, activeTab, logs, nextCursor }) => {
     return (
-        <div class="container-fluid">
-            <header class="d-flex justify-content-between align-items-center mb-4">
-                <div>
-                    <h1 class="h3 mb-2 text-gray-800">{title}</h1>
-                    <nav aria-label="breadcrumb">
-                        <ol class="breadcrumb">
-                            <li class="breadcrumb-item"><a href="/ims">Home</a></li>
-                            <li class="breadcrumb-item active">{title}</li>
-                        </ol>
-                    </nav>
+        <div class="logs-page">
+            <div class="page-header">
+                <h1>{title}</h1>
+                <div style="font-size: var(--font-size-sm); color: var(--color-text-muted);">
+                    <a href="/ims" style="color: var(--color-text-muted);">Home</a> / {title}
                 </div>
-            </header>
-
-            <div class="mb-4">
-                <ul class="nav nav-tabs">
-                    <li class="nav-item">
-                        <a class={`nav-link ${activeTab === 'logs' ? 'active' : ''}`} href="/ims/observability/logs">
-                            System Logs
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class={`nav-link ${activeTab === 'activity' ? 'active' : ''}`} href="/ims/observability/activity">
-                            User Activity
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class={`nav-link ${activeTab === 'audit' ? 'active' : ''}`} href="/ims/observability/audit">
-                            Audit Trail
-                        </a>
-                    </li>
-                </ul>
             </div>
+
+            <Tabs activeTab={activeTab} />
 
             <LogTable logs={logs} />
 
             {nextCursor && (
-                <div class="mt-3 text-center">
-                    <a href={`?cursor=${nextCursor}`} class="btn btn-outline-primary btn-sm">Load More</a>
+                <div class="text-center mt-4">
+                    <a href={`?cursor=${nextCursor}`} class="btn btn-secondary">Load More</a>
                 </div>
             )}
         </div>
