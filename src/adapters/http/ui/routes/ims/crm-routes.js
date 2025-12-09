@@ -13,6 +13,7 @@ crmRoutes.get('/customers', async (c) => {
     const tenantId = c.get('tenantId');
     const ac = c.ctx.get('domain.access-control');
 
+    // Reuse listUsers for now
     const { items: customers } = await ac.useCases.listUsers.execute(tenantId, { limit: 50 });
 
     const html = await renderPage(CustomersPage, {
@@ -68,10 +69,11 @@ crmRoutes.get('/customers/:id', async (c) => {
     const user = c.get('user');
     const tenantId = c.get('tenantId');
     const customerId = c.req.param('id');
-    const ac = c.ctx.get('domain.access-control');
+    // Corrected Dependency Injection: 'domain.queries' instead of 'domain.access-control'
+    const queries = c.ctx.get('domain.queries');
 
     try {
-        const customerData = await ac.useCases.getCustomerProfile.execute(tenantId, customerId);
+        const customerData = await queries.useCases.getCustomerProfile.execute(tenantId, customerId);
         const html = await renderPage(CustomerDetailPage, {
             user,
             customer: customerData,
