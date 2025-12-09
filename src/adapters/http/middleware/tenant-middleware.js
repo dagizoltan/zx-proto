@@ -36,7 +36,7 @@ export const tenantMiddleware = async (c, next) => {
 
       // Check if user exists in the resolved tenant
       // We need access to the user repository
-      const accessControl = c.ctx.get('domain.accessControl');
+      const accessControl = c.ctx.get('domain.access-control');
       if (accessControl && accessControl.repositories && accessControl.repositories.user) {
          const user = await accessControl.repositories.user.findById(tenantId, payload.id);
 

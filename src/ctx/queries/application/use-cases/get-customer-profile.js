@@ -1,6 +1,6 @@
 export const createGetCustomerProfile = ({ registry, obs }) => {
   const execute = async (tenantId, userId) => {
-    const accessControl = registry.get('domain.accessControl');
+    const accessControl = registry.get('domain.access-control');
     const ordersContext = registry.get('domain.orders');
 
     // 1. Fetch User
