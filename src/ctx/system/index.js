@@ -1,16 +1,26 @@
 import { createKVNotificationRepository } from '../../infra/persistence/kv/repositories/kv-notification-repository.js';
 import { createKVAuditRepository } from '../../infra/persistence/kv/repositories/kv-audit-repository.js';
 import { createNotificationService } from './domain/services/notification-service.js';
+import { createSystemEventsListener } from './application/listeners/system-events-listener.js';
 
 export const createSystemContext = (deps) => {
-  const kv = deps.persistence.kv;
+  const kvPool = deps.persistence.kvPool;
 
   // Repositories
-  const notificationRepo = createKVNotificationRepository(kv);
-  const auditRepo = createKVAuditRepository(kv);
+  const notificationRepo = createKVNotificationRepository(kvPool);
+  const auditRepo = createKVAuditRepository(kvPool);
 
   // Services
   const notificationService = createNotificationService({ notificationRepo });
+
+  // Event Listeners
+  if (deps.messaging && deps.messaging.eventBus) {
+      const listener = createSystemEventsListener({
+          notificationService,
+          eventBus: deps.messaging.eventBus
+      });
+      listener.setupSubscriptions();
+  }
 
   return {
     repositories: {

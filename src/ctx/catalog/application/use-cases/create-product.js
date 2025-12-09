@@ -17,6 +17,16 @@ export const createCreateProduct = ({ productRepository, obs, eventBus }) => {
             const parent = await productRepository.findById(tenantId, product.parentId);
             if (!parent) throw new Error('Parent product not found');
             if (parent.type !== 'CONFIGURABLE') throw new Error('Parent must be CONFIGURABLE');
+
+            // Validate attributes
+            const requiredAttrs = parent.configurableAttributes || [];
+            const variantAttrs = product.variantAttributes || {};
+
+            for (const attr of requiredAttrs) {
+                if (!variantAttrs[attr]) {
+                    throw new Error(`Variant is missing required attribute: ${attr}`);
+                }
+            }
         }
 
         await productRepository.save(tenantId, product);

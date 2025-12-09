@@ -77,7 +77,8 @@ async function bootstrap() {
         'domain.inventory'
     ])
     .registerDomain('system', createSystemContext, [
-        'infra.persistence'
+        'infra.persistence',
+        'infra.messaging'
     ])
     .registerDomain('queries', createQueriesContext, [
         'domain.access-control',
