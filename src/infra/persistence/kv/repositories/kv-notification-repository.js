@@ -10,8 +10,11 @@ export const createKVNotificationRepository = (kvPool) => {
     save: async (tenantId, notification) => {
       return kvPool.withConnection(async (kv) => {
           const key = ['tenants', tenantId, 'notifications', notification.id];
-          await kv.set(key, notification);
-          return notification;
+          // Fix: Deno KV cannot store functions (notification.toJSON is a method).
+          // We must serialize it if it's an entity with methods, or ensure we pass data only.
+          const data = typeof notification.toJSON === 'function' ? notification.toJSON() : notification;
+          await kv.set(key, data);
+          return data;
       });
     },
 
