@@ -160,12 +160,20 @@
   margin: 0;
 }
 
-/* Cards */
+.entity-id {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  display: block;
+  margin-top: 0;
+  font-family: monospace;
+}
+
+/* Cards - FLATTENED */
 .card {
   background: var(--color-bg-surface);
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--color-border);
-  box-shadow: var(--shadow-sm);
+  border-radius: 0; /* Flat */
+  border: none; /* No borders */
+  /* box-shadow removed via variable */
   padding: var(--space-6);
   margin-bottom: var(--space-6);
 }
@@ -185,8 +193,11 @@
   background: var(--color-bg-surface);
   padding: var(--space-6);
   border-radius: var(--radius-lg);
-  border: 1px solid var(--color-border);
-  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--color-border); /* Keep border for stat cards to differentiate? Or make them flat too? */
+  /* User said "tabes should not have left and right borders". Stat cards might need definition. */
+  /* But generally "flat" implies minimalism. Let's make them flat too but with a subtle border? */
+  /* Or just flat white tile. */
+  border: none;
   display: flex;
   flex-direction: column;
 }
@@ -209,12 +220,14 @@
 .stat-value.warn { color: var(--color-warning); }
 .stat-value.error { color: var(--color-error); }
 
-/* Tables */
+/* Tables - FLATTENED */
 .table-container {
   width: 100%;
   overflow-x: auto;
   background: var(--color-bg-surface);
-  box-shadow: var(--shadow-sm);
+  box-shadow: none; /* No shadow */
+  border-radius: 0; /* No rounding */
+  /* No border */
 }
 
 .table-container table {
@@ -415,8 +428,6 @@ dialog::backdrop {
 .nav-group .nav-item {
   font-size: 0.9em;
 }
-
-/* Ensure divider styling is replaced/compatible if we remove nav-divider class usage for headers */
 
 /* Toast Notifications */
 #toast-container {

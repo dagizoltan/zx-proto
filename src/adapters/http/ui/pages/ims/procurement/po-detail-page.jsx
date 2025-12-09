@@ -4,7 +4,10 @@ export const PurchaseOrderDetailPage = ({ user, po }) => {
   return (
     <div class="po-detail-page">
       <div class="page-header">
-        <h1>{po.code}</h1>
+        <div>
+            <h1>{po.code}</h1>
+            <span class="entity-id">ID: {po.id}</span>
+        </div>
         <div class="actions">
             <a href="/ims/procurement/purchase-orders" class="btn btn-secondary">Back to List</a>
             {['DRAFT', 'ISSUED', 'PARTIAL'].includes(po.status) && (

@@ -6,6 +6,7 @@ export const ShipmentDetailPage = ({ user, shipment, items, order }) => {
       <div class="page-header">
         <div>
             <h1>Shipment {shipment.code}</h1>
+            <span class="entity-id">ID: {shipment.id}</span>
             <p class="text-muted">For Order <a href={`/ims/orders/${order.id}`}>#{order.id}</a></p>
         </div>
         <span class="badge badge-success">{shipment.status}</span>

@@ -10,8 +10,8 @@ export const CustomerDetailPage = ({ customer }) => {
       <div class="page-header">
         <div>
             <h1>{user.name}</h1>
-            <p class="text-muted">{user.email}</p>
-            <div class="text-muted text-sm">Customer ID: {user.id}</div>
+            <p class="text-muted" style="margin-bottom: 0.25rem;">{user.email}</p>
+            <span class="entity-id">ID: {user.id}</span>
         </div>
         <div class="text-right">
             <div class="text-muted text-sm">Joined</div>

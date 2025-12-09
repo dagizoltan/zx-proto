@@ -4,7 +4,10 @@ export const RoleDetailPage = ({ user, role }) => {
   return (
     <div class="role-detail-page">
       <div class="page-header">
-        <h1>{role.name}</h1>
+        <div>
+            <h1>{role.name}</h1>
+            <span class="entity-id">ID: {role.id}</span>
+        </div>
         <div class="flex gap-2">
             <a href="/ims/roles" class="btn btn-secondary">Back to List</a>
         </div>

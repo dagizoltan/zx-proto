@@ -5,9 +5,9 @@ export const ProductDetailPage = ({ user, product, movements, stock, nextCursor,
   return (
     <div class="product-detail-page">
       <div class="page-header">
-        <div class="flex items-center gap-4">
+        <div>
             <h1>{product.name}</h1>
-            <span class="badge badge-neutral font-mono">{product.sku}</span>
+            <span class="entity-id">SKU: {product.sku}</span>
         </div>
       </div>
 

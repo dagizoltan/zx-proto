@@ -4,7 +4,10 @@ export const WorkOrderDetailPage = ({ user, wo, bom }) => {
   return (
     <div class="wo-detail-page">
       <div class="page-header">
-        <h1>{wo.code}</h1>
+        <div>
+            <h1>{wo.code}</h1>
+            <span class="entity-id">ID: {wo.id}</span>
+        </div>
         <div class="actions">
             <a href="/ims/manufacturing/work-orders" class="btn btn-secondary">Back to List</a>
             {['PLANNED', 'IN_PROGRESS'].includes(wo.status) && (

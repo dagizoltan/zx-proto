@@ -4,7 +4,10 @@ export const SupplierDetailPage = ({ user, supplier, purchaseOrders }) => {
   return (
     <div class="supplier-detail-page">
       <div class="page-header">
-        <h1>{supplier.name}</h1>
+        <div>
+            <h1>{supplier.name}</h1>
+            <span class="entity-id">ID: {supplier.id}</span>
+        </div>
         <div class="actions">
             <a href="/ims/procurement/suppliers" class="btn btn-secondary">Back to List</a>
             <button class="btn btn-primary">Edit Supplier</button>

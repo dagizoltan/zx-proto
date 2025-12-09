@@ -4,9 +4,12 @@ export const OrderDetailPage = ({ user, order, layout, title, shipments = [] }) 
   return (
     <div class="order-detail-page">
       <div class="page-header">
-        <div class="flex items-center gap-4">
-            <h1>Order #{order.id}</h1>
-            <span class={`badge status-badge ${order.status}`}>{order.status}</span>
+        <div>
+            <div class="flex items-center gap-4">
+                <h1>Order</h1>
+                <span class={`badge status-badge ${order.status}`}>{order.status}</span>
+            </div>
+            <span class="entity-id">ID: {order.id}</span>
         </div>
         <div class="flex gap-2">
             <a href={`/ims/orders/${order.id}/pick-list`} target="_blank" class="btn btn-secondary">Pick List</a>

@@ -4,7 +4,10 @@ export const BOMDetailPage = ({ user, bom }) => {
   return (
     <div class="bom-detail-page">
       <div class="page-header">
-        <h1>{bom.name}</h1>
+        <div>
+            <h1>{bom.name}</h1>
+            <span class="entity-id">ID: {bom.id}</span>
+        </div>
         <div class="actions">
             <a href="/ims/manufacturing/boms" class="btn btn-secondary">Back to List</a>
             <a href="/ims/manufacturing/work-orders/new" class="btn btn-primary">Create Work Order</a>

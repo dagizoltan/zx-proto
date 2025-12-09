@@ -4,7 +4,10 @@ export const UserDetailPage = ({ user, userData, roles }) => {
   return (
     <div class="user-detail-page">
       <div class="page-header">
-        <h1>{userData.name}</h1>
+        <div>
+            <h1>{userData.name}</h1>
+            <span class="entity-id">ID: {userData.id}</span>
+        </div>
         <div class="flex gap-2">
             <a href="/ims/users" class="btn btn-secondary">Back to List</a>
         </div>
