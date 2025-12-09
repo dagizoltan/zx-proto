@@ -37,23 +37,35 @@ export const seedOrders = async (ctx, tenantId, products, customers) => {
 
             // Lifecycle
             const r = Math.random();
-            if (r > 0.1) {
-                // PAID -> SHIPPED
-                await orders.useCases.updateOrderStatus.execute(tenantId, order.id, 'PAID');
 
-                if (r > 0.2) {
-                    // Ship
+            // 5% stay CREATED (Unpaid)
+            if (r < 0.05) {
+                // Do nothing, stays CREATED
+            }
+            // 5% stay PAID (Pending Ship)
+            else if (r < 0.10) {
+                 await orders.useCases.updateOrderStatus.execute(tenantId, order.id, 'PAID');
+            }
+            // 80% proceed to Shipment/Delivery/Cancel
+            else {
+                 // Move to PAID first
+                 await orders.useCases.updateOrderStatus.execute(tenantId, order.id, 'PAID');
+
+                 const r2 = Math.random();
+                 if (r2 > 0.1) { // 90% of paid are shipped
                     await orders.useCases.createShipment.execute(tenantId, {
                         orderId: order.id, items: order.items, carrier: 'UPS', trackingNumber: `1Z${Random.int(100000,999999)}`
                     });
 
-                    if (r > 0.3) {
+                    if (r2 > 0.3) { // 70% of shipped are delivered
                          await orders.useCases.updateOrderStatus.execute(tenantId, order.id, 'DELIVERED');
+                    } else {
+                         // Stays PARTIALLY_SHIPPED or SHIPPED
                     }
-                }
-            } else {
-                // CANCELLED
-                await orders.useCases.updateOrderStatus.execute(tenantId, order.id, 'CANCELLED');
+                 } else {
+                    // Canceled
+                    await orders.useCases.updateOrderStatus.execute(tenantId, order.id, 'CANCELLED');
+                 }
             }
 
         } catch (e) {

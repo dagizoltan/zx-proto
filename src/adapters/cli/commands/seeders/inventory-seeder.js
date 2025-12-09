@@ -45,9 +45,21 @@ export const seedInventory = async (ctx, tenantId, products) => {
     const totalOps = products.length;
     let ops = 0;
 
-    for (const p of products) {
+    for (const [index, p] of products.entries()) {
         const loc = Random.element(locationIds);
-        const qty = Random.int(100, 1000);
+
+        let qty = Random.int(100, 1000);
+
+        // Force Low Stock for first 3 products
+        if (index < 3) {
+            qty = Random.int(1, 15); // Low stock
+        }
+        // Force Out of Stock for next 2 products (skip receiving)
+        else if (index < 5) {
+            ops++;
+            continue;
+        }
+
         // Robust reception call via Use Case Interface
         await inventory.useCases.receiveStockRobust.execute(tenantId, {
             productId: p.id,
