@@ -14,7 +14,8 @@ import {
   listLocationsHandler,
   createLocationHandler,
   receiveStockHandler,
-  moveStockHandler
+  moveStockHandler,
+  listStockMovementsHandler
 } from '../handlers/inventory/index.js';
 
 export const inventoryRoutes = new Hono();
@@ -31,5 +32,6 @@ inventoryRoutes.get('/locations', listLocationsHandler);
 inventoryRoutes.post('/locations', validateRequest(createLocationSchema), createLocationHandler);
 
 // Stock Actions
+inventoryRoutes.get('/movements', listStockMovementsHandler);
 inventoryRoutes.post('/receive', validateRequest(receiveStockSchema), receiveStockHandler);
 inventoryRoutes.post('/move', validateRequest(moveStockSchema), moveStockHandler);

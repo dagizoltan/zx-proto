@@ -18,6 +18,7 @@ import { createOrdersContext } from './src/ctx/orders/index.js';
 import { createCatalogContext } from './src/ctx/catalog/index.js';
 import { createProcurementContext } from './src/ctx/procurement/index.js';
 import { createManufacturingContext } from './src/ctx/manufacturing/index.js';
+import { createSystemContext } from './src/ctx/system/index.js';
 import { createQueriesContext } from './src/ctx/queries/index.js';
 
 async function bootstrap() {
@@ -74,6 +75,9 @@ async function bootstrap() {
     .registerDomain('manufacturing', createManufacturingContext, [
         'infra.persistence',
         'domain.inventory'
+    ])
+    .registerDomain('system', createSystemContext, [
+        'infra.persistence'
     ])
     .registerDomain('queries', createQueriesContext, [
         'domain.access-control',

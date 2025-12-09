@@ -11,7 +11,10 @@ import {
   listUsersHandler,
   assignRolesHandler,
   listRolesHandler,
-  createRoleHandler
+  createRoleHandler,
+  subscribeNotificationsHandler,
+  listNotificationsHandler,
+  markNotificationReadHandler
 } from '../handlers/system/index.js';
 
 export const systemRoutes = new Hono();
@@ -45,3 +48,8 @@ systemRoutes.post(
   validateRequest(createRoleSchema),
   createRoleHandler
 );
+
+// Notifications
+systemRoutes.get('/notifications/stream', subscribeNotificationsHandler);
+systemRoutes.get('/notifications', listNotificationsHandler);
+systemRoutes.patch('/notifications/:id/read', markNotificationReadHandler);

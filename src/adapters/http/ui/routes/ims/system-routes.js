@@ -17,3 +17,6 @@ systemRoutes.get('/roles/:id', handlers.roleDetailHandler);
 
 // Settings
 systemRoutes.get('/settings', handlers.settingsHandler);
+
+// Notifications
+systemRoutes.get('/notifications', handlers.notificationsPageHandler);

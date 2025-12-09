@@ -233,6 +233,13 @@ export const adminNavigation = {
           roles: ['admin']
         },
         {
+          id: 'notifications',
+          label: 'Notifications',
+          href: '/ims/system/notifications',
+          icon: 'Bell',
+          roles: ['admin', 'manager']
+        },
+        {
           id: 'audit-log',
           label: 'Audit Log',
           href: '/ims/system/audit',

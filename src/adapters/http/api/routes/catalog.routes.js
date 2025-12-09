@@ -12,7 +12,9 @@ import {
   getProductHandler,
   createProductHandler,
   updateProductHandler,
-  deleteProductHandler
+  deleteProductHandler,
+  listCategoriesHandler,
+  listPriceListsHandler
 } from '../handlers/catalog/index.js';
 
 export const catalogRoutes = new Hono();
@@ -56,8 +58,8 @@ catalogRoutes.delete(
   deleteProductHandler
 );
 
-// Categories (Placeholder)
-catalogRoutes.get('/categories', (c) => c.json({ items: [] }));
+// Categories
+catalogRoutes.get('/categories', listCategoriesHandler);
 
-// Price Lists (Placeholder)
-catalogRoutes.get('/price-lists', (c) => c.json({ items: [] }));
+// Price Lists
+catalogRoutes.get('/price-lists', listPriceListsHandler);

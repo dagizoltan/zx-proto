@@ -6,7 +6,10 @@ import {
 } from '../validators/orders.validator.js';
 import {
   listOrdersHandler,
-  createOrderHandler
+  createOrderHandler,
+  getOrderHandler,
+  updateOrderStatusHandler,
+  createShipmentHandler
 } from '../handlers/orders/index.js';
 import { authMiddleware } from '../middleware/auth-middleware.js';
 
@@ -26,3 +29,7 @@ ordersRoutes.post(
   validateRequest(createOrderSchema),
   createOrderHandler
 );
+
+ordersRoutes.get('/:id', getOrderHandler);
+ordersRoutes.put('/:id/status', updateOrderStatusHandler); // PUT for status update
+ordersRoutes.post('/:id/shipments', createShipmentHandler);

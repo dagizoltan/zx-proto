@@ -7,6 +7,7 @@ import { RolesPage } from '../pages/ims/roles-page.jsx';
 import { CreateRolePage } from '../pages/ims/create-role-page.jsx';
 import { RoleDetailPage } from '../pages/ims/role-detail-page.jsx';
 import { SettingsPage } from '../pages/ims/settings-page.jsx';
+import { NotificationsPage } from '../pages/ims/system/notifications-page.jsx';
 
 // Users
 export const listUsersHandler = async (c) => {
@@ -186,6 +187,26 @@ export const settingsHandler = async (c) => {
       activePage: 'settings',
       layout: AdminLayout,
       title: 'Settings - IMS Admin'
+  });
+  return c.html(html);
+};
+
+// Notifications
+export const notificationsPageHandler = async (c) => {
+  const user = c.get('user');
+  const tenantId = c.get('tenantId');
+  const system = c.ctx.get('domain.system');
+  const cursor = c.req.query('cursor');
+
+  const { items: notifications, nextCursor } = await system.useCases.notifications.list(tenantId, { limit: 50, cursor, userId: user.id });
+
+  const html = await renderPage(NotificationsPage, {
+      user,
+      notifications,
+      nextCursor,
+      activePage: 'notifications',
+      layout: AdminLayout,
+      title: 'Notifications - IMS Admin'
   });
   return c.html(html);
 };

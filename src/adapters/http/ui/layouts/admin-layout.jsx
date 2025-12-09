@@ -78,9 +78,53 @@ export const AdminLayout = ({ children, user, currentPath }) => {
               {children}
             </main>
           </div>
+
+          <div id="toast-container"></div>
         </div>
         <script dangerouslySetInnerHTML={{ __html: `
           (function() {
+             // 0. SSE Notifications
+             if (window.EventSource) {
+               const evtSource = new EventSource('/api/system/notifications/stream');
+               evtSource.onmessage = function(event) {
+                 try {
+                    // Skip ping
+                    if (event.data.startsWith(':')) return;
+
+                    const data = JSON.parse(event.data);
+                    showToast(data);
+                 } catch (e) {
+                    console.error('SSE Error', e);
+                 }
+               };
+             }
+
+             function showToast(notification) {
+                const container = document.getElementById('toast-container');
+                const toast = document.createElement('div');
+                toast.className = 'toast ' + notification.level;
+
+                toast.innerHTML = \`
+                  <div class="toast-content">
+                    <div class="toast-title">\${notification.title || notification.level}</div>
+                    <div class="toast-message">\${notification.message}</div>
+                  </div>
+                  <button class="toast-close">&times;</button>
+                \`;
+
+                // Close button logic
+                toast.querySelector('.toast-close').onclick = () => toast.remove();
+
+                container.appendChild(toast);
+
+                // Auto dismiss Success/Info
+                if (notification.level === 'SUCCESS' || notification.level === 'INFO') {
+                  setTimeout(() => {
+                    if (toast.parentNode) toast.remove();
+                  }, 5000);
+                }
+             }
+
             // 1. Highlight active link and open its group
             const currentPath = window.location.pathname;
             const navItems = document.querySelectorAll('.nav-item');

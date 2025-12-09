@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/middleware.ts';
 import { errorHandler } from '../middleware/error-handler.js';
+import { auditMiddleware } from './middleware/audit-middleware.js';
 
 // Refactored Routes
 import { authRoutes } from './routes/auth.routes.js';
@@ -29,6 +30,9 @@ export const createAPIApp = () => {
     c.header('Content-Type', 'application/json');
     await next();
   });
+
+  // Audit Log
+  api.use('*', auditMiddleware);
 
   // Mount routes
   api.route('/auth', authRoutes);
