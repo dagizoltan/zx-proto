@@ -7,7 +7,7 @@ authRoutes.post('/login', async (c) => {
   const tenantId = c.get('tenantId');
 
   // Access domain context through c.ctx
-  const accessControl = c.ctx.get('domain.accessControl');
+  const accessControl = c.ctx.get('domain.access-control');
   const obs = c.ctx.get('infra.obs');
 
   try {
@@ -41,7 +41,7 @@ authRoutes.post('/register', async (c) => {
   const { email, password, name } = await c.req.json();
   const tenantId = c.get('tenantId');
 
-  const accessControl = c.ctx.get('domain.accessControl');
+  const accessControl = c.ctx.get('domain.access-control');
   const obs = c.ctx.get('infra.obs');
 
   try {

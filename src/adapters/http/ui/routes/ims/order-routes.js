@@ -9,6 +9,7 @@ import { PackingSlipPage } from '../../pages/ims/packing-slip-page.jsx';
 import { CreateShipmentPage } from '../../pages/ims/shipments/create-shipment-page.jsx';
 import { ShipmentDetailPage } from '../../pages/ims/shipments/shipment-detail-page.jsx';
 import { ShipmentsPage } from '../../pages/ims/shipments/shipments-page.jsx';
+import { authMiddleware } from '../../middleware/auth-middleware.js';
 
 export const orderRoutes = new Hono();
 
@@ -38,7 +39,7 @@ orderRoutes.get('/new', async (c) => {
     try {
         const user = c.get('user');
         const tenantId = c.get('tenantId');
-        const ac = c.ctx.get('domain.accessControl');
+        const ac = c.ctx.get('domain.access-control');
         const catalog = c.ctx.get('domain.catalog');
 
         const { items: allUsers } = await ac.useCases.listUsers.execute(tenantId, { limit: 100 });
@@ -85,7 +86,7 @@ orderRoutes.post('/', async (c) => {
         await orders.useCases.createOrder.execute(tenantId, body.userId, items);
         return c.redirect('/ims/orders');
     } catch (e) {
-        const ac = c.ctx.get('domain.accessControl');
+        const ac = c.ctx.get('domain.access-control');
         const catalog = c.ctx.get('domain.catalog');
 
         const { items: allUsers } = await ac.useCases.listUsers.execute(tenantId, { limit: 100 });

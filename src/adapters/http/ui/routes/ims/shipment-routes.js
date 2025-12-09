@@ -12,7 +12,7 @@ shipmentRoutes.get('/new', async (c) => {
     const user = c.get('user');
     const tenantId = c.get('tenantId');
     const orders = c.ctx.get('domain.orders');
-    const accessControl = c.ctx.get('domain.accessControl');
+    const accessControl = c.ctx.get('domain.access-control');
 
     // Fetch orders that are PAID or PARTIALLY_SHIPPED
     // Ideally we would have a filter for this in listOrders

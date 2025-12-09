@@ -22,8 +22,9 @@ export const Log = {
     if (current % Math.ceil(total / 20) === 0 || current === total) {
       const pct = Math.round((current / total) * 100);
       const bars = '█'.repeat(Math.floor(pct / 5)) + '░'.repeat(20 - Math.floor(pct / 5));
-      process.stdout.write(`\r   [${bars}] ${pct}% (${current}/${total})`);
+      const msg = `\r   [${bars}] ${pct}% (${current}/${total})`;
+      Deno.stdout.write(new TextEncoder().encode(msg));
     }
-    if (current === total) process.stdout.write('\n');
+    if (current === total) Deno.stdout.write(new TextEncoder().encode('\n'));
   }
 };

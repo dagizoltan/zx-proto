@@ -7,18 +7,16 @@ import { UserDetailPage } from '../../pages/ims/user-detail-page.jsx';
 import { RolesPage } from '../../pages/ims/roles-page.jsx';
 import { CreateRolePage } from '../../pages/ims/create-role-page.jsx';
 import { RoleDetailPage } from '../../pages/ims/role-detail-page.jsx';
-import { CustomersPage } from '../../pages/ims/customers-page.jsx';
-import { CreateCustomerPage } from '../../pages/ims/create-customer-page.jsx';
-import { CustomerDetailPage } from '../../pages/ims/customer-detail-page.jsx';
+import { SettingsPage } from '../../pages/ims/settings-page.jsx';
 
-export const accessControlRoutes = new Hono();
+export const systemRoutes = new Hono();
 
 // Users
-accessControlRoutes.get('/users', async (c) => {
+systemRoutes.get('/users', async (c) => {
     try {
         const user = c.get('user');
         const tenantId = c.get('tenantId');
-        const ac = c.ctx.get('domain.accessControl');
+        const ac = c.ctx.get('domain.access-control');
 
         const { items: users } = await ac.useCases.listUsers.execute(tenantId, { limit: 50 });
         const roles = await ac.useCases.listRoles.execute(tenantId);
@@ -37,10 +35,10 @@ accessControlRoutes.get('/users', async (c) => {
     }
 });
 
-accessControlRoutes.get('/users/new', async (c) => {
+systemRoutes.get('/users/new', async (c) => {
     const user = c.get('user');
     const tenantId = c.get('tenantId');
-    const ac = c.ctx.get('domain.accessControl');
+    const ac = c.ctx.get('domain.access-control');
     const roles = await ac.useCases.listRoles.execute(tenantId);
 
     const html = await renderPage(CreateUserPage, {
@@ -53,9 +51,9 @@ accessControlRoutes.get('/users/new', async (c) => {
     return c.html(html);
 });
 
-accessControlRoutes.post('/users', async (c) => {
+systemRoutes.post('/users', async (c) => {
     const tenantId = c.get('tenantId');
-    const ac = c.ctx.get('domain.accessControl');
+    const ac = c.ctx.get('domain.access-control');
     const body = await c.req.parseBody();
 
     try {
@@ -71,17 +69,17 @@ accessControlRoutes.post('/users', async (c) => {
                 roleIds: [body.roleId]
             });
         }
-        return c.redirect('/ims/users');
+        return c.redirect('/ims/system/users');
     } catch (e) {
         return c.text(e.message, 400);
     }
 });
 
-accessControlRoutes.get('/users/:id', async (c) => {
+systemRoutes.get('/users/:id', async (c) => {
     const user = c.get('user');
     const tenantId = c.get('tenantId');
     const userId = c.req.param('id');
-    const ac = c.ctx.get('domain.accessControl');
+    const ac = c.ctx.get('domain.access-control');
 
     const userData = await ac.repositories.user.findById(tenantId, userId);
     if (!userData) return c.text('User not found', 404);
@@ -100,10 +98,10 @@ accessControlRoutes.get('/users/:id', async (c) => {
 });
 
 // Roles
-accessControlRoutes.get('/roles', async (c) => {
+systemRoutes.get('/roles', async (c) => {
     const user = c.get('user');
     const tenantId = c.get('tenantId');
-    const ac = c.ctx.get('domain.accessControl');
+    const ac = c.ctx.get('domain.access-control');
 
     const roles = await ac.useCases.listRoles.execute(tenantId);
 
@@ -117,7 +115,7 @@ accessControlRoutes.get('/roles', async (c) => {
     return c.html(html);
 });
 
-accessControlRoutes.get('/roles/new', async (c) => {
+systemRoutes.get('/roles/new', async (c) => {
     const user = c.get('user');
 
     const html = await renderPage(CreateRolePage, {
@@ -129,9 +127,9 @@ accessControlRoutes.get('/roles/new', async (c) => {
     return c.html(html);
 });
 
-accessControlRoutes.post('/roles', async (c) => {
+systemRoutes.post('/roles', async (c) => {
     const tenantId = c.get('tenantId');
-    const ac = c.ctx.get('domain.accessControl');
+    const ac = c.ctx.get('domain.access-control');
     const body = await c.req.parseBody();
 
     try {
@@ -139,17 +137,17 @@ accessControlRoutes.post('/roles', async (c) => {
             name: body.name,
             permissions: []
         });
-        return c.redirect('/ims/roles');
+        return c.redirect('/ims/system/roles');
     } catch (e) {
         return c.text(e.message, 400);
     }
 });
 
-accessControlRoutes.get('/roles/:id', async (c) => {
+systemRoutes.get('/roles/:id', async (c) => {
     const user = c.get('user');
     const tenantId = c.get('tenantId');
     const roleId = c.req.param('id');
-    const ac = c.ctx.get('domain.accessControl');
+    const ac = c.ctx.get('domain.access-control');
 
     const role = await ac.repositories.role.findById(tenantId, roleId);
     if (!role) return c.text('Role not found', 404);
@@ -164,80 +162,30 @@ accessControlRoutes.get('/roles/:id', async (c) => {
     return c.html(html);
 });
 
-// Customers
-accessControlRoutes.get('/customers', async (c) => {
-    const user = c.get('user');
-    const tenantId = c.get('tenantId');
-    const ac = c.ctx.get('domain.accessControl');
+// Settings
+systemRoutes.get('/settings', async (c) => {
+  const user = c.get('user');
+  const configService = c.ctx.get('config');
+  const config = configService ? configService.getAll() : {};
 
-    const { items: customers } = await ac.useCases.listUsers.execute(tenantId, { limit: 50 });
+  // Filter sensitive config
+  const safeConfig = {};
+  const sensitiveKeys = ['secret', 'key', 'password', 'token', 'credential'];
 
-    const html = await renderPage(CustomersPage, {
-        user,
-        customers,
-        activePage: 'customers',
-        layout: AdminLayout,
-        title: 'Customers - IMS Admin'
-    });
-    return c.html(html);
-});
+  for (const [key, value] of Object.entries(config)) {
+      if (sensitiveKeys.some(s => key.toLowerCase().includes(s))) {
+          safeConfig[key] = '********';
+      } else {
+          safeConfig[key] = value;
+      }
+  }
 
-accessControlRoutes.get('/customers/new', async (c) => {
-    const user = c.get('user');
-    const html = await renderPage(CreateCustomerPage, {
-        user,
-        activePage: 'customers',
-        layout: AdminLayout,
-        title: 'New Customer - IMS Admin'
-    });
-    return c.html(html);
-});
+  const html = await renderPage(SettingsPage, {
+    user,
+    config: safeConfig,
+    layout: AdminLayout,
+    title: 'Settings - IMS Admin'
+  });
 
-accessControlRoutes.post('/customers', async (c) => {
-    const tenantId = c.get('tenantId');
-    const ac = c.ctx.get('domain.accessControl');
-    const body = await c.req.parseBody();
-
-    try {
-        const newUser = await ac.useCases.registerUser.execute(tenantId, {
-            name: body.name,
-            email: body.email,
-            password: body.password
-        });
-
-        const roles = await ac.useCases.listRoles.execute(tenantId);
-        const customerRole = roles.find(r => r.name.toLowerCase() === 'customer');
-
-        if (customerRole) {
-            await ac.useCases.assignRole.execute(tenantId, {
-                userId: newUser.id,
-                roleIds: [customerRole.id]
-            });
-        }
-
-        return c.redirect('/ims/customers');
-    } catch (e) {
-        return c.text(e.message, 400);
-    }
-});
-
-accessControlRoutes.get('/customers/:id', async (c) => {
-    const user = c.get('user');
-    const tenantId = c.get('tenantId');
-    const customerId = c.req.param('id');
-    const ac = c.ctx.get('domain.accessControl');
-
-    try {
-        const customerData = await ac.useCases.getCustomerProfile.execute(tenantId, customerId);
-        const html = await renderPage(CustomerDetailPage, {
-            user,
-            customer: customerData,
-            activePage: 'customers',
-            layout: AdminLayout,
-            title: 'Customer Details - IMS Admin'
-        });
-        return c.html(html);
-    } catch (e) {
-        return c.text(e.message, 404);
-    }
+  return c.html(html);
 });

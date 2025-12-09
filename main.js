@@ -43,7 +43,7 @@ async function bootstrap() {
   // 4. Register domain contexts
   console.log('🏗️  Registering domain contexts...');
   ctx
-    .registerDomain('accessControl', createAccessControlContext, [
+    .registerDomain('access-control', createAccessControlContext, [
       'infra.persistence',
       'infra.obs',
       'infra.security',

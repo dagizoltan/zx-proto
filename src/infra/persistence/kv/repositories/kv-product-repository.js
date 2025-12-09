@@ -29,6 +29,14 @@ export const createKVProductRepository = (kvPool) => {
     });
   };
 
+  const findByIds = async (tenantId, ids) => {
+    return kvPool.withConnection(async (kv) => {
+      const keys = ids.map(id => ['tenants', tenantId, 'products', id]);
+      const res = await kv.getMany(keys);
+      return res.map(r => r.value).filter(Boolean);
+    });
+  };
+
   const findBySku = async (tenantId, sku) => {
     return kvPool.withConnection(async (kv) => {
         const indexRes = await kv.get(['tenants', tenantId, 'products_by_sku', sku]);
@@ -111,5 +119,5 @@ export const createKVProductRepository = (kvPool) => {
     });
   };
 
-  return { save, findById, findBySku, findAll };
+  return { save, findById, findByIds, findBySku, findAll };
 };
