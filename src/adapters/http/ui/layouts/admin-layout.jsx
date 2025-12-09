@@ -57,17 +57,21 @@ export const AdminLayout = ({ children, user, currentPath }) => {
                 </div>
               ))}
             </nav>
+            <div class="sidebar-footer">
+              <div class="user-info">
+                <a href="/ims/me" class="user-link">
+                  <span class="user-name" title={user.email}>{user.name || user.email}</span>
+                </a>
+              </div>
+              <a href="/logout" class="btn-logout">
+                Logout
+              </a>
+            </div>
           </aside>
 
           <div class="admin-main">
             <header class="admin-header">
               <h1>IMS Shopfront Admin</h1>
-              <div class="admin-user">
-                <a href="/ims/me" class="mr-2" style="color: inherit; text-decoration: none;">
-                    <span>{user.name || user.email}</span>
-                </a>
-                <a href="/logout" class="btn btn-sm btn-secondary" style="margin-left: 1rem;">Logout</a>
-              </div>
             </header>
 
             <main class="admin-content">

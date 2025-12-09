@@ -1,7 +1,8 @@
 /* Admin Layout */
 .admin-layout {
   display: flex;
-  min-height: 100vh;
+  height: 100svh; /* Use svh for better mobile support, fixed height container */
+  overflow: hidden; /* Prevent body scroll */
 }
 
 .admin-sidebar {
@@ -12,11 +13,14 @@
   flex-direction: column;
   flex-shrink: 0;
   transition: transform 0.3s ease;
+  height: 100%;
+  overflow: hidden; /* Contain inner scroll */
 }
 
 .sidebar-header {
   padding: var(--space-4) var(--space-6);
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  flex-shrink: 0;
 }
 
 .sidebar-header h2 {
@@ -31,6 +35,7 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
+  overflow-y: auto; /* Scrollable navigation */
 }
 
 .admin-nav .nav-item {
@@ -42,6 +47,7 @@
   font-weight: 500;
   transition: all 0.2s;
   border-left: 3px solid transparent;
+  flex-shrink: 0;
 }
 
 .admin-nav .nav-item:hover,
@@ -49,6 +55,54 @@
   color: var(--color-text-inverted);
   background-color: rgba(255, 255, 255, 0.05);
   border-left-color: var(--color-primary);
+}
+
+.sidebar-footer {
+  padding: var(--space-4) var(--space-6);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  background-color: rgba(0, 0, 0, 0.1);
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.user-info {
+  margin-bottom: var(--space-1);
+}
+
+.user-link {
+  color: var(--color-text-inverted);
+  text-decoration: none;
+  display: block;
+}
+
+.user-name {
+  display: block;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 0.9rem;
+}
+
+.btn-logout {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: var(--space-2) var(--space-3);
+  background-color: rgba(255, 255, 255, 0.1);
+  color: var(--color-text-inverted);
+  border-radius: var(--radius-md);
+  text-decoration: none;
+  font-size: 0.85rem;
+  transition: background-color 0.2s;
+}
+
+.btn-logout:hover {
+  background-color: rgba(255, 255, 255, 0.2);
+  text-decoration: none;
+  color: #fff;
 }
 
 .nav-divider {
@@ -66,6 +120,8 @@
   flex-direction: column;
   min-width: 0; /* Prevent flex blowout */
   background-color: var(--color-bg-body);
+  height: 100%;
+  overflow: hidden; /* Contain scroll */
 }
 
 .admin-header {
@@ -75,6 +131,7 @@
   justify-content: space-between;
   align-items: center;
   border-bottom: 1px solid var(--color-border);
+  flex-shrink: 0;
 }
 
 .admin-header h1 {
@@ -82,16 +139,11 @@
   font-size: var(--font-size-xl);
 }
 
-.admin-user {
-  display: flex;
-  align-items: center;
-  gap: var(--space-4);
-}
-
 .admin-content {
   padding: var(--space-6);
   flex: 1;
-  overflow-x: auto;
+  overflow-y: auto; /* Scrollable content */
+  overflow-x: auto; /* Allow horizontal scroll if needed */
 }
 
 /* Page Components */
@@ -243,11 +295,19 @@ dialog::backdrop {
 @media (max-width: 768px) {
   .admin-layout {
     flex-direction: column;
+    height: auto; /* Reset fixed height for mobile */
+    overflow: visible; /* Allow body scroll */
   }
 
   .admin-sidebar {
     width: 100%;
     height: auto;
+    overflow: visible;
+  }
+
+  .admin-main {
+    height: auto;
+    overflow: visible;
   }
 
   .admin-nav {
@@ -255,6 +315,7 @@ dialog::backdrop {
     overflow-x: auto;
     padding: 0;
     gap: 0;
+    overflow-y: hidden; /* Use X scroll instead */
   }
 
   .admin-nav .nav-item {
@@ -272,6 +333,7 @@ dialog::backdrop {
 
   .admin-content {
     padding: var(--space-4);
+    overflow: visible;
   }
 
   .page-header {
