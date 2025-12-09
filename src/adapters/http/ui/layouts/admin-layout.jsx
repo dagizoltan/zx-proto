@@ -1,27 +1,87 @@
 import { h } from 'preact';
 import { adminNavigation, filterNavigationByRoles } from '../../shared/navigation/admin-nav.config.js';
 
-export const AdminLayout = ({ children, user, currentPath }) => {
-  // Use enriched roleNames from middleware, or fallback to empty array
-  // If user has no roles, they see only public items (or none if everything restricted)
-  // To avoid locking out the pilot user who might not have enriched roles yet if middleware fails,
-  // we could fallback to 'admin' if roleIds are present but names missing?
-  // No, better to rely on correct middleware behavior.
-  // BUT, for development safety in this refactor, if roleNames is undefined,
-  // we default to showing everything (legacy behavior) or defaulting to basic.
-  // Given the "fix tech debt" request, we should rely on `user.roleNames`.
-
+export const AdminLayout = ({ children, user, currentPath, currentUrl, title }) => {
   const userRoles = user.roleNames || [];
+
+  // Determine path robustly
+  let activePath = currentPath;
+  if (!activePath && currentUrl) {
+      try {
+          // Check if currentUrl is a full URL
+          if (currentUrl.startsWith('http')) {
+               activePath = new URL(currentUrl).pathname;
+          } else {
+               activePath = currentUrl;
+          }
+      } catch (e) {
+          activePath = currentUrl;
+      }
+  }
+  // Remove query params if they exist in path
+  if (activePath && activePath.includes('?')) {
+      activePath = activePath.split('?')[0];
+  }
 
   // Filter navigation
   const filteredNav = filterNavigationByRoles(adminNavigation, userRoles);
+
+  // Helper to find breadcrumb
+  const findBreadcrumb = (path) => {
+    if (!path) return null;
+
+    // 1. Exact match in navigation
+    for (const section of filteredNav.sections) {
+      for (const item of section.items) {
+        if (item.href === path) {
+           return { section: section.label, item: item.label };
+        }
+      }
+    }
+
+    // 2. Sub-path matching
+    let bestMatch = null;
+    let maxLen = 0;
+
+    for (const section of filteredNav.sections) {
+      for (const item of section.items) {
+        if (path.startsWith(item.href) && item.href.length > maxLen) {
+           const href = item.href;
+           if (path.length === href.length || path[href.length] === '/') {
+               bestMatch = { section: section.label, item: item.label };
+               maxLen = href.length;
+           }
+        }
+      }
+    }
+    if (bestMatch) return bestMatch;
+
+    return null;
+  };
+
+  const breadcrumbData = findBreadcrumb(activePath);
+
+  // Clean Title
+  const cleanTitle = (title || 'IMS Shopfront')
+    .replace(/ - IMS Admin$/, '')
+    .replace(/ - IMS Shopfront$/, '');
+
+  let breadcrumbElement = null;
+  if (breadcrumbData) {
+      const sectionLabel = breadcrumbData.section || 'Admin';
+      breadcrumbElement = (
+         <nav class="breadcrumb" style="font-size: 0.85rem; color: #6c757d; margin-bottom: 0.25rem;">
+             {sectionLabel} <span style="margin: 0 0.5rem;">/</span> {breadcrumbData.item}
+         </nav>
+      );
+  }
 
   return (
     <html lang="en">
       <head>
         <meta charSet="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>Admin - IMS Shopfront</title>
+        <title>{title || 'IMS Shopfront'}</title>
         <link rel="stylesheet" href="/static/css/styles.css" />
         <link rel="stylesheet" href="/static/css/admin.css" />
       </head>
@@ -29,7 +89,7 @@ export const AdminLayout = ({ children, user, currentPath }) => {
         <div class="admin-layout">
           <aside class="admin-sidebar">
             <div class="sidebar-header">
-              <h2>Admin Panel</h2>
+              <h2>ZX IMS</h2>
             </div>
             <nav class="admin-nav" id="admin-nav">
               {filteredNav.sections.map(section => (
@@ -39,9 +99,7 @@ export const AdminLayout = ({ children, user, currentPath }) => {
                   )}
                   <div class="nav-group-items">
                     {section.items.map(item => {
-                      // Note: Client-side JS below handles active state highlighting based on URL.
-                      // We can also use `currentPath` prop for SSR active state if provided.
-                      const isActive = currentPath === item.href;
+                      const isActive = activePath === item.href;
                       return (
                         <a
                           key={item.id}
@@ -49,7 +107,6 @@ export const AdminLayout = ({ children, user, currentPath }) => {
                           class={`nav-item ${item.disabled ? 'disabled' : ''} ${isActive ? 'active' : ''}`}
                         >
                           <span>{item.label}</span>
-                          {/* Badge support would go here */}
                         </a>
                       );
                     })}
@@ -61,7 +118,10 @@ export const AdminLayout = ({ children, user, currentPath }) => {
 
           <div class="admin-main">
             <header class="admin-header">
-              <h1>IMS Shopfront Admin</h1>
+              <div class="header-title-group">
+                  {breadcrumbElement}
+                  <h1 style="margin: 0; font-size: 1.5rem; line-height: 1.2;">{cleanTitle}</h1>
+              </div>
               <div class="admin-user">
                 <a href="/ims/me" class="mr-2" style="color: inherit; text-decoration: none;">
                     <span>{user.name || user.email}</span>
@@ -82,8 +142,6 @@ export const AdminLayout = ({ children, user, currentPath }) => {
             const navItems = document.querySelectorAll('.nav-item');
 
             navItems.forEach(item => {
-              // Exact match or sub-path match (optional)
-              // For now, exact match or simple prefix if needed
               if (item.getAttribute('href') === currentPath) {
                 item.classList.add('active');
                 const group = item.closest('.nav-group');
