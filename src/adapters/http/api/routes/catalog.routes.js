@@ -1,5 +1,7 @@
 import { Hono } from 'hono';
 import { validateRequest, validateQuery } from '../middleware/validation-middleware.js';
+import { authMiddleware } from '../middleware/auth-middleware.js';
+import { roleCheckMiddleware } from '../middleware/rbac-middleware.js';
 import {
   createProductSchema,
   updateProductSchema,
@@ -15,6 +17,9 @@ import {
 
 export const catalogRoutes = new Hono();
 
+// Public Read Access (Optional: restrict if B2B)
+// For now, listing and viewing products is public.
+
 // Products
 catalogRoutes.get(
   '/products',
@@ -22,25 +27,32 @@ catalogRoutes.get(
   listProductsHandler
 );
 
-catalogRoutes.post(
-  '/products',
-  validateRequest(createProductSchema),
-  createProductHandler
-);
-
 catalogRoutes.get(
   '/products/:id',
   getProductHandler
 );
 
+// Protected Write Access
+catalogRoutes.post(
+  '/products',
+  authMiddleware,
+  roleCheckMiddleware(['admin', 'manager']),
+  validateRequest(createProductSchema),
+  createProductHandler
+);
+
 catalogRoutes.put(
   '/products/:id',
+  authMiddleware,
+  roleCheckMiddleware(['admin', 'manager']),
   validateRequest(updateProductSchema),
   updateProductHandler
 );
 
 catalogRoutes.delete(
   '/products/:id',
+  authMiddleware,
+  roleCheckMiddleware(['admin', 'manager']),
   deleteProductHandler
 );
 

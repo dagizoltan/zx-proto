@@ -8,14 +8,17 @@ export const listProductsHandler = async (c) => {
   // Use validated query from middleware
   const query = c.get('validatedQuery');
 
-  // Construct cache key based on params
-  // Use 'q' or 'search' for search term (handle both for compatibility)
+  // Construct search term
   const searchTerm = query.q || query.search;
 
+  // Cache only if no filters and no cursor (first page)
   const isFiltered = query.status || searchTerm || query.minPrice || query.maxPrice || query.cursor || query.category;
 
+  // Include limit in cache key to prevent serving wrong page size
+  const cacheKey = `${tenantId}:products:all:${query.limit}`;
+
   if (!isFiltered) {
-      const cached = await cache.get(`${tenantId}:products:all`);
+      const cached = await cache.get(cacheKey);
       if (cached) {
         return c.json(cached);
       }
@@ -28,14 +31,13 @@ export const listProductsHandler = async (c) => {
       search: searchTerm,
       minPrice: query.minPrice,
       maxPrice: query.maxPrice,
-      // category: query.category // The use case might not support category filtering yet, but we pass it
   });
 
   const response = toApiProductList(result);
 
   // Only cache default list
   if (!isFiltered) {
-    await cache.set(`${tenantId}:products:all`, response, 300000);
+    await cache.set(cacheKey, response, 300000); // 5 mins
   }
 
   return c.json(response);

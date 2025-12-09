@@ -4,6 +4,7 @@ import { DashboardPage } from '../pages/ims/dashboard-page.jsx';
 import { MePage } from '../pages/ims/me-page.jsx';
 import { AdminLayout } from '../layouts/admin-layout.jsx';
 import { authMiddleware } from '../middleware/auth-middleware.js';
+import { roleEnrichmentMiddleware } from '../middleware/role-enrichment.middleware.js';
 
 import { catalogRoutes } from './ims/catalog-routes.js';
 import { orderRoutes } from './ims/order-routes.js';
@@ -17,6 +18,7 @@ import { crmRoutes } from './ims/crm-routes.js';
 export const imsRoutes = new Hono();
 
 imsRoutes.use('*', authMiddleware);
+imsRoutes.use('*', roleEnrichmentMiddleware); // Enrich user with role names for UI navigation
 
 imsRoutes.route('/catalog', catalogRoutes);
 imsRoutes.route('/orders', orderRoutes);
@@ -40,6 +42,7 @@ imsRoutes.get('/dashboard', async (c) => {
     stats,
     orders: recentOrders,
     layout: AdminLayout,
+    activePage: '/ims/dashboard', // Helps navigation highlighting if URL mismatch
     title: 'Dashboard - IMS Admin'
   });
 

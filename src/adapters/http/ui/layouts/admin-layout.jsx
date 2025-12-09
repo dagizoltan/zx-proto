@@ -2,31 +2,18 @@ import { h } from 'preact';
 import { adminNavigation, filterNavigationByRoles } from '../../shared/navigation/admin-nav.config.js';
 
 export const AdminLayout = ({ children, user, currentPath }) => {
-  // Assuming user has roleIds or roleNames.
-  // In admin-routes.js, we saw user.roleIds.
-  // We need to map roleIds to names if adminNavigation uses names, or assume names are available.
-  // For now, let's assume 'admin' is present if roleIds contains 'admin' ID or similar,
-  // BUT the previous code in admin-routes checks `role.name`.
-  // The user object passed to layout might not have resolved role names.
-  //
-  // IMPORTANT: The original layout didn't filter by role in the UI (it showed everything).
-  // The new requirement says "filterNavigationByRoles".
-  // If we don't have role names here, we might show everything or fail.
-  // Let's try to extract role names if possible, or default to showing all if user is admin.
-  //
-  // Actually, let's keep it simple: Render the navigation from config.
-  // If we can't filter accurately yet, we at least achieve the "Centralized Config" goal.
+  // Use enriched roleNames from middleware, or fallback to empty array
+  // If user has no roles, they see only public items (or none if everything restricted)
+  // To avoid locking out the pilot user who might not have enriched roles yet if middleware fails,
+  // we could fallback to 'admin' if roleIds are present but names missing?
+  // No, better to rely on correct middleware behavior.
+  // BUT, for development safety in this refactor, if roleNames is undefined,
+  // we default to showing everything (legacy behavior) or defaulting to basic.
+  // Given the "fix tech debt" request, we should rely on `user.roleNames`.
 
-  // Quick fix: Map 'user.roleIds' to a dummy list if needed, or rely on what's passed.
-  // If user object structure is unknown, we default to ['admin', 'manager'] for now to avoid hiding everything
-  // during this refactor if the user object isn't fully populated.
-  //
-  // Re-reading admin-routes.js: it fetches roles to check permissions.
-  // The 'user' object in session likely has 'roleIds'.
-  //
-  // Let's assume for this step we render everything (or basic filtering)
-  // and let the backend enforce access.
-  const userRoles = ['admin', 'manager', 'warehouse_staff']; // TODO: Get real roles from user context
+  const userRoles = user.roleNames || [];
+
+  // Filter navigation
   const filteredNav = filterNavigationByRoles(adminNavigation, userRoles);
 
   return (
@@ -52,12 +39,8 @@ export const AdminLayout = ({ children, user, currentPath }) => {
                   )}
                   <div class="nav-group-items">
                     {section.items.map(item => {
-                      // currentPath usually comes from URL in browser, but here it's SSR.
-                      // We need to inject currentPath into the component props or use client side JS.
-                      // The previous layout used client side JS to highlight.
-                      // We can keep that or try to match here if currentPath is passed.
-                      // Let's rely on the client-side script for active state to be safe,
-                      // or if `currentPath` prop is passed (I added it to props), use it.
+                      // Note: Client-side JS below handles active state highlighting based on URL.
+                      // We can also use `currentPath` prop for SSR active state if provided.
                       const isActive = currentPath === item.href;
                       return (
                         <a
@@ -99,6 +82,8 @@ export const AdminLayout = ({ children, user, currentPath }) => {
             const navItems = document.querySelectorAll('.nav-item');
 
             navItems.forEach(item => {
+              // Exact match or sub-path match (optional)
+              // For now, exact match or simple prefix if needed
               if (item.getAttribute('href') === currentPath) {
                 item.classList.add('active');
                 const group = item.closest('.nav-group');
