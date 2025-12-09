@@ -52,14 +52,14 @@ async function bootstrap() {
       'infra.persistence',
       'infra.obs',
       'infra.messaging',
-      'domain.accessControl',
+      'domain.access-control',
     ])
     .registerDomain('orders', createOrdersContext, [
       'infra.persistence',
       'infra.obs',
       'infra.messaging',
       'domain.inventory',
-      'domain.accessControl',
+      'domain.access-control',
     ])
     .registerDomain('catalog', createCatalogContext, [
       'infra.persistence',
