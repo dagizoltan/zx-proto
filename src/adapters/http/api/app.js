@@ -1,7 +1,8 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/middleware.ts';
 import { authRoutes } from './routes/auth-routes.js';
-import { productRoutes } from './routes/product-routes.js';
+// import { productRoutes } from './routes/product-routes.js'; // Deprecated
+import { catalogRoutes } from './routes/catalog.routes.js';
 import { orderRoutes } from './routes/order-routes.js';
 import { imsRoutes } from './routes/admin-routes.js';
 import { errorHandler } from '../middleware/error-handler.js';
@@ -25,7 +26,13 @@ export const createAPIApp = () => {
 
   // Mount routes
   api.route('/auth', authRoutes);
-  api.route('/products', productRoutes);
+
+  // Replaced /products with /catalogs/products structure
+  // Note: Old clients using /products will break.
+  // If backward compatibility is needed, we could alias it.
+  // For now, adhering to the plan to refactor.
+  api.route('/catalogs', catalogRoutes);
+
   api.route('/orders', orderRoutes);
   api.route('/admin', imsRoutes);
 
