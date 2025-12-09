@@ -16,7 +16,8 @@ export const logsPageHandler = async (c) => {
         activeTab: 'logs',
         logs: items,
         nextCursor,
-        layout: AdminLayout
+        layout: AdminLayout,
+        user: c.get('user')
     }));
 };
 
@@ -31,7 +32,8 @@ export const activityPageHandler = async (c) => {
         activeTab: 'activity',
         logs: items,
         nextCursor,
-        layout: AdminLayout
+        layout: AdminLayout,
+        user: c.get('user')
     }));
 };
 
@@ -46,6 +48,7 @@ export const auditPageHandler = async (c) => {
         activeTab: 'audit',
         logs: items,
         nextCursor,
-        layout: AdminLayout
+        layout: AdminLayout,
+        user: c.get('user')
     }));
 };

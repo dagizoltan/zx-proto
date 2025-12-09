@@ -10,7 +10,8 @@ export const feedHandler = async (c) => {
         activeTab: 'feed',
         feed: items,
         layout: AdminLayout,
-        title: 'Feed - Communication'
+        title: 'Feed - Communication',
+        user: c.get('user')
     }));
 };
 
@@ -21,7 +22,8 @@ export const messagesHandler = async (c) => {
         activeTab: 'messages',
         messages: items,
         layout: AdminLayout,
-        title: 'Messages - Communication'
+        title: 'Messages - Communication',
+        user: c.get('user')
     }));
 };
 
@@ -32,6 +34,7 @@ export const notificationsHandler = async (c) => {
         activeTab: 'notifications',
         notifications: items,
         layout: AdminLayout,
-        title: 'Notifications - Communication'
+        title: 'Notifications - Communication',
+        user: c.get('user')
     }));
 };
