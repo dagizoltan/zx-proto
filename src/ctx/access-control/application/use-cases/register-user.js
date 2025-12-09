@@ -19,6 +19,15 @@ export const createRegisterUser = ({ userRepository, authService, obs, eventBus 
 
     await userRepository.save(tenantId, user);
 
+    if (obs) obs.audit('User registered', {
+        tenantId,
+        userId: user.id,
+        userEmail: user.email,
+        action: 'REGISTER',
+        resource: 'User',
+        resourceId: user.id
+    });
+
     if (eventBus) {
         await eventBus.publish('access_control.user_registered', {
             id: user.id,

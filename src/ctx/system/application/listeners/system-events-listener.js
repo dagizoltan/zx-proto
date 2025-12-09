@@ -1,8 +1,40 @@
 
-export const createSystemEventsListener = ({ notificationService, eventBus }) => {
+import { AuditLog } from '../../domain/audit-log.js';
+
+export const createSystemEventsListener = ({ notificationService, eventBus, auditRepository }) => {
 
     // Map Domain Events to Human Readable Notifications
     const setupSubscriptions = () => {
+
+        // --- Audit Logging ---
+        // Listens to generic 'system.audit_log' events published by infra.obs
+        if (auditRepository) {
+            eventBus.subscribe('system.audit_log', async (payload) => {
+                // Payload: { message, metadata, timestamp }
+                const { message, metadata, timestamp } = payload;
+                const tenantId = metadata.tenantId;
+
+                // We need tenantId to save
+                if (!tenantId) return;
+
+                // Extract or infer fields
+                const auditLog = AuditLog({
+                    id: crypto.randomUUID(),
+                    tenantId,
+                    userId: metadata.userId || null,
+                    userEmail: metadata.userEmail || null,
+                    action: metadata.action || 'UNKNOWN',
+                    resource: metadata.resource || 'SYSTEM',
+                    resourceId: metadata.resourceId || null,
+                    details: { message, ...metadata },
+                    timestamp: timestamp ? new Date(timestamp) : new Date(),
+                    ip: metadata.ip || null,
+                    userAgent: metadata.userAgent || null
+                });
+
+                await auditRepository.save(tenantId, auditLog);
+            });
+        }
 
         // --- Catalog ---
         eventBus.subscribe('catalog.product_created', async (payload) => {

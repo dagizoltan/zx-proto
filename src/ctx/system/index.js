@@ -18,6 +18,7 @@ export const createSystemContext = (deps) => {
   if (deps.messaging && deps.messaging.eventBus) {
       const listener = createSystemEventsListener({
           notificationService,
+          auditRepository: auditRepo,
           eventBus: deps.messaging.eventBus
       });
       listener.setupSubscriptions();

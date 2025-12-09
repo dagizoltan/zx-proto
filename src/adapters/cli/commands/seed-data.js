@@ -35,8 +35,8 @@ async function bootstrap() {
   // Register contexts
   ctx
     .registerInfra('persistence', createPersistenceContext, [])
-    .registerInfra('obs', createObsContext, ['infra.persistence'])
     .registerInfra('messaging', createMessagingContext, ['infra.persistence'])
+    .registerInfra('obs', createObsContext, ['infra.persistence', 'infra.messaging'])
     .registerInfra('security', createSecurityContext, [])
     .registerInfra('realtime', createRealtimeContext, ['infra.messaging'])
     .registerDomain('access-control', createAccessControlContext, ['infra.persistence', 'infra.obs', 'infra.security'])

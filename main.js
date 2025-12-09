@@ -37,8 +37,8 @@ async function bootstrap() {
   console.log('🔧 Registering infrastructure contexts...');
   ctx
     .registerInfra('persistence', createPersistenceContext, [])
-    .registerInfra('obs', createObsContext, ['infra.persistence'])
     .registerInfra('messaging', createMessagingContext, ['infra.persistence'])
+    .registerInfra('obs', createObsContext, ['infra.persistence', 'infra.messaging'])
     .registerInfra('security', createSecurityContext, [])
     .registerInfra('realtime', createRealtimeContext, ['infra.messaging']);
 

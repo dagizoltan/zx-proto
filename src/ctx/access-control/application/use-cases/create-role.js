@@ -13,7 +13,14 @@ export const createCreateRole = ({ roleRepository, obs, eventBus }) => {
 
     await roleRepository.save(tenantId, role);
 
-    if (obs) obs.audit('Role created', { roleId: role.id, name });
+    if (obs) obs.audit('Role created', {
+        tenantId,
+        roleId: role.id,
+        name,
+        action: 'CREATE',
+        resource: 'Role',
+        resourceId: role.id
+    });
 
     if (eventBus) {
         await eventBus.publish('access_control.role_created', {

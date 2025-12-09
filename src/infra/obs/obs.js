@@ -7,7 +7,7 @@ const LOG_LEVELS = {
   AUDIT: 5,
 };
 
-export const createObs = (kvPool, minLevel = 'INFO') => {
+export const createObs = (kvPool, minLevel = 'INFO', eventBus = null) => {
   const minLevelValue = LOG_LEVELS[minLevel] ?? LOG_LEVELS['INFO'];
 
   const log = async (level, message, metadata = {}) => {
@@ -22,6 +22,16 @@ export const createObs = (kvPool, minLevel = 'INFO') => {
     };
 
     console.log(`[${logEntry.level}] ${logEntry.message}`, metadata);
+
+    // Publish Audit events to EventBus for Domain Handling (System/AuditLogs)
+    if (level === 'AUDIT' && eventBus) {
+        // Fire and forget
+        eventBus.publish('system.audit_log', {
+            message,
+            metadata,
+            timestamp: logEntry.timestamp
+        }).catch(e => console.error('Failed to publish audit event', e));
+    }
 
     try {
       await kvPool.withConnection(async (kv) => {
