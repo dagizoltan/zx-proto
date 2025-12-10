@@ -13,15 +13,10 @@ export const PaginationControls = ({ nextCursor, baseUrl, currentUrl }) => {
   };
 
   return (
-    <div class="pagination-controls">
+    <div class="pagination flex justify-end mt-4">
       <a href={getNextUrl()} class="btn btn-secondary btn-sm">
         Next Page &rarr;
       </a>
-
-      <style>{`
-        .pagination-controls { display: flex; justify-content: flex-end; margin-top: 1.5rem; }
-        .btn-sm { padding: 0.5rem 1rem; font-size: 0.875rem; }
-      `}</style>
     </div>
   );
 };

@@ -28,30 +28,31 @@ export const WorkOrdersPage = ({ user, workOrders }) => {
                 <th>Code</th>
                 <th>Status</th>
                 <th>Product (BOM)</th>
-                <th>Quantity</th>
-                <th>Actions</th>
+                <th class="text-right">Quantity</th>
+                <th class="text-right">Actions</th>
               </tr>
             </thead>
             <tbody>
               {workOrders.map(wo => (
                 <tr>
-                  <td class="font-mono text-sm">{wo.id.slice(0, 8)}...</td>
-                  <td><a href={`/ims/manufacturing/work-orders/${wo.id}`}>{wo.code}</a></td>
-                  <td><span class={`badge badge-${wo.status.toLowerCase()}`}>{wo.status}</span></td>
+                  <td class="font-mono text-sm">
+                      <a href={`/ims/manufacturing/work-orders/${wo.id}`}>{wo.id.slice(0, 8)}...</a>
+                  </td>
+                  <td>{wo.code}</td>
+                  <td><span class={`status-badge ${wo.status}`}>{wo.status}</span></td>
                   <td>{wo.productName || 'Unknown'}</td>
-                  <td>{wo.quantity}</td>
-                  <td>
-                    <a href={`/ims/manufacturing/work-orders/${wo.id}`} class="btn btn-sm btn-secondary" style="margin-right: 0.25rem;">View</a>
+                  <td class="text-right">{wo.quantity}</td>
+                  <td class="text-right flex justify-end gap-2">
+                    <a href={`/ims/manufacturing/work-orders/${wo.id}`} class="btn btn-sm btn-secondary">View</a>
+                    {/* Note: Complete button usually requires navigation to completion page or modal, but if POST is supported directly: */}
                     {['PLANNED', 'IN_PROGRESS'].includes(wo.status) && (
-                        <form method="POST" action={`/ims/manufacturing/work-orders/${wo.id}/complete`} style="display:inline">
-                           <button class="btn btn-sm btn-primary">Complete</button>
-                         </form>
+                         <a href={`/ims/manufacturing/work-orders/${wo.id}/complete`} class="btn btn-sm btn-primary">Complete</a>
                     )}
                   </td>
                 </tr>
               ))}
               {workOrders.length === 0 && (
-                <tr><td colspan="6" class="text-center">No work orders found</td></tr>
+                <tr><td colspan="6" class="text-center text-muted">No work orders found</td></tr>
               )}
             </tbody>
           </table>

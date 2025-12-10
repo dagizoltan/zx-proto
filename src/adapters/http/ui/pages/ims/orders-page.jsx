@@ -33,21 +33,23 @@ export const OrdersPage = ({ user, orders, nextCursor, currentUrl }) => {
                     <th>Date</th>
                     <th>Customer</th>
                     <th>Status</th>
-                    <th>Total</th>
-                    <th>Actions</th>
+                    <th class="text-right">Total</th>
+                    <th class="text-right">Actions</th>
                 </tr>
                 </thead>
                 <tbody>
                 {orders.map(order => (
                     <tr>
-                    <td class="font-mono text-sm">{order.id.slice(0, 8)}...</td>
+                    <td class="font-mono text-sm">
+                        <a href={`/ims/orders/${order.id}`}>{order.id.slice(0, 8)}...</a>
+                    </td>
                     <td>{new Date(order.createdAt).toLocaleDateString()}</td>
                     <td>{order.userId}</td>
                     <td>
                         <span class={`status-badge ${order.status}`}>{order.status}</span>
                     </td>
-                    <td>${order.total.toFixed(2)}</td>
-                    <td>
+                    <td class="text-right">${order.total.toFixed(2)}</td>
+                    <td class="text-right">
                         <a href={`/ims/orders/${order.id}`} class="btn btn-sm btn-secondary">View</a>
                     </td>
                     </tr>

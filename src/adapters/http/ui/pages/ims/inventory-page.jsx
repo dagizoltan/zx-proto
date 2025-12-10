@@ -6,15 +6,16 @@ export const InventoryPage = ({ user, products, nextCursor, currentUrl }) => {
     <div class="inventory-page">
       <div class="page-header">
         <h1>Inventory Management</h1>
-        <div class="actions">
-            <a href="/ims/inventory/transfer" class="btn btn-secondary" style="margin-right: 0.5rem;">Transfer Stock</a>
+        <div class="actions flex gap-2">
+            <a href="/ims/inventory/transfer" class="btn btn-secondary">Transfer Stock</a>
             <a href="/ims/inventory/receive" class="btn btn-primary">Receive Stock</a>
         </div>
       </div>
 
-      <div style="margin-bottom: 1rem; display: flex; gap: 0.5rem;">
-          <button class="btn btn-sm btn-secondary active">Stock Levels</button>
-          <button class="btn btn-sm btn-secondary">Movements Log</button>
+      <div class="flex gap-2 mb-6">
+          <a href="/ims/inventory" class="btn btn-sm btn-primary">Stock Levels</a>
+          <a href="/ims/inventory/movements" class="btn btn-sm btn-secondary">Movements Log</a>
+          <a href="/ims/inventory/locations" class="btn btn-sm btn-secondary">Locations</a>
       </div>
 
       <div class="stat-grid">
@@ -39,28 +40,28 @@ export const InventoryPage = ({ user, products, nextCursor, currentUrl }) => {
                 <tr>
                     <th>SKU</th>
                     <th>Name</th>
-                    <th>Price</th>
-                    <th>Total Stock</th>
-                    <th>Reserved</th>
-                    <th>Available</th>
-                    <th>Actions</th>
+                    <th class="text-right">Price</th>
+                    <th class="text-right">Total Stock</th>
+                    <th class="text-right">Reserved</th>
+                    <th class="text-right">Available</th>
+                    <th class="text-right">Actions</th>
                 </tr>
                 </thead>
                 <tbody>
                 {products.map(product => (
                     <tr>
-                    <td>{product.sku}</td>
+                    <td class="font-mono text-sm">{product.sku}</td>
                     <td>{product.name}</td>
-                    <td>${product.price}</td>
-                    <td>
+                    <td class="text-right">${product.price}</td>
+                    <td class="text-right">
                         <span class={product.quantity < 10 ? 'text-error font-bold' : ''}>
                         {product.quantity}
                         </span>
                     </td>
-                    <td>{product.reservedQuantity || 0}</td>
-                    <td>{(product.quantity - (product.reservedQuantity || 0))}</td>
-                    <td>
-                        <a href={`/ims/products/${product.id}`} class="btn btn-sm btn-secondary">View Details</a>
+                    <td class="text-right">{product.reservedQuantity || 0}</td>
+                    <td class="text-right">{(product.quantity - (product.reservedQuantity || 0))}</td>
+                    <td class="text-right">
+                        <a href={`/ims/catalog/products/${product.id}`} class="btn btn-sm btn-secondary">View</a>
                     </td>
                     </tr>
                 ))}

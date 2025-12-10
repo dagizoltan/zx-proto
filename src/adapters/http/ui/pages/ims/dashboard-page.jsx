@@ -14,7 +14,7 @@ export const DashboardPage = ({ user, stats }) => {
       </div>
 
       {/* TIER 1: HIGH-LEVEL KPIs */}
-      <h2 class="section-title">Key Performance Indicators</h2>
+      <h3 class="mb-4">Key Performance Indicators</h3>
       <div class="stat-grid">
         <div class="stat-card">
           <h3>Total Revenue</h3>
@@ -41,7 +41,7 @@ export const DashboardPage = ({ user, stats }) => {
       </div>
 
       {/* TIER 2: OPERATIONAL ACTION ITEMS */}
-      <h2 class="section-title">Operations & Actions</h2>
+      <h3 class="mb-4">Operations & Actions</h3>
       <div class="stat-grid">
         <div class="stat-card">
           <h3>Pending Orders</h3>
@@ -66,11 +66,11 @@ export const DashboardPage = ({ user, stats }) => {
       </div>
 
       {/* TIER 3: RECENT ACTIVITY */}
-       <div class="grid-2-col" style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-4); margin-top: var(--space-4);">
+       <div class="grid-2-col mb-6">
           {/* RECENT ORDERS */}
-          <div class="card">
-            <div class="card-header">
-                <h2>Recent Orders</h2>
+          <div class="card p-0">
+            <div class="card-header flex justify-between items-center p-4 border-b border-white/5">
+                <h3 class="m-0">Recent Orders</h3>
                 <a href="/ims/orders" class="btn btn-sm btn-link">View All</a>
             </div>
             {orders.recent && orders.recent.length > 0 ? (
@@ -80,7 +80,7 @@ export const DashboardPage = ({ user, stats }) => {
                     <tr>
                       <th>ID</th>
                       <th>Status</th>
-                      <th>Total</th>
+                      <th class="text-right">Total</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -88,21 +88,21 @@ export const DashboardPage = ({ user, stats }) => {
                       <tr>
                         <td><a href={`/ims/orders/${order.id}`}>#{order.id.slice(0, 8)}</a></td>
                         <td><span class={`status-badge ${order.status}`}>{order.status}</span></td>
-                        <td>${order.total.toFixed(2)}</td>
+                        <td class="text-right">${order.total.toFixed(2)}</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
             ) : (
-              <p class="text-muted">No recent orders.</p>
+              <div class="p-4 text-muted">No recent orders.</div>
             )}
           </div>
 
           {/* RECENT WORK ORDERS */}
-          <div class="card">
-            <div class="card-header">
-                <h2>Recent Work Orders</h2>
+          <div class="card p-0">
+            <div class="card-header flex justify-between items-center p-4 border-b border-white/5">
+                <h3 class="m-0">Recent Work Orders</h3>
                 <a href="/ims/manufacturing/work-orders" class="btn btn-sm btn-link">View All</a>
             </div>
             {manufacturing.recent && manufacturing.recent.length > 0 ? (
@@ -112,7 +112,7 @@ export const DashboardPage = ({ user, stats }) => {
                     <tr>
                       <th>ID</th>
                       <th>Status</th>
-                      <th>Date</th>
+                      <th class="text-right">Date</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -120,22 +120,22 @@ export const DashboardPage = ({ user, stats }) => {
                       <tr>
                         <td><a href={`/ims/manufacturing/work-orders/${wo.id}`}>#{wo.id.slice(0, 8)}</a></td>
                          <td><span class={`status-badge ${wo.status}`}>{wo.status}</span></td>
-                        <td>{new Date(wo.createdAt).toLocaleDateString()}</td>
+                        <td class="text-right">{new Date(wo.createdAt).toLocaleDateString()}</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
             ) : (
-              <p class="text-muted">No recent work orders.</p>
+              <div class="p-4 text-muted">No recent work orders.</div>
             )}
           </div>
       </div>
 
        {/* RECENT SYSTEM ACTIVITY */}
-      <div class="card" style="margin-top: var(--space-4);">
-         <div class="card-header">
-                <h2>System Activity</h2>
+      <div class="card p-0">
+         <div class="card-header flex justify-between items-center p-4 border-b border-white/5">
+                <h3 class="m-0">System Activity</h3>
                 <a href="/ims/system/audit-logs" class="btn btn-sm btn-link">View Logs</a>
             </div>
           {system.recentActivity && system.recentActivity.length > 0 ? (
@@ -162,7 +162,7 @@ export const DashboardPage = ({ user, stats }) => {
                 </table>
               </div>
             ) : (
-              <p class="text-muted">No recent system activity.</p>
+              <div class="p-4 text-muted">No recent system activity.</div>
             )}
       </div>
     </div>

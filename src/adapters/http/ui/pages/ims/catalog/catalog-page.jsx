@@ -3,17 +3,17 @@ import { PaginationControls } from '../../../components/pagination.jsx';
 
 export const CatalogPage = ({ user, products, nextCursor, currentUrl, query = '' }) => {
   return (
-    <div>
+    <div class="catalog-page">
       <div class="page-header">
         <h1>Catalog</h1>
-        <div class="flex gap-2">
+        <div class="flex gap-2 items-center">
             <form method="GET" action="/ims/catalog/products" class="flex gap-2">
                 <input
                     type="search"
                     name="q"
                     value={query}
                     placeholder="Search products..."
-                    class="px-3 py-2 border rounded-md"
+                    class="w-200px"
                 />
                 <button type="submit" class="btn btn-secondary">Search</button>
             </form>
@@ -32,7 +32,6 @@ export const CatalogPage = ({ user, products, nextCursor, currentUrl, query = ''
         </div>
         <div class="stat-card">
             <h3>Low Stock</h3>
-             {/* Assuming quantity is available on product list object, typically it is enriched */}
             <div class="stat-value warn">{products.filter(p => p.quantity < 10).length}</div>
         </div>
       </div>
@@ -46,29 +45,31 @@ export const CatalogPage = ({ user, products, nextCursor, currentUrl, query = ''
                         <th>SKU</th>
                         <th>Name</th>
                         <th>Type</th>
-                        <th>Price</th>
+                        <th class="text-right">Price</th>
                         <th>Category</th>
                         <th>Status</th>
-                        <th>Actions</th>
+                        <th class="text-right">Actions</th>
                     </tr>
                 </thead>
                 <tbody>
                     {products.map(product => (
                         <tr key={product.id}>
-                            <td class="font-mono text-sm">{product.id.slice(0, 8)}...</td>
+                            <td class="font-mono text-sm">
+                                <a href={`/ims/catalog/products/${product.id}`}>{product.id.slice(0, 8)}...</a>
+                            </td>
                             <td class="font-mono text-sm">{product.sku}</td>
-                            <td class="font-medium">{product.name}</td>
+                            <td class="font-bold text-white">{product.name}</td>
                             <td>
                                 <span class="badge badge-neutral">{product.type || 'SIMPLE'}</span>
                             </td>
-                            <td>${product.price.toFixed(2)}</td>
+                            <td class="text-right">${product.price.toFixed(2)}</td>
                             <td>{product.category || '-'}</td>
                             <td>
                                 <span class={`badge ${product.status === 'ACTIVE' ? 'badge-success' : 'badge-neutral'}`}>
                                     {product.status}
                                 </span>
                             </td>
-                            <td>
+                            <td class="text-right">
                                 <a href={`/ims/catalog/products/${product.id}`} class="btn btn-sm btn-secondary">View</a>
                             </td>
                         </tr>

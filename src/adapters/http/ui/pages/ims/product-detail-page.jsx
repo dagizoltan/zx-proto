@@ -26,12 +26,14 @@ export const ProductDetailPage = ({ user, product, movements, stock, nextCursor,
         </div>
         <div class="stat-card">
           <h3>Category</h3>
-          <div class="stat-value text-xl">{product.category}</div>
+          <div class="stat-value" style="font-size: 1.5rem;">{product.category}</div>
         </div>
       </div>
 
-      <div class="card">
-        <h2>Stock Movement History</h2>
+      <div class="card p-0">
+        <div class="px-6 py-4 border-b border-white/5 bg-white/5">
+           <h3 class="m-0 text-white font-semibold">Stock Movement History</h3>
+        </div>
         {movements && movements.length > 0 ? (
           <div class="table-container">
             <table>
@@ -39,7 +41,7 @@ export const ProductDetailPage = ({ user, product, movements, stock, nextCursor,
                 <tr>
                   <th>Date</th>
                   <th>Type</th>
-                  <th>Quantity</th>
+                  <th class="text-right">Quantity</th>
                   <th>Reference</th>
                 </tr>
               </thead>
@@ -50,7 +52,7 @@ export const ProductDetailPage = ({ user, product, movements, stock, nextCursor,
                     <td>
                       <span class={`badge ${getTypeBadgeClass(m.type)}`}>{m.type}</span>
                     </td>
-                    <td class={isNegative(m.type) ? 'text-error font-bold' : 'text-success font-bold'}>
+                    <td class={`text-right font-bold ${isNegative(m.type) ? 'text-error' : 'text-success'}`}>
                       {isNegative(m.type) ? '-' : '+'}{m.quantity}
                     </td>
                     <td class="text-muted">{m.referenceId || m.reason || '-'}</td>
@@ -60,10 +62,14 @@ export const ProductDetailPage = ({ user, product, movements, stock, nextCursor,
             </table>
           </div>
         ) : (
-          <p class="text-muted">No stock movements recorded.</p>
+          <div class="p-4 text-muted">No stock movements recorded.</div>
         )}
 
-        <PaginationControls nextCursor={nextCursor} currentUrl={currentUrl} />
+        {movements && movements.length > 0 && (
+            <div class="p-4 border-t border-white/5">
+                <PaginationControls nextCursor={nextCursor} currentUrl={currentUrl} />
+            </div>
+        )}
       </div>
     </div>
   );

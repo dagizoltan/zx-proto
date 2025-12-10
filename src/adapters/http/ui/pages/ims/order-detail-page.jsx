@@ -7,7 +7,7 @@ export const OrderDetailPage = ({ user, order, layout, title, shipments = [] }) 
         <div>
             <div class="flex items-center gap-4">
                 <h1>Order</h1>
-                <span class={`badge status-badge ${order.status}`}>{order.status}</span>
+                <span class={`status-badge ${order.status}`}>{order.status}</span>
             </div>
             <span class="entity-id">ID: {order.id}</span>
         </div>
@@ -40,7 +40,7 @@ export const OrderDetailPage = ({ user, order, layout, title, shipments = [] }) 
         </div>
         <div class="stat-card">
             <h3>Date Created</h3>
-            <div class="stat-value text-xl">{new Date(order.createdAt).toLocaleDateString()}</div>
+            <div class="stat-value text-2xl">{new Date(order.createdAt).toLocaleDateString()}</div>
         </div>
       </div>
 
@@ -50,18 +50,18 @@ export const OrderDetailPage = ({ user, order, layout, title, shipments = [] }) 
                 <thead>
                     <tr>
                         <th>Product</th>
-                        <th>Quantity</th>
-                        <th>Price</th>
-                        <th>Total</th>
+                        <th class="text-right">Quantity</th>
+                        <th class="text-right">Price</th>
+                        <th class="text-right">Total</th>
                     </tr>
                 </thead>
                 <tbody>
                     {order.items.map(item => (
                         <tr>
                             <td>{item.productName || item.productId}</td>
-                            <td>{item.quantity}</td>
-                            <td>${item.price?.toFixed(2)}</td>
-                            <td>${(item.quantity * item.price).toFixed(2)}</td>
+                            <td class="text-right">{item.quantity}</td>
+                            <td class="text-right">${item.price?.toFixed(2)}</td>
+                            <td class="text-right">${(item.quantity * item.price).toFixed(2)}</td>
                         </tr>
                     ))}
                 </tbody>
@@ -71,8 +71,8 @@ export const OrderDetailPage = ({ user, order, layout, title, shipments = [] }) 
 
       {shipments.length > 0 && (
           <div class="card p-0">
-            <div class="card-header px-6 py-4 border-b border-border">
-                <h3 class="m-0">Shipments</h3>
+            <div class="px-6 py-4 border-b border-white/5 bg-white/5">
+                <h3 class="m-0 text-white font-semibold">Shipments</h3>
             </div>
             <div class="table-container">
                 <table>
@@ -82,19 +82,19 @@ export const OrderDetailPage = ({ user, order, layout, title, shipments = [] }) 
                             <th>Carrier</th>
                             <th>Tracking</th>
                             <th>Status</th>
-                            <th>Date</th>
-                            <th>Actions</th>
+                            <th class="text-right">Date</th>
+                            <th class="text-right">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                         {shipments.map(s => (
                             <tr>
-                                <td>{s.code}</td>
+                                <td class="font-mono">{s.code}</td>
                                 <td>{s.carrier}</td>
                                 <td>{s.trackingNumber}</td>
-                                <td><span class="badge badge-success">{s.status}</span></td>
-                                <td>{new Date(s.shippedAt).toLocaleDateString()}</td>
-                                <td>
+                                <td><span class={`status-badge ${s.status}`}>{s.status}</span></td>
+                                <td class="text-right">{new Date(s.shippedAt).toLocaleDateString()}</td>
+                                <td class="text-right">
                                     <a href={`/ims/shipments/${s.id}`} class="btn btn-sm btn-secondary">View</a>
                                 </td>
                             </tr>
