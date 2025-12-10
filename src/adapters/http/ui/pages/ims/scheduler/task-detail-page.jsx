@@ -3,13 +3,11 @@ import { h } from 'preact';
 
 export const TaskDetailPage = ({ task, history, error, success }) => {
     return (
-        <div class="max-w-5xl mx-auto space-y-6">
+        <div class="space-y-6">
             <div class="flex items-center justify-between">
-                <div class="flex items-center gap-4">
-                    <a href="/ims/scheduler/tasks" class="btn btn-outline btn-sm">
-                        &larr; Back
-                    </a>
+                <div>
                     <h1 class="text-2xl font-bold text-slate-800">{task.name}</h1>
+                    <span class="entity-id text-xs text-slate-400 font-mono mt-1 block">{task.id}</span>
                 </div>
                 <div class="flex gap-2">
                      <form action={`/ims/scheduler/tasks/${task.id}/run`} method="POST" onsubmit="return confirm('Run this task immediately?');">
@@ -22,6 +20,27 @@ export const TaskDetailPage = ({ task, history, error, success }) => {
 
             {error && <div class="bg-red-50 text-red-700 p-4 rounded-lg mb-4 border border-red-200">{error}</div>}
             {success && <div class="bg-emerald-50 text-emerald-700 p-4 rounded-lg mb-4 border border-emerald-200">{success}</div>}
+
+            {/* Metrics Grid */}
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="stat-card">
+                    <div class="stat-title">Status</div>
+                    <div class={`stat-value ${task.status === 'RUNNING' ? 'text-blue-600' : 'text-slate-700'}`}>{task.status}</div>
+                    <div class="stat-trend text-slate-400">{task.enabled ? 'Enabled' : 'Disabled'}</div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-title">Last Run</div>
+                    <div class="stat-value text-sm text-slate-700">{task.lastRunAt ? new Date(task.lastRunAt).toLocaleString() : 'Never'}</div>
+                    <div class="stat-trend text-slate-400">Previous execution</div>
+                </div>
+
+                 <div class="stat-card">
+                    <div class="stat-title">Next Run</div>
+                    <div class="stat-value text-sm text-slate-700">{task.nextRunAt ? new Date(task.nextRunAt).toLocaleString() : 'Pending'}</div>
+                    <div class="stat-trend text-slate-400">Scheduled</div>
+                </div>
+            </div>
 
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* Settings Card */}
@@ -57,23 +76,6 @@ export const TaskDetailPage = ({ task, history, error, success }) => {
                                 <button type="submit" class="btn btn-primary w-full bg-indigo-600 text-white p-2 rounded hover:bg-indigo-700">Save Changes</button>
                             </div>
                         </form>
-                    </div>
-
-                    <div class="card bg-slate-50 border-slate-200 p-4 rounded border">
-                         <div class="space-y-3">
-                            <div class="flex justify-between text-sm">
-                                <span class="text-slate-500">Status</span>
-                                <span class={`font-medium ${task.status === 'RUNNING' ? 'text-blue-600' : 'text-slate-700'}`}>{task.status}</span>
-                            </div>
-                            <div class="flex justify-between text-sm">
-                                <span class="text-slate-500">Last Run</span>
-                                <span class="font-medium text-slate-700">{task.lastRunAt ? new Date(task.lastRunAt).toLocaleString() : 'Never'}</span>
-                            </div>
-                            <div class="flex justify-between text-sm">
-                                <span class="text-slate-500">Next Run</span>
-                                <span class="font-medium text-slate-700">{task.nextRunAt ? new Date(task.nextRunAt).toLocaleString() : 'Pending'}</span>
-                            </div>
-                         </div>
                     </div>
                 </div>
 
