@@ -1,17 +1,6 @@
 // Service to handle complex allocation logic
 export const createStockAllocationService = (stockRepository, stockMovementRepository, batchRepository, productRepository) => {
 
-  // Deprecated: Inefficient total calculation.
-  const _updateProductTotal = async (tenantId, productId) => {
-    if (!productRepository) return;
-    const entries = await stockRepository.getEntriesForProduct(tenantId, productId);
-    const total = entries.reduce((sum, e) => sum + e.quantity, 0);
-    const product = await productRepository.findById(tenantId, productId);
-    if (product) {
-        await productRepository.save(tenantId, { ...product, quantity: total });
-    }
-  };
-
   // Helper for Issue #6 (Time Sort) & #3 (Atomic Log)
   const getMovementKey = (tenantId, movement) => {
       // Reverse chronological order: Max Int - Timestamp
@@ -22,6 +11,36 @@ export const createStockAllocationService = (stockRepository, stockMovementRepos
 
   const allocate = async (tenantId, productId, amount, referenceId) => {
     await allocateBatch(tenantId, [{ productId, quantity: amount }], referenceId);
+  };
+
+  // Helper to atomically update product total
+  const prepareProductUpdates = async (tenantId, deltas, updates) => {
+      if (!productRepository || deltas.size === 0) return;
+      const productIds = Array.from(deltas.keys());
+
+      // Fetch current products with versions
+      const products = await Promise.all(productIds.map(pid =>
+          productRepository.getWithVersion ? productRepository.getWithVersion(tenantId, pid) : productRepository.findById(tenantId, pid).then(v => ({ value: v, versionstamp: null }))
+      ));
+
+      for (const res of products) {
+          if (!res || !res.value) continue;
+          const pid = res.value.id;
+          const delta = deltas.get(pid);
+          if (delta === 0) continue;
+
+          const newQuantity = (res.value.quantity || 0) + delta;
+          const updatedProduct = { ...res.value, quantity: newQuantity };
+
+          // Add to updates list. Note: KVStockRepository.commitUpdates handles specific structure
+          // We assume monolith privilege: constructing the key manually or reusing known structure
+          // Key: ['tenants', tenantId, 'products', pid]
+          updates.push({
+              key: ['tenants', tenantId, 'products', pid],
+              versionstamp: res.versionstamp,
+              value: updatedProduct
+          });
+      }
   };
 
   const allocateBatch = async (tenantId, items, referenceId) => {
@@ -173,7 +192,7 @@ export const createStockAllocationService = (stockRepository, stockMovementRepos
     }
 
     const toShip = [];
-    const affectedProducts = new Set();
+    const productDeltas = new Map(); // Map<productId, number>
 
     if (!itemsToShip) {
         for (const [key, rec] of inventoryMap.entries()) {
@@ -234,7 +253,8 @@ export const createStockAllocationService = (stockRepository, stockMovementRepos
             value: newValue
         });
 
-        affectedProducts.add(productId);
+        const currentDelta = productDeltas.get(productId) || 0;
+        productDeltas.set(productId, currentDelta - quantity);
 
         newMovements.push({
             id: crypto.randomUUID(),
@@ -258,14 +278,12 @@ export const createStockAllocationService = (stockRepository, stockMovementRepos
         });
     }
 
+    await prepareProductUpdates(tenantId, productDeltas, updates);
+
     if (updates.length > 0) {
         const success = await stockRepository.commitUpdates(tenantId, updates);
         if (!success) {
             throw new Error('Commit failed due to concurrent modification. Please retry.');
-        }
-
-        for (const pid of affectedProducts) {
-             await _updateProductTotal(tenantId, pid);
         }
     }
   };
@@ -391,7 +409,7 @@ export const createStockAllocationService = (stockRepository, stockMovementRepos
 
              const updates = [];
              const movements = [];
-             const affectedProducts = new Set();
+             const productDeltas = new Map();
 
              for (const item of consume) {
                  const entries = stockMap.get(item.productId);
@@ -433,7 +451,8 @@ export const createStockAllocationService = (stockRepository, stockMovementRepos
                          timestamp: new Date().toISOString()
                      });
 
-                     affectedProducts.add(item.productId);
+                     const cur = productDeltas.get(item.productId) || 0;
+                     productDeltas.set(item.productId, cur - take);
 
                      remaining -= take;
                  }
@@ -475,7 +494,9 @@ export const createStockAllocationService = (stockRepository, stockMovementRepos
                      value: newEntry
                  });
              }
-             affectedProducts.add(produce.productId);
+
+             const cur = productDeltas.get(produce.productId) || 0;
+             productDeltas.set(produce.productId, cur + produce.quantity);
 
              movements.push({
                  id: crypto.randomUUID(),
@@ -498,15 +519,13 @@ export const createStockAllocationService = (stockRepository, stockMovementRepos
                 });
              }
 
+             await prepareProductUpdates(tenantId, productDeltas, updates);
+
              const success = await stockRepository.commitUpdates(tenantId, updates);
              if (!success) {
                  if (attempt === MAX_RETRIES) throw new Error('Production failed due to concurrency');
                  await new Promise(r => setTimeout(r, Math.random() * 50));
                  continue;
-             }
-
-             for (const pid of affectedProducts) {
-                 await _updateProductTotal(tenantId, pid);
              }
              return;
 
@@ -578,13 +597,15 @@ export const createStockAllocationService = (stockRepository, stockMovementRepos
                   value: movement
               });
 
+              const productDeltas = new Map();
+              productDeltas.set(productId, quantity);
+              await prepareProductUpdates(tenantId, productDeltas, updates);
+
               const success = await stockRepository.commitUpdates(tenantId, updates);
               if (!success) {
                   await new Promise(r => setTimeout(r, Math.random() * 50));
                   continue;
               }
-
-              await _updateProductTotal(tenantId, productId);
               return;
 
           } catch (e) {
@@ -611,7 +632,7 @@ export const createStockAllocationService = (stockRepository, stockMovementRepos
 
               const updates = [];
               const movements = [];
-              const affectedProducts = new Set();
+              const productDeltas = new Map();
 
               for (const item of items) {
                   const { productId, locationId, quantity } = item;
@@ -661,7 +682,9 @@ export const createStockAllocationService = (stockRepository, stockMovementRepos
                       timestamp: new Date().toISOString()
                   };
                   movements.push(movement);
-                  affectedProducts.add(productId);
+
+                  const cur = productDeltas.get(productId) || 0;
+                  productDeltas.set(productId, cur + quantity);
               }
 
               // Fix #3
@@ -673,15 +696,13 @@ export const createStockAllocationService = (stockRepository, stockMovementRepos
                   });
               }
 
+              await prepareProductUpdates(tenantId, productDeltas, updates);
+
               const success = await stockRepository.commitUpdates(tenantId, updates);
               if (!success) {
                   if (attempt === MAX_RETRIES) throw new Error('Batch receive failed due to concurrency');
                   await new Promise(r => setTimeout(r, Math.random() * 50));
                   continue;
-              }
-
-              for (const pid of affectedProducts) {
-                  await _updateProductTotal(tenantId, pid);
               }
               return;
 
