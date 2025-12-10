@@ -6,8 +6,8 @@ export const TaskDetailPage = ({ task, history, error, success }) => {
         <div class="task-detail-page">
             <div class="page-header">
                 <div>
-                    <h1 class="m-0">{task.name}</h1>
-                    <span class="entity-id block mt-1">{task.id}</span>
+                    <h1>{task.name}</h1>
+                    <span class="entity-id">{task.id}</span>
                 </div>
                 <div class="flex gap-2">
                      <form action={`/ims/scheduler/tasks/${task.id}/run`} method="POST" onsubmit="return confirm('Run this task immediately?');">
@@ -18,72 +18,71 @@ export const TaskDetailPage = ({ task, history, error, success }) => {
                 </div>
             </div>
 
-            {error && <div class="alert alert-danger mb-4">{error}</div>}
-            {success && <div class="alert alert-success mb-4">{success}</div>}
+            {error && <div style="padding: var(--space-4); background: var(--color-error-bg); color: var(--color-error); border-radius: var(--radius-md); margin-bottom: var(--space-4);">{error}</div>}
+            {success && <div style="padding: var(--space-4); background: var(--color-success-bg); color: var(--color-success); border-radius: var(--radius-md); margin-bottom: var(--space-4);">{success}</div>}
 
             {/* Metrics Grid */}
-            <div class="stat-grid mb-6">
+            <div class="stat-grid">
                 <div class="stat-card">
                     <h3>Status</h3>
-                    <div class={`stat-value ${task.status === 'RUNNING' ? 'text-info' : ''}`}>{task.status}</div>
-                    <div class="text-sm text-muted mt-1">{task.enabled ? 'Enabled' : 'Disabled'}</div>
+                    <div class="stat-value">{task.status}</div>
+                    <div class="text-sm text-muted" style="margin-top: var(--space-1);">{task.enabled ? 'Enabled' : 'Disabled'}</div>
                 </div>
 
                 <div class="stat-card">
                     <h3>Last Run</h3>
-                    <div class="stat-value text-base">{task.lastRunAt ? new Date(task.lastRunAt).toLocaleString() : 'Never'}</div>
+                    <div class="stat-value" style="font-size: 1.5rem;">{task.lastRunAt ? new Date(task.lastRunAt).toLocaleString() : 'Never'}</div>
                 </div>
 
                  <div class="stat-card">
                     <h3>Next Run</h3>
-                    <div class="stat-value text-base">{task.nextRunAt ? new Date(task.nextRunAt).toLocaleString() : 'Pending'}</div>
+                    <div class="stat-value" style="font-size: 1.5rem;">{task.nextRunAt ? new Date(task.nextRunAt).toLocaleString() : 'Pending'}</div>
                 </div>
             </div>
 
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                {/* Settings Card */}
-                <div class="lg:col-span-1 space-y-6">
+            {/* Layout: Settings (1/3) + History (2/3) */}
+            <div style="display: flex; flex-wrap: wrap; gap: var(--space-6);">
+                <div style="flex: 1; min-width: 300px;">
                     <div class="card">
-                        <div class="card-header mb-4">
-                            <h3 class="card-title m-0">Configuration</h3>
+                        <div style="margin-bottom: var(--space-4); border-bottom: 1px solid var(--color-border); padding-bottom: var(--space-2);">
+                            <h3 style="margin: 0;">Configuration</h3>
                         </div>
-                        <form action={`/ims/scheduler/tasks/${task.id}`} method="POST" class="space-y-4">
-                            <div class="form-group">
-                                <label class="form-label">Name</label>
-                                <input type="text" value={task.name} disabled class="input bg-slate-100 cursor-not-allowed" />
-                                <p class="form-hint">Managed by system code.</p>
+                        <form action={`/ims/scheduler/tasks/${task.id}`} method="POST">
+                            <div style="margin-bottom: var(--space-4);">
+                                <label>Name</label>
+                                <input type="text" value={task.name} disabled style="background-color: var(--color-bg-subtle); cursor: not-allowed;" />
+                                <p class="text-muted text-sm" style="margin-top: var(--space-1);">Managed by system code.</p>
                             </div>
 
-                             <div class="form-group">
-                                <label class="form-label">Handler Key</label>
-                                <code class="block w-full p-2 bg-slate-100 rounded text-xs border border-border">{task.handlerKey}</code>
+                             <div style="margin-bottom: var(--space-4);">
+                                <label>Handler Key</label>
+                                <code style="display: block; width: 100%; padding: var(--space-2); background: var(--color-bg-subtle); border-radius: var(--radius-md); border: 1px solid var(--color-border); font-size: var(--font-size-sm);">{task.handlerKey}</code>
                             </div>
 
-                            <div class="form-group">
-                                <label class="form-label">Schedule (Cron)</label>
-                                <input type="text" name="cronExpression" value={task.cronExpression} required class="input font-mono" placeholder="* * * * *" />
-                                <p class="form-hint">Standard 5-field cron expression.</p>
+                            <div style="margin-bottom: var(--space-4);">
+                                <label>Schedule (Cron)</label>
+                                <input type="text" name="cronExpression" value={task.cronExpression} required class="font-mono" placeholder="* * * * *" />
+                                <p class="text-muted text-sm" style="margin-top: var(--space-1);">Standard 5-field cron expression.</p>
                             </div>
 
-                            <div class="flex items-center gap-2 pt-2">
-                                <input type="checkbox" id="enabled" name="enabled" value="true" checked={task.enabled} class="checkbox" />
-                                <label for="enabled" class="text-sm">Enable automated scheduling</label>
+                            <div style="margin-bottom: var(--space-4); display: flex; align-items: center;">
+                                <input type="checkbox" id="enabled" name="enabled" value="true" checked={task.enabled} />
+                                <label for="enabled" style="margin: 0;">Enable automated scheduling</label>
                             </div>
 
-                            <div class="pt-4 border-t border-border">
-                                <button type="submit" class="btn btn-primary w-full">Save Changes</button>
+                            <div style="padding-top: var(--space-4); border-top: 1px solid var(--color-border);">
+                                <button type="submit" class="btn btn-primary" style="width: 100%;">Save Changes</button>
                             </div>
                         </form>
                     </div>
                 </div>
 
-                {/* History Card */}
-                <div class="lg:col-span-2">
-                    <div class="card p-0 h-full">
-                        <div class="card-header px-6 py-4 border-b border-border">
-                            <h3 class="card-title m-0">Recent Executions</h3>
+                <div style="flex: 2; min-width: 300px;">
+                    <div class="card p-0" style="height: 100%; display: flex; flex-direction: column;">
+                        <div style="padding: var(--space-4) var(--space-6); border-bottom: 1px solid var(--color-border);">
+                            <h3 style="margin: 0;">Recent Executions</h3>
                         </div>
-                        <div class="table-container">
+                        <div class="table-container" style="flex: 1;">
                             <table>
                                 <thead>
                                     <tr>
@@ -97,7 +96,7 @@ export const TaskDetailPage = ({ task, history, error, success }) => {
                                     {history.map(run => {
                                         const duration = run.endTime ? ((new Date(run.endTime) - new Date(run.startTime))/1000).toFixed(1) + 's' : '-';
                                         const badgeClass = run.status === 'SUCCESS' ? 'badge-success' :
-                                                           run.status === 'FAILURE' ? 'badge-danger' : 'badge-info';
+                                                           run.status === 'FAILURE' ? 'badge-danger' : 'badge-neutral';
 
                                         return (
                                         <tr>
@@ -116,7 +115,7 @@ export const TaskDetailPage = ({ task, history, error, success }) => {
                                         </tr>
                                         );
                                     })}
-                                    {history.length === 0 && <tr><td colspan="4" class="text-center text-muted p-4">No executions found.</td></tr>}
+                                    {history.length === 0 && <tr><td colspan="4" class="text-center text-muted" style="padding: var(--space-4);">No executions found.</td></tr>}
                                 </tbody>
                             </table>
                         </div>
