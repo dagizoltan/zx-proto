@@ -5,9 +5,9 @@ import { createSchedulerService } from './domain/services/scheduler-service.js';
 
 export const createSchedulerContext = (deps) => {
     // 1. Resolve dependencies
-    const { kvPool } = deps['infra.persistence'];
-    const eventBus = deps['infra.messaging'];
-    const registry = deps.registry;
+    const { persistence, messaging, registry } = deps;
+    const { kvPool } = persistence;
+    const { eventBus } = messaging;
 
     // 2. Create Repositories
     const taskRepo = createKVScheduledTaskRepository(kvPool);
