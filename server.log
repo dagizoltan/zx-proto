@@ -1,0 +1,104 @@
+[0m[32mTask[0m [0m[36mstart[0m deno run --allow-net --allow-read --allow-env --unstable-kv --unstable-cron main.js
+🚀 IMS Shopfront - Starting...
+
+📋 Environment: local
+🔧 Registering infrastructure contexts...
+🏗️  Registering domain contexts...
+⚙️  Initializing contexts...
+[SUCCESS] All contexts initialized {
+  contexts: [
+    "infra.persistence",
+    "infra.messaging",
+    "infra.obs",
+    "infra.security",
+    "infra.realtime",
+    "domain.access-control",
+    "domain.inventory",
+    "domain.orders",
+    "domain.catalog",
+    "domain.procurement",
+    "domain.manufacturing",
+    "domain.system",
+    "domain.observability",
+    "domain.communication",
+    "domain.scheduler",
+    "domain.queries"
+  ],
+  initOrder: [
+    "infra.persistence",
+    "infra.messaging",
+    "infra.obs",
+    "infra.security",
+    "infra.realtime",
+    "domain.access-control",
+    "domain.inventory",
+    "domain.orders",
+    "domain.catalog",
+    "domain.procurement",
+    "domain.manufacturing",
+    "domain.system",
+    "domain.observability",
+    "domain.communication",
+    "domain.scheduler",
+    "domain.queries"
+  ]
+}
+⏰ Starting Scheduler Ticker...
+🌐 Creating HTTP server...
+[INFO] Server starting on port 8000 {}
+
+✨ Server ready!
+   🔗 UI:  http://localhost:8000/
+   🔗 API: http://localhost:8000/api
+   🔗 Health: http://localhost:8000/health
+
+[INFO] [CancelStaleOrders] Scanning for stale CREATED orders > 48h... {}
+[INFO] [InventorySnapshot] Taking daily inventory snapshot... {}
+[INFO] [ComputeLTV] Recomputing Customer Lifetime Value (LTV)... {}
+[INFO] [ComputeLTV] Aggregating order history... {}
+[INFO] [PaymentReminders] Sending payment reminders for orders > 24h... {}
+[INFO] [CheckOverdueWOs] Checking for overdue Work Orders... {}
+[INFO] [CheckPendingPOs] Checking for delayed Purchase Orders... {}
+[INFO] [CheckPendingPOs] Scanning pending POs... {}
+[INFO] [CheckLowStock] Checking for low stock items... {}
+[INFO] [CheckPendingPOs] All POs within expected delivery windows. {}
+[INFO] [ComputeLTV] Recomputing Customer Lifetime Value (LTV)... {}
+[INFO] [ComputeLTV] Aggregating order history... {}
+[INFO] [CancelStaleOrders] Scanning for stale CREATED orders > 48h... {}
+[INFO] [CheckPendingPOs] Checking for delayed Purchase Orders... {}
+[INFO] [CheckPendingPOs] Scanning pending POs... {}
+[INFO] [InventorySnapshot] Taking daily inventory snapshot... {}
+[INFO] [CheckOverdueWOs] Checking for overdue Work Orders... {}
+[INFO] [PaymentReminders] Sending payment reminders for orders > 24h... {}
+[INFO] [CheckLowStock] Checking for low stock items... {}
+[INFO] [CheckPendingPOs] All POs within expected delivery windows. {}
+[INFO] [CancelStaleOrders] Scanning for stale CREATED orders > 48h... {}
+[INFO] [InventorySnapshot] Taking daily inventory snapshot... {}
+[INFO] [ComputeLTV] Recomputing Customer Lifetime Value (LTV)... {}
+[INFO] [ComputeLTV] Aggregating order history... {}
+[INFO] [CheckPendingPOs] Checking for delayed Purchase Orders... {}
+[INFO] [CheckPendingPOs] Scanning pending POs... {}
+[INFO] [PaymentReminders] Sending payment reminders for orders > 24h... {}
+[INFO] [CheckOverdueWOs] Checking for overdue Work Orders... {}
+[INFO] [CheckLowStock] Checking for low stock items... {}
+[INFO] [CheckPendingPOs] All POs within expected delivery windows. {}
+[INFO] [ComputeLTV] Recomputing Customer Lifetime Value (LTV)... {}
+[INFO] [ComputeLTV] Aggregating order history... {}
+[INFO] [CancelStaleOrders] Scanning for stale CREATED orders > 48h... {}
+[INFO] [InventorySnapshot] Taking daily inventory snapshot... {}
+[INFO] [PaymentReminders] Sending payment reminders for orders > 24h... {}
+[INFO] [CheckPendingPOs] Checking for delayed Purchase Orders... {}
+[INFO] [CheckPendingPOs] Scanning pending POs... {}
+[INFO] [CheckOverdueWOs] Checking for overdue Work Orders... {}
+[INFO] [CheckLowStock] Checking for low stock items... {}
+[INFO] [CheckPendingPOs] All POs within expected delivery windows. {}
+[INFO] [InventorySnapshot] Taking daily inventory snapshot... {}
+[INFO] [ComputeLTV] Recomputing Customer Lifetime Value (LTV)... {}
+[INFO] [ComputeLTV] Aggregating order history... {}
+[INFO] [CancelStaleOrders] Scanning for stale CREATED orders > 48h... {}
+[INFO] [CheckPendingPOs] Checking for delayed Purchase Orders... {}
+[INFO] [CheckPendingPOs] Scanning pending POs... {}
+[INFO] [PaymentReminders] Sending payment reminders for orders > 24h... {}
+[INFO] [CheckOverdueWOs] Checking for overdue Work Orders... {}
+[INFO] [CheckLowStock] Checking for low stock items... {}
+[INFO] [CheckPendingPOs] All POs within expected delivery windows. {}

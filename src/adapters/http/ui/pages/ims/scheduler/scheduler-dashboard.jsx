@@ -3,85 +3,79 @@ import { h } from 'preact';
 
 export const SchedulerDashboardPage = ({ stats, recentExecutions, activeTasks }) => {
     return (
-        <div class="space-y-6">
-            <div class="flex justify-between items-center">
-                <h1 class="text-2xl font-bold text-slate-800">Scheduler Dashboard</h1>
+        <div class="scheduler-dashboard">
+            <div class="page-header">
+                <h1>Scheduler Dashboard</h1>
                 <div class="text-sm text-slate-500">Last updated: {new Date().toLocaleTimeString()}</div>
             </div>
 
             {/* Metrics Grid */}
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div class="stat-grid">
                 <div class="stat-card">
-                    <div class="stat-title">Success Rate (24h)</div>
-                    <div class={`stat-value ${stats.successRate < 90 ? 'text-red-600' : 'text-emerald-600'}`}>{stats.successRate}%</div>
-                    <div class="stat-trend text-slate-400">{stats.totalRecent} runs</div>
+                    <h3>Success Rate (24h)</h3>
+                    <div class={`stat-value ${stats.successRate < 90 ? 'text-danger' : 'text-success'}`}>{stats.successRate}%</div>
                 </div>
 
                 <div class="stat-card">
-                    <div class="stat-title">Avg Runtime</div>
-                    <div class="stat-value text-blue-600">{stats.avgRuntime}</div>
-                    <div class="stat-trend text-slate-400">per task</div>
+                    <h3>Avg Runtime</h3>
+                    <div class="stat-value">{stats.avgRuntime}</div>
                 </div>
 
                  <div class="stat-card">
-                    <div class="stat-title">Tasks Due Soon</div>
-                    <div class="stat-value text-indigo-600">{stats.dueSoonCount}</div>
-                    <div class="stat-trend text-slate-400">Next 24 hours</div>
+                    <h3>Tasks Due Soon</h3>
+                    <div class="stat-value">{stats.dueSoonCount}</div>
                 </div>
 
                 <div class="stat-card">
-                    <div class="stat-title">Critical Failures</div>
-                    <div class={`stat-value ${stats.criticalFailures > 0 ? 'text-red-600' : 'text-slate-600'}`}>{stats.criticalFailures}</div>
-                    <div class="stat-trend text-slate-400">Last 24 hours</div>
+                    <h3>Critical Failures</h3>
+                    <div class={`stat-value ${stats.criticalFailures > 0 ? 'text-danger' : ''}`}>{stats.criticalFailures}</div>
                 </div>
             </div>
 
             {/* Recent Activity & Status */}
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
                 {/* Recent Executions */}
                  <div class="card p-0">
-                    <div class="card-header flex justify-between items-center p-4 border-b border-slate-100">
-                        <h3 class="card-title font-semibold text-slate-800">Recent Executions</h3>
-                        <a href="/ims/scheduler/history" class="text-sm text-indigo-600 hover:text-indigo-800">View All</a>
+                    <div class="card-header px-6 py-4 border-b border-border">
+                        <div class="flex justify-between items-center">
+                            <h3 class="m-0">Recent Executions</h3>
+                            <a href="/ims/scheduler/history" class="btn btn-sm btn-secondary">View All</a>
+                        </div>
                     </div>
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-sm text-left">
-                            <thead class="bg-slate-50 text-slate-500 font-medium">
+                    <div class="table-container">
+                        <table>
+                            <thead>
                                 <tr>
-                                    <th class="px-4 py-2">Task</th>
-                                    <th class="px-4 py-2">Status</th>
-                                    <th class="px-4 py-2">Time</th>
-                                    <th class="px-4 py-2 text-right">Actions</th>
+                                    <th>Task</th>
+                                    <th>Status</th>
+                                    <th>Time</th>
+                                    <th>Actions</th>
                                 </tr>
                             </thead>
-                            <tbody class="divide-y divide-slate-100">
+                            <tbody>
                                 {recentExecutions.map(run => {
-                                    const statusColors = {
-                                        'SUCCESS': 'bg-emerald-100 text-emerald-800',
-                                        'FAILURE': 'bg-red-100 text-red-800',
-                                        'RUNNING': 'bg-blue-100 text-blue-800'
-                                    };
-                                    const badgeClass = statusColors[run.status] || 'bg-slate-100 text-slate-800';
+                                    const badgeClass = run.status === 'SUCCESS' ? 'badge-success' :
+                                                       run.status === 'FAILURE' ? 'badge-danger' : 'badge-info';
 
                                     return (
-                                    <tr class="hover:bg-slate-50">
-                                        <td class="px-4 py-3 font-medium text-slate-700">{run.taskName}</td>
-                                        <td class="px-4 py-3">
-                                            <span class={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${badgeClass}`}>
+                                    <tr>
+                                        <td class="font-medium">{run.taskName}</td>
+                                        <td>
+                                            <span class={`badge ${badgeClass}`}>
                                                 {run.status}
                                             </span>
                                         </td>
-                                        <td class="px-4 py-3 text-slate-500 text-xs">
+                                        <td class="text-sm text-muted">
                                             {new Date(run.startTime).toLocaleString()}
                                         </td>
-                                        <td class="px-4 py-3 text-right">
-                                            <a href={`/ims/scheduler/history/${run.id}`} class="text-indigo-600 hover:text-indigo-900">Details</a>
+                                        <td>
+                                            <a href={`/ims/scheduler/history/${run.id}`} class="btn btn-sm btn-secondary">View</a>
                                         </td>
                                     </tr>
                                     );
                                 })}
                                  {recentExecutions.length === 0 && (
-                                     <tr><td colspan="4" class="px-4 py-8 text-center text-slate-400">No executions recorded.</td></tr>
+                                     <tr><td colspan="4" class="text-center text-muted p-4">No executions recorded.</td></tr>
                                  )}
                             </tbody>
                         </table>
@@ -91,19 +85,19 @@ export const SchedulerDashboardPage = ({ stats, recentExecutions, activeTasks })
                 {/* Task Status Overview */}
                 <div class="card">
                     <div class="card-header flex justify-between items-center mb-4">
-                        <h3 class="card-title font-semibold text-slate-800">Active Tasks</h3>
-                        <a href="/ims/scheduler/tasks" class="text-sm text-indigo-600 hover:text-indigo-800">Manage</a>
+                        <h3 class="card-title m-0">Active Tasks</h3>
+                        <a href="/ims/scheduler/tasks" class="btn btn-sm btn-secondary">Manage</a>
                     </div>
                     <div class="space-y-4">
                         {activeTasks.map(task => (
-                            <div class="flex items-center justify-between p-3 bg-slate-50 rounded-lg border border-slate-100">
+                            <div class="flex items-center justify-between p-3 bg-slate-50 rounded border border-border">
                                 <div>
-                                    <div class="font-medium text-slate-700">{task.name}</div>
-                                    <div class="text-xs text-slate-500">{task.cronExpression}</div>
+                                    <div class="font-medium">{task.name}</div>
+                                    <div class="text-xs text-muted font-mono">{task.cronExpression}</div>
                                 </div>
                                 <div class="text-right">
-                                    <div class="text-xs text-slate-500">Next: {task.nextRunAt ? new Date(task.nextRunAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : 'Pending'}</div>
-                                    <span class={`inline-block w-2 h-2 rounded-full ${task.enabled ? 'bg-emerald-500' : 'bg-slate-300'} ml-2`}></span>
+                                    <div class="text-xs text-muted">Next: {task.nextRunAt ? new Date(task.nextRunAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : 'Pending'}</div>
+                                    <span class={`inline-block w-2 h-2 rounded-full ${task.enabled ? 'bg-success' : 'bg-muted'} ml-2`}></span>
                                 </div>
                             </div>
                         ))}
