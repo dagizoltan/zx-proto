@@ -1,6 +1,6 @@
 {
   "tasks": {
-    "dev": "deno run --allow-net --allow-read --allow-write --allow-env --unstable-kv main.js",
+    "dev": "deno run --allow-net --allow-read --allow-write --allow-env --unstable-kv --unstable-cron main.js",
     "start": "deno run --allow-net --allow-read --allow-env --unstable-kv main.js",
     "test": "deno test --allow-net --allow-read --allow-env --unstable-kv",
     "seed": "deno run --allow-net --allow-read --allow-env --unstable-kv src/adapters/cli/commands/seed-data.js"
