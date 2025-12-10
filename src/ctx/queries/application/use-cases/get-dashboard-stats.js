@@ -6,11 +6,9 @@ export const createGetDashboardStats = ({ registry }) => {
     const manufacturingDomain = registry.get('domain.manufacturing');
     const procurementDomain = registry.get('domain.procurement');
     const accessControlDomain = registry.get('domain.access-control');
+    const observabilityDomain = registry.get('domain.observability');
 
     // 1. ORDERS Stats
-    // We use a larger limit to get a decent count, though for "Total" we should ideally use a count method if available.
-    // Since repositories currently only have findAll/list, we fetch a batch.
-    // In a real app, we'd add .count() methods to repositories.
     const { items: allOrders } = await ordersDomain.repositories.order.findAll(tenantId, { limit: 1000 });
     const totalOrders = allOrders.length;
     const totalRevenue = allOrders.reduce((sum, o) => sum + (Number(o.total) || 0), 0);
@@ -39,23 +37,54 @@ export const createGetDashboardStats = ({ registry }) => {
     const openPurchaseOrders = allPOs.filter(po => ['CREATED', 'PARTIALLY_RECEIVED'].includes(po.status)).length;
 
     // 5. CRM Stats
-    // Assuming 'customer' role check is needed, or just total users for now.
     const { items: allUsers } = await accessControlDomain.repositories.user.findAll(tenantId, { limit: 1000 });
-    const totalCustomers = allUsers.length; // Improving this would require filtering by role
+    const totalCustomers = allUsers.length;
 
-    // 6. INVENTORY Stats (Low Stock)
-    // Fetch products and check stock. Limit to 100 for performance.
+    // 6. INVENTORY Stats (Low Stock & Value)
     const { items: products } = await inventoryDomain.repositories.product.findAll(tenantId, { limit: 100 });
     let lowStockCount = 0;
+    let totalInventoryValue = 0;
 
-    // We can run these in parallel
     await Promise.all(products.map(async (p) => {
         const stock = await inventoryDomain.repositories.stock.getStock(tenantId, p.id);
-        // Default threshold 10
+
+        // Low Stock Check
         if (stock < 10) {
             lowStockCount++;
         }
+
+        // Inventory Value
+        if (stock > 0 && p.price) {
+            totalInventoryValue += (stock * Number(p.price));
+        }
     }));
+
+    // 7. OBSERVABILITY Stats
+    // Assuming we can list logs. If not, we might need to skip or mock.
+    // We try to fetch logs via 'observability' domain if repository is available.
+    let systemErrors = 0;
+    let recentActivity = [];
+
+    if (observabilityDomain && observabilityDomain.repositories.logs) {
+        // Fetch recent error logs (last 24h approximation: limit 100 and filter)
+        // Note: Real implementation should filter by date in query if possible.
+        // The logs repo uses 'list' not 'findAll' and requires a level.
+        const { items: logs } = await observabilityDomain.repositories.logs.list(tenantId, { level: 'ERROR', limit: 100 });
+        const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+
+        systemErrors = logs.filter(l =>
+            new Date(l.timestamp) > oneDayAgo
+        ).length;
+    }
+
+    if (observabilityDomain && observabilityDomain.repositories.audit) {
+         // The audit repo uses 'list' (or inherited list from log repo which needs level if raw log repo)
+         // but createKVAuditRepository exposes 'list' that presets level='audit'.
+         const { items: audits } = await observabilityDomain.repositories.audit.list(tenantId, { limit: 10 });
+         recentActivity = audits
+            .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+            .slice(0, 5);
+    }
 
     return {
         orders: {
@@ -78,7 +107,13 @@ export const createGetDashboardStats = ({ registry }) => {
             totalCustomers: totalCustomers
         },
         inventory: {
-            lowStockCount: lowStockCount
+            lowStockCount: lowStockCount,
+            totalValue: totalInventoryValue
+        },
+        system: {
+            errors24h: systemErrors,
+            recentActivity: recentActivity,
+            status: systemErrors > 0 ? 'WARN' : 'HEALTHY'
         }
     };
   };

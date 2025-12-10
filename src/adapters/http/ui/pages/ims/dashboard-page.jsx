@@ -2,31 +2,46 @@ import { h } from 'preact';
 import { AdminLayout } from '../../layouts/admin-layout.jsx';
 
 export const DashboardPage = ({ user, stats }) => {
-  const { orders, shipments, manufacturing, procurement, crm, inventory } = stats;
+  const { orders, shipments, manufacturing, procurement, crm, inventory, system } = stats;
 
   return (
     <div class="dashboard-page">
       <div class="page-header">
         <h1>Dashboard</h1>
+        <div class="page-actions">
+            {/* Future: Date Range Picker */}
+        </div>
       </div>
 
-      <h2 class="section-title">Sales & CRM</h2>
+      {/* TIER 1: HIGH-LEVEL KPIs */}
+      <h2 class="section-title">Key Performance Indicators</h2>
       <div class="stat-grid">
         <div class="stat-card">
           <h3>Total Revenue</h3>
           <div class="stat-value">${orders.revenue ? orders.revenue.toFixed(2) : '0.00'}</div>
+          <div class="stat-meta">Lifetime Sales</div>
         </div>
         <div class="stat-card">
-          <h3>Total Orders</h3>
-          <div class="stat-value">{orders.total}</div>
+          <h3>Inventory Value</h3>
+          <div class="stat-value">${inventory.totalValue ? inventory.totalValue.toFixed(2) : '0.00'}</div>
+           <div class="stat-meta">Asset Value</div>
+        </div>
+        <div class="stat-card">
+          <h3>Active Customers</h3>
+          <div class="stat-value">{crm.totalCustomers}</div>
+           <div class="stat-meta">Total Users</div>
         </div>
          <div class="stat-card">
-          <h3>Total Customers</h3>
-          <div class="stat-value">{crm.totalCustomers}</div>
+          <h3>System Status</h3>
+          <div class={`stat-value ${system.status === 'HEALTHY' ? 'success' : 'error'}`}>
+              {system.status}
+          </div>
+          <div class="stat-meta">{system.errors24h} Errors (24h)</div>
         </div>
       </div>
 
-      <h2 class="section-title">Operations</h2>
+      {/* TIER 2: OPERATIONAL ACTION ITEMS */}
+      <h2 class="section-title">Operations & Actions</h2>
       <div class="stat-grid">
         <div class="stat-card">
           <h3>Pending Orders</h3>
@@ -44,18 +59,15 @@ export const DashboardPage = ({ user, stats }) => {
           <h3>Open POs</h3>
           <div class="stat-value">{procurement.openPOs}</div>
         </div>
-      </div>
-
-       <h2 class="section-title">Inventory</h2>
-       <div class="stat-grid">
         <div class="stat-card">
           <h3>Low Stock Items</h3>
           <div class="stat-value warn">{inventory.lowStockCount}</div>
         </div>
-         {/* Future: Total Inventory Value */}
       </div>
 
-      <div class="grid-2-col" style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-4); margin-top: var(--space-4);">
+      {/* TIER 3: RECENT ACTIVITY */}
+       <div class="grid-2-col" style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-4); margin-top: var(--space-4);">
+          {/* RECENT ORDERS */}
           <div class="card">
             <div class="card-header">
                 <h2>Recent Orders</h2>
@@ -87,6 +99,7 @@ export const DashboardPage = ({ user, stats }) => {
             )}
           </div>
 
+          {/* RECENT WORK ORDERS */}
           <div class="card">
             <div class="card-header">
                 <h2>Recent Work Orders</h2>
@@ -117,6 +130,40 @@ export const DashboardPage = ({ user, stats }) => {
               <p class="text-muted">No recent work orders.</p>
             )}
           </div>
+      </div>
+
+       {/* RECENT SYSTEM ACTIVITY */}
+      <div class="card" style="margin-top: var(--space-4);">
+         <div class="card-header">
+                <h2>System Activity</h2>
+                <a href="/ims/system/audit-logs" class="btn btn-sm btn-link">View Logs</a>
+            </div>
+          {system.recentActivity && system.recentActivity.length > 0 ? (
+              <div class="table-container">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Time</th>
+                      <th>User</th>
+                      <th>Action</th>
+                      <th>Resource</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {system.recentActivity.map(log => (
+                      <tr>
+                        <td>{new Date(log.timestamp).toLocaleString()}</td>
+                        <td>{log.userId}</td>
+                        <td>{log.action}</td>
+                        <td>{log.resource}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <p class="text-muted">No recent system activity.</p>
+            )}
       </div>
     </div>
   );
