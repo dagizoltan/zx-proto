@@ -19,7 +19,15 @@ export const createKVRoleRepository = (kvPool) => {
       if (!ids || ids.length === 0) return [];
       return kvPool.withConnection(async (kv) => {
           const keys = ids.map(id => ['tenants', tenantId, 'roles', id]);
-          const results = await kv.getMany(keys);
+          const BATCH_SIZE = 10;
+          const results = [];
+
+          for (let i = 0; i < keys.length; i += BATCH_SIZE) {
+              const chunk = keys.slice(i, i + BATCH_SIZE);
+              const chunkRes = await kv.getMany(chunk);
+              results.push(...chunkRes);
+          }
+
           // Filter out nulls (missing roles)
           return results.map(r => r.value).filter(r => r !== null);
       });

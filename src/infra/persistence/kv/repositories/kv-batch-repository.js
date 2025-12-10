@@ -17,8 +17,16 @@ export const createKVBatchRepository = (kvPool) => {
     if (!ids || ids.length === 0) return [];
     return kvPool.withConnection(async (kv) => {
       const keys = ids.map(id => ['tenants', tenantId, 'batches', id]);
-      const res = await kv.getMany(keys);
-      return res.map(r => r.value).filter(v => v !== null);
+      const BATCH_SIZE = 10;
+      const results = [];
+
+      for (let i = 0; i < keys.length; i += BATCH_SIZE) {
+        const chunk = keys.slice(i, i + BATCH_SIZE);
+        const chunkRes = await kv.getMany(chunk);
+        results.push(...chunkRes);
+      }
+
+      return results.map(r => r.value).filter(v => v !== null);
     });
   };
 

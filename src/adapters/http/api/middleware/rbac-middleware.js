@@ -1,3 +1,12 @@
+import { LRUCache } from "https://esm.sh/lru-cache@10.2.0";
+
+// Cache for role definitions: Key = "tenantId:roleId", Value = Role Object
+// TTL: 5 minutes, Max: 500 items
+const roleCache = new LRUCache({
+    max: 500,
+    ttl: 1000 * 60 * 5,
+});
+
 export const roleCheckMiddleware = (allowedRoles) => {
     return async (c, next) => {
         const user = c.get('user');
@@ -9,14 +18,32 @@ export const roleCheckMiddleware = (allowedRoles) => {
             return c.json({ error: 'Forbidden: No roles assigned' }, 403);
         }
 
-        // Fetch full role objects to check names/permissions
+        // Resolve roles (Cache-First Strategy)
+        const resolvedRoles = [];
+        const missingRoleIds = [];
+
+        for (const roleId of user.roleIds) {
+            const cacheKey = `${tenantId}:${roleId}`;
+            const cached = roleCache.get(cacheKey);
+            if (cached) {
+                resolvedRoles.push(cached);
+            } else {
+                missingRoleIds.push(roleId);
+            }
+        }
+
+        if (missingRoleIds.length > 0) {
+            const fetched = await ac.repositories.role.findByIds(tenantId, missingRoleIds);
+            for (const role of fetched) {
+                if (role) {
+                    resolvedRoles.push(role);
+                    roleCache.set(`${tenantId}:${role.id}`, role);
+                }
+            }
+        }
+
         let hasAccess = false;
-
-        // Optimize: If we just need to check names, we might want to cache or optimize this lookup
-        // but for now, we follow existing logic.
-        const roles = await ac.repositories.role.findByIds(tenantId, user.roleIds);
-
-        for (const role of roles) {
+        for (const role of resolvedRoles) {
             if (role && allowedRoles.includes(role.name)) {
                 hasAccess = true;
                 break;
