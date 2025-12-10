@@ -1,10 +1,12 @@
 
 import { renderPage } from '../../renderer.js';
+import { AdminLayout } from '../../layouts/admin-layout.jsx';
 import { SchedulerDashboardPage } from '../../pages/ims/scheduler/scheduler-dashboard.jsx';
 
 export const schedulerDashboardHandler = async (c) => {
     const tenantId = c.get('tenantId') || 'default';
     const scheduler = c.ctx.get('domain.scheduler').service;
+    const user = c.get('user');
 
     // Aggregate stats manually or via service method
     const tasks = await scheduler.listTasks(tenantId);
@@ -17,5 +19,13 @@ export const schedulerDashboardHandler = async (c) => {
         lastRun: history[0]?.startTime || null
     };
 
-    return renderPage(c, SchedulerDashboardPage, { stats }, { title: 'Scheduler Dashboard' });
+    const html = await renderPage(SchedulerDashboardPage, {
+        stats,
+        user,
+        layout: AdminLayout,
+        title: 'Scheduler Dashboard',
+        activePage: '/ims/scheduler/dashboard'
+    });
+
+    return c.html(html);
 };
