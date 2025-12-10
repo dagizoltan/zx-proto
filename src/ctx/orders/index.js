@@ -5,7 +5,6 @@ import { createCreateOrder } from './application/use-cases/create-order.js';
 import { createListOrders } from './application/use-cases/list-orders.js';
 import { createGetOrder } from './application/use-cases/get-order.js';
 import { createUpdateOrderStatus } from './application/use-cases/update-order-status.js';
-import { createGetDashboardStats } from './application/use-cases/get-dashboard-stats.js';
 import { createCreateShipment } from './application/use-cases/create-shipment.js'; // NEW
 import { createListShipments } from './application/use-cases/list-shipments.js'; // NEW
 
@@ -38,10 +37,6 @@ export const createOrdersContext = async (deps) => {
     eventBus
   });
 
-  const getDashboardStats = createGetDashboardStats({
-    orderRepository
-  });
-
   const createShipment = createCreateShipment({
       shipmentRepository,
       orderRepository,
@@ -64,7 +59,6 @@ export const createOrdersContext = async (deps) => {
       listOrders,
       getOrder,
       updateOrderStatus,
-      getDashboardStats,
       createShipment,
       listShipments
     }
