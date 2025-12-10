@@ -119,7 +119,7 @@ export const createSchedulerService = ({ taskRepo, executionRepo, registry, even
   };
 
   const tick = async (tenantId = 'default') => { // Default tenant for now
-    const tasks = await taskRepo.findAll(tenantId);
+    const { items: tasks } = await taskRepo.findAll(tenantId, { limit: 100 });
 
     const executions = [];
     for (const task of tasks) {
@@ -139,9 +139,15 @@ export const createSchedulerService = ({ taskRepo, executionRepo, registry, even
     syncDefinitions,
     tick,
     executeTask,
-    listTasks: (tenantId) => taskRepo.findAll(tenantId),
+    listTasks: async (tenantId) => {
+        const { items } = await taskRepo.findAll(tenantId, { limit: 100 });
+        return items;
+    },
     getTask: (tenantId, id) => taskRepo.findById(tenantId, id),
     updateTask: (tenantId, task) => taskRepo.save(tenantId, task),
-    getHistory: (tenantId) => executionRepo.findAll(tenantId) // Add pagination later
+    getHistory: async (tenantId) => {
+        const { items } = await executionRepo.findAll(tenantId, { limit: 100 });
+        return items;
+    }
   };
 };

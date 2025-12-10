@@ -11,7 +11,7 @@ export const createKVScheduledTaskRepository = (kvPool) => {
         // Since we don't have a direct index, we use list and find.
         // Tasks are few (<50), so this is acceptable.
         // Ideally, we'd add a secondary index if this grows.
-        const tasks = await base.findAll(tenantId);
+        const { items: tasks } = await base.findAll(tenantId, { limit: 100 });
         return tasks.find(t => t.handlerKey === handlerKey) || null;
     }
   };

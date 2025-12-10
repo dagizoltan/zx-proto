@@ -11,7 +11,7 @@ export const createKVTaskExecutionRepository = (kvPool) => {
     findByTaskId: async (tenantId, taskId, limit = 50) => {
         // Naive implementation using findAll + sort
         // In prod, use secondary index or composite keys
-        const all = await base.findAll(tenantId);
+        const { items: all } = await base.findAll(tenantId, { limit: 1000 });
         return all
             .filter(e => e.taskId === taskId)
             .sort((a, b) => b.startTime - a.startTime)
