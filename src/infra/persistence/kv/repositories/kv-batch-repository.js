@@ -13,6 +13,15 @@ export const createKVBatchRepository = (kvPool) => {
     });
   };
 
+  const findByIds = async (tenantId, ids) => {
+    if (!ids || ids.length === 0) return [];
+    return kvPool.withConnection(async (kv) => {
+      const keys = ids.map(id => ['tenants', tenantId, 'batches', id]);
+      const res = await kv.getMany(keys);
+      return res.map(r => r.value).filter(v => v !== null);
+    });
+  };
+
   const findBySku = async (tenantId, sku) => {
     return kvPool.withConnection(async (kv) => {
       const iter = kv.list({ prefix: ['tenants', tenantId, 'batches'] });
@@ -24,5 +33,5 @@ export const createKVBatchRepository = (kvPool) => {
     });
   };
 
-  return { save, findById, findBySku };
+  return { save, findById, findByIds, findBySku };
 };

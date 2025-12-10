@@ -74,7 +74,8 @@ const createMockStockRepository = (initialStock) => {
 };
 
 const mockBatchRepo = {
-    findById: async () => ({ expiryDate: '2025-01-01' })
+    findById: async () => ({ expiryDate: '2025-01-01' }),
+    findByIds: async (tid, ids) => ids.map(id => ({ id, expiryDate: '2025-01-01' }))
 };
 
 const mockProductRepo = {

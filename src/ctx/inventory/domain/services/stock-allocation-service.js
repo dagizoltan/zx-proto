@@ -42,16 +42,33 @@ export const createStockAllocationService = (stockRepository, stockMovementRepos
             const updates = [];
             const movements = [];
 
+            // Gather all needed batch IDs across all items/entries
+            const batchIdsToFetch = new Set();
+            for (const req of items) {
+                const entries = stockMap.get(req.productId) || [];
+                for (const e of entries) {
+                    if (e.value.batchId && e.value.batchId !== 'default') {
+                        batchIdsToFetch.add(e.value.batchId);
+                    }
+                }
+            }
+
+            let batchMap = new Map();
+            if (batchRepository && batchIdsToFetch.size > 0) {
+                 const batches = await batchRepository.findByIds(tenantId, Array.from(batchIdsToFetch));
+                 batches.forEach(b => batchMap.set(b.id, b));
+            }
+
             for (const req of items) {
                 const entries = stockMap.get(req.productId) || [];
 
-                const enriched = await Promise.all(entries.map(async (e) => {
+                const enriched = entries.map(e => {
                     let batch = null;
-                    if (e.value.batchId && e.value.batchId !== 'default' && batchRepository) {
-                        batch = await batchRepository.findById(tenantId, e.value.batchId);
+                    if (e.value.batchId && e.value.batchId !== 'default') {
+                         batch = batchMap.get(e.value.batchId) || null;
                     }
                     return { ...e, batch };
-                }));
+                });
 
                 enriched.sort((a, b) => {
                     const expiryA = a.batch?.expiryDate ? new Date(a.batch.expiryDate).getTime() : Infinity;
