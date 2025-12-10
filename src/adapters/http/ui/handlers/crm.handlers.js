@@ -10,8 +10,19 @@ export const listCustomersHandler = async (c) => {
     const tenantId = c.get('tenantId');
     const ac = c.ctx.get('domain.access-control');
 
-    // Reuse listUsers for now
-    const { items: customers } = await ac.useCases.listUsers.execute(tenantId, { limit: 50 });
+    // Filter by 'Customer' role
+    const roles = await ac.useCases.listRoles.execute(tenantId);
+    const customerRole = roles.find(r => r.name.toLowerCase() === 'customer');
+
+    let customers = [];
+    if (customerRole) {
+        const result = await ac.useCases.findUsersByRole.execute(tenantId, customerRole.id, { limit: 50 });
+        customers = result.items;
+    } else {
+         // Fallback if role doesn't exist yet (though it should from seed)
+         const result = await ac.useCases.listUsers.execute(tenantId, { limit: 50 });
+         customers = result.items;
+    }
 
     const html = await renderPage(CustomersPage, {
         user,

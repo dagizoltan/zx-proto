@@ -576,5 +576,103 @@ export const createStockAllocationService = (stockRepository, stockMovementRepos
       }
   };
 
-  return { allocate, commit, release, allocateBatch, executeProduction, receiveStockRobust };
+  const receiveStockBatch = async (tenantId, { items, reason }) => {
+      // items: [{ productId, locationId, quantity, batchId }]
+      const MAX_RETRIES = 5;
+      let attempt = 0;
+
+      while (attempt < MAX_RETRIES) {
+          attempt++;
+          try {
+              const productIds = [...new Set(items.map(i => i.productId))];
+              const stockMap = new Map();
+
+              await Promise.all(productIds.map(async (pid) => {
+                  const entries = await stockRepository.getEntriesWithVersion(tenantId, pid);
+                  stockMap.set(pid, entries);
+              }));
+
+              const updates = [];
+              const movements = [];
+              const affectedProducts = new Set();
+
+              for (const item of items) {
+                  const { productId, locationId, quantity } = item;
+                  const finalBatchId = item.batchId || `REC-${new Date().toISOString().slice(0,10)}-${crypto.randomUUID().slice(0,4)}`;
+
+                  const entries = stockMap.get(productId) || [];
+                  const existing = entries.find(e => e.value.locationId === locationId && e.value.batchId === finalBatchId);
+
+                  if (existing) {
+                       updates.push({
+                          key: existing.key,
+                          versionstamp: existing.versionstamp,
+                          value: {
+                              ...existing.value,
+                              quantity: existing.value.quantity + quantity,
+                              updatedAt: new Date().toISOString()
+                          }
+                      });
+                  } else {
+                      const newEntry = {
+                          id: crypto.randomUUID(),
+                          tenantId,
+                          productId,
+                          locationId,
+                          batchId: finalBatchId,
+                          quantity: quantity,
+                          reservedQuantity: 0,
+                          createdAt: new Date().toISOString(),
+                          updatedAt: new Date().toISOString()
+                      };
+                      updates.push({
+                          key: ['tenants', tenantId, 'stock', productId, locationId, finalBatchId],
+                          versionstamp: null,
+                          value: newEntry
+                      });
+                  }
+
+                  const movement = {
+                      id: crypto.randomUUID(),
+                      tenantId,
+                      productId,
+                      quantity,
+                      type: 'received',
+                      toLocationId: locationId,
+                      batchId: finalBatchId,
+                      referenceId: reason,
+                      timestamp: new Date().toISOString()
+                  };
+                  movements.push(movement);
+                  affectedProducts.add(productId);
+              }
+
+              // Fix #3
+              for (const m of movements) {
+                  updates.push({
+                      key: getMovementKey(tenantId, m),
+                      versionstamp: null,
+                      value: m
+                  });
+              }
+
+              const success = await stockRepository.commitUpdates(tenantId, updates);
+              if (!success) {
+                  if (attempt === MAX_RETRIES) throw new Error('Batch receive failed due to concurrency');
+                  await new Promise(r => setTimeout(r, Math.random() * 50));
+                  continue;
+              }
+
+              for (const pid of affectedProducts) {
+                  await _updateProductTotal(tenantId, pid);
+              }
+              return;
+
+          } catch (e) {
+              if (attempt === MAX_RETRIES) throw e;
+          }
+      }
+  };
+
+  return { allocate, commit, release, allocateBatch, executeProduction, receiveStockRobust, receiveStockBatch };
 };

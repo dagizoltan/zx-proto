@@ -9,6 +9,7 @@ import { createListUsers } from './application/use-cases/list-users.js';
 import { createListRoles } from './application/use-cases/list-roles.js';
 import { createCreateRole } from './application/use-cases/create-role.js';
 import { createAssignRoleToUser } from './application/use-cases/assign-role.js';
+import { createFindUsersByRole } from './application/use-cases/find-users-by-role.js';
 
 export const createAccessControlContext = async (deps) => {
   const { persistence, config, obs, registry, security, messaging } = deps;
@@ -45,6 +46,7 @@ export const createAccessControlContext = async (deps) => {
   const listRoles = createListRoles({ roleRepository });
   const createRole = createCreateRole({ roleRepository, obs, eventBus });
   const assignRole = createAssignRoleToUser({ userRepository, roleRepository, obs });
+  const findUsersByRole = createFindUsersByRole({ userRepository });
 
   return {
     name: 'access-control',
@@ -70,6 +72,7 @@ export const createAccessControlContext = async (deps) => {
       listRoles,
       createRole,
       assignRole,
+      findUsersByRole,
     },
   };
 };

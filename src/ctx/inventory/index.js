@@ -121,6 +121,10 @@ export const createInventoryContext = async (deps) => {
       execute: async (...args) => stockAllocationService.receiveStockRobust(...args)
   };
 
+  const receiveStockBatch = {
+      execute: async (...args) => stockAllocationService.receiveStockBatch(...args)
+  };
+
   // Access other contexts when needed
   const checkUserPermission = async (tenantId, userId, action) => {
     const accessControl = registry.get('domain.access-control');
@@ -160,7 +164,8 @@ export const createInventoryContext = async (deps) => {
       createWarehouse,
       createLocation,
       executeProduction,
-      receiveStockRobust
+      receiveStockRobust,
+      receiveStockBatch
     },
 
     // Cross-context helpers

@@ -1,6 +1,7 @@
 export const createKVPool = (size = 5) => {
   const connections = [];
   const available = [];
+  const waiting = [];
 
   const initialize = async () => {
     for (let i = 0; i < size; i++) {
@@ -11,14 +12,20 @@ export const createKVPool = (size = 5) => {
   };
 
   const acquire = async () => {
-    while (available.length === 0) {
-      await new Promise(resolve => setTimeout(resolve, 10));
+    if (available.length > 0) {
+      return available.pop();
     }
-    return available.pop();
+    // No connection available, wait in queue
+    return new Promise(resolve => waiting.push(resolve));
   };
 
   const release = (kv) => {
-    available.push(kv);
+    if (waiting.length > 0) {
+      const resolve = waiting.shift();
+      resolve(kv);
+    } else {
+      available.push(kv);
+    }
   };
 
   const withConnection = async (fn) => {

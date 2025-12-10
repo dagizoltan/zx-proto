@@ -40,19 +40,27 @@ export const createReceivePurchaseOrder = ({ poRepository, inventoryService }) =
     if (!po) throw new Error('PO not found');
     if (po.status === 'RECEIVED' || po.status === 'CANCELLED') throw new Error('PO already closed');
 
-    // Iterate items
+    // Update PO item quantities
+    const inventoryItems = [];
+
     for (const receivedItem of receiveData.items) {
       const poItem = po.items.find(i => i.productId === receivedItem.productId);
       if (poItem) {
         poItem.receivedQuantity += receivedItem.quantity;
       }
 
-      // Use Robust Reception via Use Case Interface
-      await inventoryService.receiveStockRobust.execute(tenantId, {
+      inventoryItems.push({
         productId: receivedItem.productId,
         locationId: receiveData.locationId,
         quantity: receivedItem.quantity,
         batchId: null, // Will generate unique batch
+      });
+    }
+
+    // Atomic Inventory Update
+    if (inventoryItems.length > 0) {
+      await inventoryService.receiveStockBatch.execute(tenantId, {
+        items: inventoryItems,
         reason: `Received PO ${po.code}`
       });
     }
