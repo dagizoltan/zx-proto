@@ -46,6 +46,8 @@ export const seedAccessControl = async (ctx, tenantId) => {
                 name: u.name
             });
             await ac.useCases.assignRole.execute(tenantId, { userId: user.id, roleIds: [roleIds[u.role]] });
+            // Throttle to prevent database lock
+            await new Promise(r => setTimeout(r, 20));
         } catch (e) {
             // Check if error is "User already exists"
             if (e.message.includes('already exists')) {
@@ -73,6 +75,8 @@ export const seedAccessControl = async (ctx, tenantId) => {
             });
             await ac.useCases.assignRole.execute(tenantId, { userId: user.id, roleIds: [roleIds.customer] });
             customers.push(user);
+            // Throttle to prevent database lock
+            await new Promise(r => setTimeout(r, 20));
         } catch (e) {
              const existing = await ac.repositories.user.findByEmail(tenantId, email);
              if (existing) customers.push(existing);
