@@ -7,6 +7,11 @@ export const createKVTaskExecutionRepository = (kvPool) => {
 
   return {
     ...base,
+    save: async (tenantId, entity) => {
+        const data = entity.toJSON ? entity.toJSON() : entity;
+        await base.save(tenantId, data);
+        return entity;
+    },
     // Add specific methods for history if needed (e.g. by taskId)
     findByTaskId: async (tenantId, taskId, limit = 50) => {
         // Naive implementation using findAll + sort
