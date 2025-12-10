@@ -60,7 +60,9 @@ export const AdminLayout = ({ children, user, currentPath }) => {
             <div class="sidebar-footer">
               <div class="user-info">
                 <a href="/ims/me" class="user-link">
-                  <span class="user-name" title={user.email}>{user.name || user.email}</span>
+                  <span class="user-name" title={user.name}>{user.name || 'User'}</span>
+                  <span class="user-email" title={user.email}>{user.email}</span>
+                  <span class="user-role" title={(user.roleNames || []).join(', ')}>{(user.roleNames || []).join(', ') || 'No Roles'}</span>
                 </a>
               </div>
               <a href="/logout" class="btn-logout">
