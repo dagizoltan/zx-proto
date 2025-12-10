@@ -28,7 +28,7 @@ This report provides a comprehensive review of the codebase, focusing on perform
     *   **Data Integrity:** Stock movements are recorded in the same atomic transaction as the stock update, ensuring zero drift.
 *   **Performance:**
     *   `_updateProductTotal` runs after every commit. It sums *all* stock entries for a product. For a product with 1,000 batch entries, this is an O(N) operation on every write, which may cause latency.
-    *   `allocateBatch` fetches batch details inside a loop (`batchRepository.findById`). While functional, it should use a batch fetch pattern to reduce network round-trips.
+    *   `allocateBatch` fetches batch details inside a loop (`batchRepository.findById`). While functional, it should use a batch fetch pattern to reduce network round-trips. [RESOLVED] - Implemented `findByIds` batch fetch.
 
 #### 3. Orders Domain
 *   **Strengths:**
@@ -49,7 +49,7 @@ This report provides a comprehensive review of the codebase, focusing on perform
 
 #### 1. Access Control (RBAC)
 *   **Performance:** N+1 issue fixed. `RBACService.checkPermission` and `roleCheckMiddleware` now use `roleRepository.findByIds` (batch fetch).
-*   **Cache Miss:** Middleware fetches roles on *every* request. A short-lived in-memory cache (LRU) would significantly reduce KV reads.
+*   **Cache Miss:** Middleware fetches roles on *every* request. A short-lived in-memory cache (LRU) would significantly reduce KV reads. [RESOLVED] - Implemented LRU Cache.
 
 #### 2. Scheduler
 *   **Robustness:** `SchedulerService.tick` iterates through tasks and `await Promise.all(executions)`, ensuring Deno Deploy doesn't kill the process early.

@@ -119,7 +119,8 @@ export const createSchedulerService = ({ taskRepo, executionRepo, registry, even
   };
 
   const tick = async (tenantId = 'default') => { // Default tenant for now
-    const { items: tasks } = await taskRepo.findAll(tenantId, { limit: 100 });
+    // Optimized: Use secondary index to fetch only enabled tasks
+    const tasks = await taskRepo.findActive(tenantId);
 
     const executions = [];
     for (const task of tasks) {
