@@ -22,7 +22,7 @@ export const ProductSchema = z.object({
   sku: z.string().min(1),
   name: z.string().min(1),
   description: z.string().optional(),
-  category: z.string().optional(),
+  categoryId: z.string().uuid().optional(),
 
   // Enterprise Pricing
   price: z.number().positive(), // Base price

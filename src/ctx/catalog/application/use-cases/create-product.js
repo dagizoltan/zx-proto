@@ -1,7 +1,15 @@
 import { createProduct as createProductEntity, ProductSchema } from '../../domain/entities/product.js';
 
-export const createCreateProduct = ({ productRepository, obs, eventBus }) => {
+export const createCreateProduct = ({ productRepository, categoryRepository, obs, eventBus }) => {
     const execute = async (tenantId, productData) => {
+
+        // Validate Category ID
+        if (productData.categoryId) {
+            if (!categoryRepository) throw new Error('Category Repository not available');
+            const cat = await categoryRepository.findById(tenantId, productData.categoryId);
+            if (!cat) throw new Error(`Category ${productData.categoryId} not found`);
+        }
+
         // Validation using Zod Schema (Domain Entity)
         const product = createProductEntity({
             id: crypto.randomUUID(),

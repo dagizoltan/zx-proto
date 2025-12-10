@@ -27,7 +27,12 @@ export const createCatalogContext = async (deps) => {
     const listProducts = createListProducts({ productRepository });
     const searchProducts = createSearchProducts({ productRepository });
     const filterByCategory = createFilterByCategory({ productRepository });
-    const createProduct = createCreateProduct({ productRepository, obs, eventBus });
+    const createProduct = createCreateProduct({
+        productRepository,
+        categoryRepository,
+        obs,
+        eventBus
+    });
 
     // New Use Cases
     const createCategory = createCreateCategory({ categoryRepository });

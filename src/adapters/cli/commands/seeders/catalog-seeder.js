@@ -39,8 +39,14 @@ export const seedCatalog = async (ctx, tenantId) => {
 
     // Configurable T-Shirt
     try {
+        const clothingId = catMap['Clothing'];
         const shirt = await catalog.useCases.createProduct.execute(tenantId, {
-            sku: 'TSHIRT-BASE', name: 'Basic T-Shirt', price: 20, type: 'CONFIGURABLE', configurableAttributes: ['color', 'size'], category: 'Clothing'
+            sku: 'TSHIRT-BASE',
+            name: 'Basic T-Shirt',
+            price: 20,
+            type: 'CONFIGURABLE',
+            configurableAttributes: ['color', 'size'],
+            categoryId: clothingId
         });
         const colors = ['Red', 'Blue', 'Black'];
         const sizes = ['S', 'M', 'L'];
@@ -53,7 +59,7 @@ export const seedCatalog = async (ctx, tenantId) => {
                     type: 'VARIANT',
                     parentId: shirt.id,
                     variantAttributes: { color: c, size: s },
-                    category: 'Clothing'
+                    categoryId: clothingId
                 });
                 products.push(v);
             }
@@ -63,13 +69,15 @@ export const seedCatalog = async (ctx, tenantId) => {
     // Simple Products
     for (let i = 0; i < 500; i++) {
         try {
-            const cat = Random.element(categories);
+            const catName = Random.element(categories);
+            const catId = catMap[catName];
+
             const p = await catalog.useCases.createProduct.execute(tenantId, {
                 sku: `SKU-${10000 + i}`,
-                name: `${cat} Item ${i}`,
-                description: `A fantastic ${cat.toLowerCase()} product.`,
+                name: `${catName} Item ${i}`,
+                description: `A fantastic ${catName.toLowerCase()} product.`,
                 price: Random.float(10, 500),
-                category: cat,
+                categoryId: catId,
                 type: 'SIMPLE',
                 status: 'ACTIVE'
             });
