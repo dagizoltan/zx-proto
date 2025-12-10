@@ -1,5 +1,5 @@
 
-import { createBaseRepository } from '../../../infra/persistence/kv/repositories/base-repository.js';
+import { createBaseRepository } from '../../../../infra/persistence/kv/repositories/base-repository.js';
 import { createTaskExecution } from '../entities/task-execution.js';
 
 export const createKVTaskExecutionRepository = (kvPool) => {

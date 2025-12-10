@@ -1,5 +1,5 @@
 
-import { createBaseRepository } from '../../../infra/persistence/kv/repositories/base-repository.js';
+import { createBaseRepository } from '../../../../infra/persistence/kv/repositories/base-repository.js';
 import { createScheduledTask } from '../entities/scheduled-task.js';
 
 export const createKVScheduledTaskRepository = (kvPool) => {
