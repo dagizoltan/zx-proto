@@ -44,7 +44,7 @@ export const createStockAllocationService = (stockRepository, stockMovementRepos
   };
 
   const allocateBatch = async (tenantId, items, referenceId) => {
-    const MAX_RETRIES = 5;
+    const MAX_RETRIES = 10;
     let attempt = 0;
 
     while (attempt < MAX_RETRIES) {
@@ -156,7 +156,8 @@ export const createStockAllocationService = (stockRepository, stockMovementRepos
                 const success = await stockRepository.commitUpdates(tenantId, updates);
                 if (!success) {
                     if (attempt === MAX_RETRIES) throw new Error('Failed to allocate stock after multiple attempts (High Concurrency)');
-                    await new Promise(r => setTimeout(r, Math.random() * 50));
+                    const delay = Math.random() * 100 * attempt;
+                    await new Promise(r => setTimeout(r, delay));
                     continue;
                 }
             }
@@ -165,7 +166,17 @@ export const createStockAllocationService = (stockRepository, stockMovementRepos
             return;
 
         } catch (e) {
-            if (e.message.includes('Insufficient stock')) throw e;
+            if (e.message && e.message.includes('Insufficient stock')) throw e;
+
+            // Retry on locked database (SQLite contention)
+            if (e.message && (e.message.includes('database is locked') || e.name === 'TypeError')) {
+                 if (attempt < MAX_RETRIES) {
+                     const delay = Math.random() * 100 * attempt;
+                     await new Promise(r => setTimeout(r, delay));
+                     continue;
+                 }
+            }
+
             if (attempt === MAX_RETRIES) throw e;
         }
     }
@@ -283,6 +294,11 @@ export const createStockAllocationService = (stockRepository, stockMovementRepos
     if (updates.length > 0) {
         const success = await stockRepository.commitUpdates(tenantId, updates);
         if (!success) {
+            // Commit wraps this in retry logic (if any) or caller handles it.
+            // But `commit` is not in a retry loop here?
+            // Wait, `commit` implementation shown in read_file does NOT have a retry loop!
+            // It relies on caller or just fails.
+            // Previous code: "throw new Error('Commit failed...')"
             throw new Error('Commit failed due to concurrent modification. Please retry.');
         }
     }
@@ -524,13 +540,23 @@ export const createStockAllocationService = (stockRepository, stockMovementRepos
              const success = await stockRepository.commitUpdates(tenantId, updates);
              if (!success) {
                  if (attempt === MAX_RETRIES) throw new Error('Production failed due to concurrency');
-                 await new Promise(r => setTimeout(r, Math.random() * 50));
+                 const delay = Math.random() * 100 * attempt;
+                 await new Promise(r => setTimeout(r, delay));
                  continue;
              }
              return;
 
          } catch (e) {
-             if (e.message.includes('Insufficient stock')) throw e;
+             if (e.message && e.message.includes('Insufficient stock')) throw e;
+
+             if (e.message && (e.message.includes('database is locked') || e.name === 'TypeError')) {
+                 if (attempt < MAX_RETRIES) {
+                     const delay = Math.random() * 100 * attempt;
+                     await new Promise(r => setTimeout(r, delay));
+                     continue;
+                 }
+             }
+
              if (attempt === MAX_RETRIES) throw e;
          }
      }
@@ -539,7 +565,7 @@ export const createStockAllocationService = (stockRepository, stockMovementRepos
   const receiveStockRobust = async (tenantId, { productId, locationId, quantity, batchId, reason }) => {
       const finalBatchId = batchId || `REC-${new Date().toISOString().slice(0,10)}-${crypto.randomUUID().slice(0,4)}`;
 
-      const MAX_RETRIES = 5;
+      const MAX_RETRIES = 10;
       let attempt = 0;
 
       while (attempt < MAX_RETRIES) {
@@ -603,12 +629,20 @@ export const createStockAllocationService = (stockRepository, stockMovementRepos
 
               const success = await stockRepository.commitUpdates(tenantId, updates);
               if (!success) {
-                  await new Promise(r => setTimeout(r, Math.random() * 50));
+                  const delay = Math.random() * 100 * attempt;
+                  await new Promise(r => setTimeout(r, delay));
                   continue;
               }
               return;
 
           } catch (e) {
+              if (e.message && (e.message.includes('database is locked') || e.name === 'TypeError')) {
+                 if (attempt < MAX_RETRIES) {
+                     const delay = Math.random() * 100 * attempt;
+                     await new Promise(r => setTimeout(r, delay));
+                     continue;
+                 }
+              }
               if (attempt === MAX_RETRIES) throw e;
           }
       }
@@ -616,7 +650,7 @@ export const createStockAllocationService = (stockRepository, stockMovementRepos
 
   const receiveStockBatch = async (tenantId, { items, reason }) => {
       // items: [{ productId, locationId, quantity, batchId }]
-      const MAX_RETRIES = 5;
+      const MAX_RETRIES = 10;
       let attempt = 0;
 
       while (attempt < MAX_RETRIES) {
@@ -701,12 +735,20 @@ export const createStockAllocationService = (stockRepository, stockMovementRepos
               const success = await stockRepository.commitUpdates(tenantId, updates);
               if (!success) {
                   if (attempt === MAX_RETRIES) throw new Error('Batch receive failed due to concurrency');
-                  await new Promise(r => setTimeout(r, Math.random() * 50));
+                  const delay = Math.random() * 100 * attempt;
+                  await new Promise(r => setTimeout(r, delay));
                   continue;
               }
               return;
 
           } catch (e) {
+              if (e.message && (e.message.includes('database is locked') || e.name === 'TypeError')) {
+                 if (attempt < MAX_RETRIES) {
+                     const delay = Math.random() * 100 * attempt;
+                     await new Promise(r => setTimeout(r, delay));
+                     continue;
+                 }
+              }
               if (attempt === MAX_RETRIES) throw e;
           }
       }

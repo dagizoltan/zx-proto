@@ -56,6 +56,10 @@ export const seedInventory = async (ctx, tenantId, products) => {
             batchId: `INITIAL-${Random.int(2022, 2023)}-${Random.int(1, 12)}`, // Old stock
             reason: 'Initial Load'
         });
+
+        // Throttle to prevent overwhelming the SQLite backend (database locked)
+        await new Promise(resolve => setTimeout(resolve, 20));
+
         ops++;
         Log.progress(ops, totalOps);
     }
