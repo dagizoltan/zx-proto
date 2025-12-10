@@ -213,6 +213,34 @@ export const adminNavigation = {
     },
 
     {
+      id: 'scheduler',
+      label: 'Scheduler',
+      items: [
+         {
+             id: 'scheduler-dashboard',
+             label: 'Dashboard',
+             href: '/ims/scheduler/dashboard',
+             icon: 'LayoutDashboard', // Reusing icon, maybe 'Clock' better if available
+             roles: ['admin']
+         },
+         {
+             id: 'tasks',
+             label: 'Task Definitions',
+             href: '/ims/scheduler/tasks',
+             icon: 'ListChecks',
+             roles: ['admin']
+         },
+         {
+             id: 'history',
+             label: 'History',
+             href: '/ims/scheduler/history',
+             icon: 'History',
+             roles: ['admin']
+         }
+      ]
+    },
+
+    {
       id: 'observability',
       label: 'Observability',
       items: [

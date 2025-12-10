@@ -16,6 +16,7 @@ import { systemRoutes } from './ims/system-routes.js';
 import { crmRoutes } from './ims/crm-routes.js';
 import { observabilityRoutes } from './ims/observability-routes.js';
 import { communicationRoutes } from './ims/communication-routes.js';
+import { schedulerRoutes } from './scheduler/scheduler.routes.js';
 
 export const imsRoutes = new Hono();
 
@@ -32,6 +33,7 @@ imsRoutes.route('/system', systemRoutes);
 imsRoutes.route('/crm', crmRoutes);
 imsRoutes.route('/observability', observabilityRoutes);
 imsRoutes.route('/communication', communicationRoutes);
+imsRoutes.route('/scheduler', schedulerRoutes);
 
 imsRoutes.get('/dashboard', async (c) => {
   const user = c.get('user');

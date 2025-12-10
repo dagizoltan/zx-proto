@@ -22,6 +22,8 @@ import { createSystemContext } from './src/ctx/system/index.js';
 import { createQueriesContext } from './src/ctx/queries/index.js';
 import { createObservabilityContext } from './src/ctx/observability/index.js';
 import { createCommunicationContext } from './src/ctx/communication/index.js';
+import { createSchedulerContext } from './src/ctx/scheduler/index.js';
+import { createCronAdapter } from './src/adapters/scheduler/cron-adapter.js';
 
 async function bootstrap() {
   console.log('🚀 IMS Shopfront - Starting...\n');
@@ -90,6 +92,11 @@ async function bootstrap() {
         'infra.persistence',
         'infra.messaging'
     ])
+    .registerDomain('scheduler', createSchedulerContext, [
+        'infra.persistence',
+        'infra.messaging',
+        'domain.system'
+    ])
     .registerDomain('queries', createQueriesContext, [
         'domain.access-control',
         'domain.orders'
@@ -104,6 +111,26 @@ async function bootstrap() {
     contexts: ctx.list(),
     initOrder: ctx.getInitOrder(),
   });
+
+  // 5.5 Register Scheduled Tasks
+  const scheduler = ctx.get('domain.scheduler').service;
+  const system = ctx.get('domain.system');
+
+  // Register handlers
+  scheduler.registerHandler('system.cleanup_audit_logs', (args) => system.useCases.cleanupAuditLogs.execute({ ...args, log: args.log }));
+
+  // Sync definitions (default schedules)
+  await scheduler.syncDefinitions('default', [
+      {
+          handlerKey: 'system.cleanup_audit_logs',
+          name: 'Cleanup Old Audit Logs',
+          description: 'Deletes audit logs older than 90 days',
+          defaultSchedule: '0 3 * * *' // 3 AM Daily
+      }
+  ]);
+
+  // Start Cron Ticker
+  createCronAdapter(scheduler).start();
 
   // 6. Create and start server with both API and UI apps
   console.log('🌐 Creating HTTP server...');
