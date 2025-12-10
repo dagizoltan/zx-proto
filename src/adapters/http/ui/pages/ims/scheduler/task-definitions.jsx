@@ -35,64 +35,15 @@ export const TaskDefinitionsPage = ({ tasks }) => {
                                     {task.lastRunAt ? new Date(task.lastRunAt).toLocaleString() : '-'}
                                 </td>
                                 <td class="p-4 text-right space-x-2">
-                                    <button
-                                        class="btn btn-sm btn-ghost"
-                                        onclick={`runTask('${task.id}')`}
-                                    >
-                                        Run Now
-                                    </button>
-                                    <button
-                                        class="btn btn-sm btn-ghost"
-                                        onclick={`editTask('${task.id}', '${task.cronExpression}', ${task.enabled})`}
-                                    >
-                                        Edit
-                                    </button>
+                                    <a href={`/ims/scheduler/tasks/${task.id}`} class="btn btn-sm btn-ghost text-indigo-600">
+                                        Manage
+                                    </a>
                                 </td>
                             </tr>
                         ))}
                     </tbody>
                 </table>
             </div>
-
-            {/* Edit Modal Logic (Script injection) */}
-            <script dangerouslySetInnerHTML={{ __html: `
-                async function runTask(id) {
-                    if(!confirm('Run this task now?')) return;
-                    try {
-                        const res = await fetch(\`/api/scheduler/tasks/\${id}/run\`, { method: 'POST' });
-                        if(res.ok) {
-                            alert('Task started');
-                            window.location.reload();
-                        } else {
-                            alert('Failed to start task');
-                        }
-                    } catch(e) {
-                        alert(e.message);
-                    }
-                }
-
-                async function editTask(id, cron, enabled) {
-                    const newCron = prompt('Enter new Cron Expression:', cron);
-                    if(newCron === null) return;
-
-                    const newEnabled = confirm('Is this task enabled?');
-
-                    try {
-                        const res = await fetch(\`/api/scheduler/tasks/\${id}\`, {
-                            method: 'PUT',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ cronExpression: newCron, enabled: newEnabled })
-                        });
-                        if(res.ok) {
-                            window.location.reload();
-                        } else {
-                            alert('Failed to update task');
-                        }
-                    } catch(e) {
-                        alert(e.message);
-                    }
-                }
-            `}} />
         </div>
     );
 };
