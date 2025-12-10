@@ -20,7 +20,25 @@ By utilizing a Deno KV instance backed by an on-chain/immutable database, your s
 
 ---
 
-## 2. The Path to MVP (Commercial Viability)
+## 2. Comparative Valuation: On-Chain vs. Off-Chain
+
+The following table contrasts the value proposition of the current codebase if deployed as a standard "Web2" ERP versus a "Web3/On-Chain" Trust Platform.
+
+| Metric | Scenario A: Standard ERP (Off-Chain) | Scenario B: Trust Platform (On-Chain) |
+| :--- | :--- | :--- |
+| **Primary Value Prop** | "It manages my stock." | "It **proves** my stock history." |
+| **Target Market** | Small E-commerce, Local Warehouses | Pharma, Aerospace, Luxury, Gov Contractors |
+| **SaaS Pricing (Monthly)** | **$99 - $299** / month | **$499 - $1,500** / month |
+| **Enterprise License (Yearly)** | **$15k - $30k** / year | **$50k - $150k** / year |
+| **Codebase Asset Value** | **~$100k** (Replacement Cost) | **~$150k+** (Includes IP/Trust Layer) |
+| **Company Valuation (Seed)** | **$1M - $2M** (Crowded Market) | **$3M - $5M** (Blue Ocean / RegTech) |
+| **Key Differentiator** | None (Competes with Odoo, Netsuite) | **Immutable Audit Trail / Anti-Fraud** |
+| **Sales Cycle** | Short (Self-Serve) | Long (Compliance Review) |
+| **Churn Risk** | High (Price Sensitive) | Low (Regulatory Lock-in) |
+
+---
+
+## 3. The Path to MVP (Commercial Viability)
 
 To sell this to a real customer (SME), you need to close the "Business Utility Gap".
 *Estimated Effort: 4-6 Weeks for 1 Senior Engineer.*
@@ -40,7 +58,7 @@ To sell this to a real customer (SME), you need to close the "Business Utility G
 
 ---
 
-## 3. The Path to Enterprise Grade (Accelerated by On-Chain)
+## 4. The Path to Enterprise Grade (Accelerated by On-Chain)
 
 The "On-Chain" backing significantly shortens the path to Enterprise compliance.
 
@@ -58,30 +76,6 @@ The "On-Chain" backing significantly shortens the path to Enterprise compliance.
 *   **Disaster Recovery:** The decentralized nature potentially mitigates single-point-of-failure risks for data durability.
 
 ---
-
-## 4. Valuation & Market Price (Revised)
-
-The "On-Chain" architecture shifts the valuation model from "Feature-based" to "Trust-based".
-
-### Intrinsic Code Value (Asset Valuation)
-*   **Architecture & Core Engines:** $80,000 - $100,000 (Added complexity of trust layer).
-*   **UI/Frontend:** $30,000 - $40,000.
-*   **Infrastructure/Setup:** $10,000.
-*   **Total Replacement Cost:** **~$120,000 - $150,000.**
-
-### Market Price (Licensing/SaaS)
-
-#### **Scenario A: Generic ERP (Ignored On-Chain)**
-*   **Price:** $99 - $299/mo.
-*   **Target:** Small shops. (Crowded market, hard to sell).
-
-#### **Scenario B: Trust Platform (Leveraging On-Chain)**
-*   **Positioning:** "Supply Chain Transparency Platform" or "Regulated Inventory Management".
-*   **Target:** Pharma, Aerospace, Luxury Goods, Government Contractors.
-*   **Price Potential:**
-    *   **SaaS:** **$499 - $1,500 / month** (Compliance Premium).
-    *   **Enterprise License:** **$50,000 - $150,000 / year**.
-    *   *Why?* You are not selling "Inventory Software"; you are selling "Audit Insurance".
 
 ### Reality Check
 You still need the **$10k of "Business Finish"** (PDFs, Settings) to open the door.
