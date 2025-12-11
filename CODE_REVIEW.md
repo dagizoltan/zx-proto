@@ -27,7 +27,7 @@ This report provides a comprehensive review of the codebase, focusing on perform
     *   **Concurrency:** `StockAllocationService` correctly implements Optimistic Concurrency Control (OCC) with versionstamps and retry loops.
     *   **Data Integrity:** Stock movements are recorded in the same atomic transaction as the stock update, ensuring zero drift.
 *   **Performance:**
-    *   `_updateProductTotal` runs after every commit. It sums *all* stock entries for a product. For a product with 1,000 batch entries, this is an O(N) operation on every write, which may cause latency.
+    *   `_updateProductTotal` runs after every commit. It sums *all* stock entries for a product. For a product with 1,000 batch entries, this is an O(N) operation on every write, which may cause latency. [RESOLVED] - Implemented Atomic Delta Updates.
     *   `allocateBatch` fetches batch details inside a loop (`batchRepository.findById`). While functional, it should use a batch fetch pattern to reduce network round-trips. [RESOLVED] - Implemented `findByIds` batch fetch.
 
 #### 3. Orders Domain
@@ -53,14 +53,14 @@ This report provides a comprehensive review of the codebase, focusing on perform
 
 #### 2. Scheduler
 *   **Robustness:** `SchedulerService.tick` iterates through tasks and `await Promise.all(executions)`, ensuring Deno Deploy doesn't kill the process early.
-*   **Scalability:** Fetches *all* tasks (limit 100) every minute. As tasks grow, this needs pagination or a better index (`tasks_by_status`).
+*   **Scalability:** Fetches *all* tasks (limit 100) every minute. As tasks grow, this needs pagination or a better index (`tasks_by_status`). [RESOLVED] - Implemented Active Task Index.
 
 ---
 
 ## 3. Code Hygiene & DX
 
 *   **Hardcoded Limits:** Almost every `findAll` call uses `{ limit: 50 }` or `{ limit: 100 }`. This is a ticking time bomb for data loss in dropdowns (e.g., Category Selectors).
-*   **In-Memory Filtering:** Lists (Categories, Products) are often fetched in bulk and filtered in memory (e.g., `products.filter(p => p.categoryId === ...)`). This works for <1000 items but fails at scale.
+*   **In-Memory Filtering:** Lists (Categories, Products) are often fetched in bulk and filtered in memory (e.g., `products.filter(p => p.categoryId === ...)`). This works for <1000 items but fails at scale. [RESOLVED] - Implemented Secondary Indexes.
 *   **Testing:** Critical paths (Inventory) are well-tested, but UI logic (Handlers) lacks automated tests.
 
 ---
