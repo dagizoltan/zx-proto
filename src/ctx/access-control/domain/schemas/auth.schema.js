@@ -9,8 +9,13 @@ export const UserSchema = z.object({
   createdAt: z.string().optional()
 });
 
+export const PermissionSchema = z.object({
+    resource: z.string(),
+    action: z.string()
+});
+
 export const RoleSchema = z.object({
   id: z.string().min(1),
   name: z.string().min(1),
-  permissions: z.array(z.string()).optional()
+  permissions: z.array(PermissionSchema).optional()
 });
