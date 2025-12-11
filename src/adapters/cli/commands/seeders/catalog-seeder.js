@@ -1,4 +1,5 @@
 import { Random, Log } from './utils.js';
+import { unwrap, isErr } from '../../../../../lib/trust/index.js';
 
 export const seedCatalog = async (ctx, tenantId) => {
     Log.step('Seeding Catalog (Categories, PriceLists, Products)');
@@ -10,12 +11,18 @@ export const seedCatalog = async (ctx, tenantId) => {
     const catMap = {}; // name -> id
 
     for (const name of categories) {
-        try {
-            const cat = await catalog.useCases.createCategory.execute(tenantId, { name, description: `Seeded ${name}` });
-            catMap[name] = cat.id;
-        } catch (e) {
-            const all = await catalog.useCases.listCategories.execute(tenantId, { limit: 100 });
-            catMap[name] = all.items.find(c => c.name === name)?.id;
+        // Use 'unwrap' to throw on error, preserving old flow or handle Result explicitly.
+        // For seeding, if it fails, we assume it exists or retry.
+        const res = await catalog.useCases.createCategory.execute(tenantId, { name, description: `Seeded ${name}` });
+
+        if (res.ok) {
+            catMap[name] = res.value.id;
+        } else {
+            // Assume exists, try fetch
+            const allRes = await catalog.useCases.listCategories.execute(tenantId, { limit: 100 });
+            if (allRes.ok) {
+                catMap[name] = allRes.value.items.find(c => c.name === name)?.id;
+            }
         }
     }
 
@@ -23,66 +30,70 @@ export const seedCatalog = async (ctx, tenantId) => {
     const pls = ['Retail', 'Wholesale', 'VIP'];
     const plIds = [];
     for (const name of pls) {
-        try {
-            const pl = await catalog.useCases.createPriceList.execute(tenantId, { name, currency: 'USD' });
-            plIds.push(pl);
-        } catch (e) {
-             const all = await catalog.useCases.listPriceLists.execute(tenantId, { limit: 10 });
-             const found = all.items.find(l => l.name === name);
-             if (found) plIds.push(found);
+        const res = await catalog.useCases.createPriceList.execute(tenantId, { name, currency: 'USD' });
+        if (res.ok) {
+            plIds.push(res.value);
+        } else {
+             const allRes = await catalog.useCases.listPriceLists.execute(tenantId, { limit: 10 });
+             if (allRes.ok) {
+                 const found = allRes.value.items.find(l => l.name === name);
+                 if (found) plIds.push(found);
+             }
         }
     }
 
-    // 3. Products (1000)
+    // 3. Products
     const products = [];
     Log.info('Generating 500 Products...');
 
     // Configurable T-Shirt
-    try {
-        const clothingId = catMap['Clothing'];
-        const shirt = await catalog.useCases.createProduct.execute(tenantId, {
-            sku: 'TSHIRT-BASE',
-            name: 'Basic T-Shirt',
-            price: 20,
-            type: 'CONFIGURABLE',
-            configurableAttributes: ['color', 'size'],
-            categoryId: clothingId
-        });
+    let shirtId;
+    const shirtRes = await catalog.useCases.createProduct.execute(tenantId, {
+        sku: 'TSHIRT-BASE',
+        name: 'Basic T-Shirt',
+        price: 20,
+        type: 'CONFIGURABLE',
+        configurableAttributes: ['color', 'size'],
+        categoryId: catMap['Clothing']
+    });
+
+    if (shirtRes.ok) {
+        shirtId = shirtRes.value.id;
         const colors = ['Red', 'Blue', 'Black'];
         const sizes = ['S', 'M', 'L'];
         for (const c of colors) {
             for (const s of sizes) {
-                const v = await catalog.useCases.createProduct.execute(tenantId, {
+                const vRes = await catalog.useCases.createProduct.execute(tenantId, {
                     sku: `TSHIRT-${c.toUpperCase()}-${s}`,
                     name: `T-Shirt ${c} ${s}`,
                     price: 20,
                     type: 'VARIANT',
-                    parentId: shirt.id,
+                    parentId: shirtId,
                     variantAttributes: { color: c, size: s },
-                    categoryId: clothingId
+                    categoryId: catMap['Clothing']
                 });
-                products.push(v);
+                if (vRes.ok) products.push(vRes.value);
             }
         }
-    } catch(e) {}
+    }
 
     // Simple Products
     for (let i = 0; i < 500; i++) {
-        try {
-            const catName = Random.element(categories);
-            const catId = catMap[catName];
+        const catName = Random.element(categories);
+        const catId = catMap[catName];
 
-            const p = await catalog.useCases.createProduct.execute(tenantId, {
-                sku: `SKU-${10000 + i}`,
-                name: `${catName} Item ${i}`,
-                description: `A fantastic ${catName.toLowerCase()} product.`,
-                price: Random.float(10, 500),
-                categoryId: catId,
-                type: 'SIMPLE',
-                status: 'ACTIVE'
-            });
-            products.push(p);
-        } catch (e) {}
+        const pRes = await catalog.useCases.createProduct.execute(tenantId, {
+            sku: `SKU-${10000 + i}`,
+            name: `${catName} Item ${i}`,
+            description: `A fantastic ${catName.toLowerCase()} product.`,
+            price: Random.float(10, 500),
+            categoryId: catId,
+            type: 'SIMPLE',
+            status: 'ACTIVE'
+        });
+
+        if (pRes.ok) products.push(pRes.value);
+
         Log.progress(i + 1, 500);
     }
 

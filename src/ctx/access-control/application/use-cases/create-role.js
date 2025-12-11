@@ -1,9 +1,10 @@
 import { createRole } from '../../domain/entities/role.js';
+import { Ok, Err, isErr } from '../../../../../lib/trust/index.js';
 
 export const createCreateRole = ({ roleRepository, obs, eventBus }) => {
   const execute = async (tenantId, { name, permissions }) => {
-    // Simple validation could be added here
-    if (!name) throw new Error("Role name is required");
+    // Validation handled by Schema in repo, but basic check is fine
+    if (!name) return Err({ code: 'VALIDATION_ERROR', message: "Role name is required" });
 
     const role = createRole({
       id: crypto.randomUUID(),
@@ -11,7 +12,8 @@ export const createCreateRole = ({ roleRepository, obs, eventBus }) => {
       permissions
     });
 
-    await roleRepository.save(tenantId, role);
+    const saveRes = await roleRepository.save(tenantId, role);
+    if (isErr(saveRes)) return saveRes;
 
     if (obs) obs.audit('Role created', {
         tenantId,
@@ -30,7 +32,7 @@ export const createCreateRole = ({ roleRepository, obs, eventBus }) => {
         });
     }
 
-    return role;
+    return Ok(role);
   };
   return { execute };
 };

@@ -1,24 +1,32 @@
+import { Ok, Err, isErr } from '../../../../../lib/trust/index.js';
+
 export const createLoginUser = ({ userRepository, authService, obs }) => {
   const execute = async (tenantId, email, password) => {
-    const user = await userRepository.findByEmail(tenantId, email);
+    // 1. Find User by Email
+    const queryRes = await userRepository.queryByIndex(tenantId, 'email', email);
+    if (isErr(queryRes)) return queryRes;
 
-    if (!user) {
-      throw new Error('Invalid credentials');
+    if (queryRes.value.items.length === 0) {
+      // Don't reveal user existence
+      return Err({ code: 'AUTH_FAILED', message: 'Invalid credentials' });
     }
 
+    const user = queryRes.value.items[0];
+
+    // 2. Verify Password
     const isValid = await authService.verifyPassword(password, user.passwordHash);
-
     if (!isValid) {
-      throw new Error('Invalid credentials');
+      return Err({ code: 'AUTH_FAILED', message: 'Invalid credentials' });
     }
 
+    // 3. Generate Token
     const token = await authService.generateToken({
       id: user.id,
       email: user.email,
       roleIds: user.roleIds
     });
 
-    return { user, token };
+    return Ok({ user, token });
   };
 
   return { execute };

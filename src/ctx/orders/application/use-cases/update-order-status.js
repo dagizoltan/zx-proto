@@ -1,7 +1,10 @@
+import { Ok, Err, isErr } from '../../../../../lib/trust/index.js';
+
 export const createUpdateOrderStatus = ({ orderRepository, registry, obs, eventBus }) => {
   const execute = async (tenantId, orderId, newStatus) => {
-    const order = await orderRepository.findById(tenantId, orderId);
-    if (!order) throw new Error('Order not found');
+    const res = await orderRepository.findById(tenantId, orderId);
+    if (isErr(res)) return Err({ code: 'NOT_FOUND', message: 'Order not found' });
+    const order = res.value;
 
     const inventory = registry.get('domain.inventory');
 
@@ -11,33 +14,32 @@ export const createUpdateOrderStatus = ({ orderRepository, registry, obs, eventB
     const VALID_TRANSITIONS = {
       'CREATED': ['PAID', 'CANCELLED'],
       'PAID': ['SHIPPED', 'PARTIALLY_SHIPPED', 'CANCELLED'],
-      'PARTIALLY_SHIPPED': ['SHIPPED', 'CANCELLED', 'DELIVERED'], // Added DELIVERED just in case
+      'PARTIALLY_SHIPPED': ['SHIPPED', 'CANCELLED', 'DELIVERED'],
       'SHIPPED': ['DELIVERED'],
-      'DELIVERED': [], // Terminal
-      'CANCELLED': []  // Terminal
+      'DELIVERED': [],
+      'CANCELLED': []
     };
 
     const allowed = VALID_TRANSITIONS[oldStatus] || [];
     if (!allowed.includes(newStatus)) {
-        // Allow idempotent updates (same status)
         if (oldStatus !== newStatus) {
-            throw new Error(
-                `Invalid status transition: ${oldStatus} -> ${newStatus}. ` +
-                `Valid transitions: ${allowed.join(', ') || 'none'}`
-            );
+            return Err({
+                code: 'INVALID_TRANSITION',
+                message: `Invalid status transition: ${oldStatus} -> ${newStatus}. Valid: ${allowed.join(', ') || 'none'}`
+            });
         }
     }
 
     // Actions based on transition
     if (newStatus === 'SHIPPED' && oldStatus !== 'SHIPPED') {
-        // Ensure strictly correct logic. Previous code allowed CREATED -> SHIPPED. Now blocked.
-        await inventory.useCases.confirmStockShipment.execute(tenantId, orderId);
+        const confirmRes = await inventory.useCases.confirmStockShipment.execute(tenantId, orderId);
+        if (isErr(confirmRes)) return confirmRes;
     } else if (newStatus === 'CANCELLED' && oldStatus !== 'CANCELLED') {
         if (oldStatus === 'SHIPPED' || oldStatus === 'DELIVERED') {
-             // Already blocked by State Machine, but double check logic
-             throw new Error(`Cannot cancel order in ${oldStatus} status`);
+             return Err({ code: 'INVALID_TRANSITION', message: `Cannot cancel order in ${oldStatus} status` });
         }
-        await inventory.useCases.cancelStockReservation.execute(tenantId, orderId);
+        const cancelRes = await inventory.useCases.cancelStockReservation.execute(tenantId, orderId);
+        if (isErr(cancelRes)) return cancelRes;
     }
 
     // Update Order
@@ -47,7 +49,8 @@ export const createUpdateOrderStatus = ({ orderRepository, registry, obs, eventB
         updatedAt: new Date().toISOString()
     };
 
-    await orderRepository.save(tenantId, updatedOrder);
+    const saveRes = await orderRepository.save(tenantId, updatedOrder);
+    if (isErr(saveRes)) return saveRes;
 
     if (eventBus) {
         await eventBus.publish('order.status_updated', {
@@ -62,7 +65,7 @@ export const createUpdateOrderStatus = ({ orderRepository, registry, obs, eventB
         await obs.info(`Order ${orderId} updated to ${newStatus}`);
     }
 
-    return updatedOrder;
+    return Ok(updatedOrder);
   };
 
   return { execute };

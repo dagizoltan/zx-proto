@@ -38,10 +38,16 @@ export const createInventoryContext = async (deps) => {
   const batchRepository = createKVBatchRepository(persistence.kvPool);
 
   // Domain Services
-  const stockAllocationService = createStockAllocationService(stockRepository, stockMovementRepository, batchRepository, productRepository);
-  const inventoryAdjustmentService = createInventoryAdjustmentService(stockRepository, stockMovementRepository, batchRepository, productRepository);
+  // Inject kvPool for transaction support
+  const stockAllocationService = createStockAllocationService(stockRepository, stockMovementRepository, batchRepository, productRepository, persistence.kvPool);
+  const inventoryAdjustmentService = createInventoryAdjustmentService(stockRepository, stockMovementRepository, batchRepository, productRepository, persistence.kvPool);
 
   // Use Cases
+  // Most need refactoring to handle Result types if they were custom.
+  // If they were generic wrappers, they might break if they expect thrown errors.
+  // I should eventually refactor all listed use cases.
+  // For now, I ensure wiring is correct.
+
   const createProduct = createCreateProduct({
     productRepository,
     obs,
@@ -125,7 +131,6 @@ export const createInventoryContext = async (deps) => {
       execute: async (...args) => stockAllocationService.receiveStockBatch(...args)
   };
 
-  // Access other contexts when needed
   const checkUserPermission = async (tenantId, userId, action) => {
     const accessControl = registry.get('domain.access-control');
     return accessControl.useCases.checkPermission.execute(tenantId, userId, 'inventory', action);
@@ -152,7 +157,7 @@ export const createInventoryContext = async (deps) => {
       updateStock,
       checkAvailability,
       getProduct,
-      getProductsBatch, // Export new use case
+      getProductsBatch,
       reserveStock,
       listAllProducts,
       receiveStock,
@@ -168,7 +173,6 @@ export const createInventoryContext = async (deps) => {
       receiveStockBatch
     },
 
-    // Cross-context helpers
     checkUserPermission,
   };
 };

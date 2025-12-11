@@ -1,0 +1,37 @@
+import { z } from 'zod';
+
+export const OrderItemSchema = z.object({
+  productId: z.string().uuid(),
+  quantity: z.number().int().positive(),
+  unitPrice: z.number().nonnegative(),
+  totalPrice: z.number().nonnegative(),
+  productName: z.string().optional()
+});
+
+export const OrderSchema = z.object({
+  id: z.string().uuid(),
+  tenantId: z.string().optional(), // Often inferred
+  customerId: z.string().uuid().optional(),
+  items: z.array(OrderItemSchema),
+  totalAmount: z.number().nonnegative(),
+  status: z.enum(['CREATED', 'PAID', 'PARTIALLY_SHIPPED', 'SHIPPED', 'DELIVERED', 'CANCELLED']).default('CREATED'),
+  paymentStatus: z.enum(['PENDING', 'PAID', 'FAILED', 'REFUNDED']).default('PENDING'),
+  shippingAddress: z.string().optional(),
+  billingAddress: z.string().optional(),
+  createdAt: z.string().datetime().optional(),
+  updatedAt: z.string().datetime().optional()
+});
+
+export const ShipmentSchema = z.object({
+    id: z.string().uuid(),
+    orderId: z.string().uuid(),
+    items: z.array(z.object({
+        productId: z.string().uuid(),
+        quantity: z.number().int().positive(),
+        batchId: z.string().optional()
+    })),
+    trackingNumber: z.string().optional(),
+    carrier: z.string().optional(),
+    status: z.enum(['PENDING', 'SHIPPED', 'DELIVERED']).default('PENDING'),
+    shippedAt: z.string().datetime().optional()
+});

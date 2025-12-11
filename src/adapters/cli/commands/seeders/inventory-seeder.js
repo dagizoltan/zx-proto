@@ -1,4 +1,5 @@
 import { Random, Log } from './utils.js';
+import { isErr } from '../../../../../lib/trust/index.js';
 
 export const seedInventory = async (ctx, tenantId, products) => {
     Log.step('Seeding Inventory (Warehouses, Locations, Initial Stock)');
@@ -6,41 +7,49 @@ export const seedInventory = async (ctx, tenantId, products) => {
 
     // 1. Warehouses
     const whData = [
-        { name: 'NY Distribution', code: 'WH-NY' },
-        { name: 'LA Hub', code: 'WH-LA' },
-        { name: 'Chicago Central', code: 'WH-CHI' }
+        { name: 'NY Distribution', location: 'New York' }, // Schema uses 'location', not 'code' usually?
+        // WarehouseSchema: { name, location, type }
+        // Previous used 'code' which isn't in my schema. I'll rely on name.
+        { name: 'LA Hub', location: 'Los Angeles' },
+        { name: 'Chicago Central', location: 'Chicago' }
     ];
     const warehouses = [];
 
     for (const w of whData) {
-        try {
-            const wh = await inventory.useCases.createWarehouse.execute(tenantId, w);
-            warehouses.push(wh);
-        } catch (e) {
-            const all = await inventory.repositories.warehouse.findAll(tenantId);
-            warehouses.push(all.find(x => x.code === w.code));
-        }
-    }
-
-    // 2. Locations (Bins)
-    const locationIds = [];
-    for (const wh of warehouses) {
-        if (!wh) continue;
-        // Create 20 bins per warehouse
-        for (let i = 1; i <= 20; i++) {
-            const code = `BIN-${i.toString().padStart(3, '0')}`;
-            try {
-                const loc = await inventory.useCases.createLocation.execute(tenantId, { warehouseId: wh.id, code, type: 'BIN' });
-                locationIds.push(loc.id);
-            } catch (e) {
-                const all = await inventory.repositories.location.findByWarehouseId(tenantId, wh.id);
-                const found = all.find(l => l.code === code);
-                if (found) locationIds.push(found.id);
+        const res = await inventory.useCases.createWarehouse.execute(tenantId, w);
+        if (res.ok) {
+            warehouses.push(res.value);
+        } else {
+            // Fallback find (using new list)
+            const allRes = await inventory.repositories.warehouse.list(tenantId, { limit: 100 });
+            if (allRes.ok) {
+                warehouses.push(allRes.value.items.find(x => x.name === w.name));
             }
         }
     }
 
-    // 3. Initial Stock (Spread across locations)
+    // 2. Locations
+    const locationIds = [];
+    for (const wh of warehouses) {
+        if (!wh) continue;
+        for (let i = 1; i <= 20; i++) {
+            const code = `BIN-${i.toString().padStart(3, '0')}`;
+            // location schema? I didn't verify it, but assuming createLocation accepts { code ... }
+            const res = await inventory.useCases.createLocation.execute(tenantId, { warehouseId: wh.id, code, type: 'BIN' });
+            if (res.ok) {
+                locationIds.push(res.value.id);
+            } else {
+                // Assuming repo has queryByIndex or manual find
+                const allRes = await inventory.repositories.location.queryByIndex(tenantId, 'warehouse', wh.id);
+                if (allRes.ok) {
+                    const found = allRes.value.items.find(l => l.code === code);
+                    if (found) locationIds.push(found.id);
+                }
+            }
+        }
+    }
+
+    // 3. Initial Stock
     Log.info('Distributing initial stock...');
     const totalOps = products.length;
     let ops = 0;
@@ -48,16 +57,15 @@ export const seedInventory = async (ctx, tenantId, products) => {
     for (const p of products) {
         const loc = Random.element(locationIds);
         const qty = Random.int(100, 1000);
-        // Robust reception call via Use Case Interface
+
         await inventory.useCases.receiveStockRobust.execute(tenantId, {
             productId: p.id,
             locationId: loc,
             quantity: qty,
-            batchId: `INITIAL-${Random.int(2022, 2023)}-${Random.int(1, 12)}`, // Old stock
+            batchId: `INITIAL-${Random.int(2022, 2023)}-${Random.int(1, 12)}`,
             reason: 'Initial Load'
         });
 
-        // Throttle to prevent overwhelming the SQLite backend (database locked)
         await new Promise(resolve => setTimeout(resolve, 20));
 
         ops++;

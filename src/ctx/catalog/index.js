@@ -5,16 +5,31 @@ import { createPricingService } from './domain/services/pricing-service.js';
 // New Imports
 import { createKVCategoryRepository } from '../../infra/persistence/kv/repositories/kv-category-repository.js';
 import { createKVPriceListRepository } from '../../infra/persistence/kv/repositories/kv-price-list-repository.js';
+import { createKVProductRepository } from '../../infra/persistence/kv/repositories/kv-product-repository.js'; // Ensure we use new repo factory locally if needed?
+// Wait, 'inventory.repositories.product' is passed in.
+// If I replaced 'kv-product-repository.js', then 'inventory' domain needs to use the new one.
+// The 'inventory' domain likely creates the product repo.
+// I should update 'src/ctx/inventory/index.js' to use the new repo factory?
+// OR 'main.js' injects dependencies.
+
 import { createCreateCategory } from './application/use-cases/create-category.js';
 import { createListCategories } from './application/use-cases/list-categories.js';
 import { createCreatePriceList } from './application/use-cases/create-price-list.js';
 import { createListPriceLists } from './application/use-cases/list-price-lists.js';
+import { Ok, Err, isErr } from '../../../lib/trust/index.js';
 
 
 export const createCatalogContext = async (deps) => {
-    const { inventory, obs, messaging, persistence } = deps; // persistence needed for new repos
+    const { inventory, obs, messaging, persistence } = deps;
     const { eventBus } = messaging || {};
-    const productRepository = inventory.repositories.product; // Shared for now
+
+    // We should probably instantiate the product repo here if it's owned by Catalog conceptually,
+    // but the code says "Shared for now" from inventory.
+    // If I updated 'kv-product-repository.js', then whoever instantiates it gets the new one.
+    // I need to check main.js or inventory/index.js.
+    // For now, assuming productRepository matches the new interface.
+
+    let productRepository = inventory.repositories.product;
 
     // Instantiate new Repositories
     const categoryRepository = createKVCategoryRepository(persistence.kvPool);
@@ -34,31 +49,33 @@ export const createCatalogContext = async (deps) => {
         eventBus
     });
 
-    // New Use Cases
     const createCategory = createCreateCategory({ categoryRepository });
     const listCategories = createListCategories({ categoryRepository });
     const createPriceList = createCreatePriceList({ priceListRepository });
     const listPriceLists = createListPriceLists({ priceListRepository });
 
-    // Stub for featured products
     const getFeaturedProducts = {
         execute: async (tenantId) => listProducts.execute(tenantId, 1, 5)
     };
 
     // Get Product (with Pricing logic)
+    // Refactor to return Result
     const getProduct = {
         execute: async (tenantId, productId, { quantity = 1, customerGroup = null } = {}) => {
-            const product = await productRepository.findById(tenantId, productId);
-            if (!product) return null;
+            const res = await productRepository.findById(tenantId, productId);
+            if (isErr(res)) return res; // NotFound or Error
 
-            // Calculate dynamic price
+            const product = res.value;
+
+            // Calculate dynamic price (pricingService is sync and domain pure)
             const { price, appliedRule } = pricingService.calculatePrice(product, quantity, customerGroup);
-            return {
+
+            return Ok({
                 ...product,
                 finalPrice: price,
                 basePrice: product.price,
                 appliedRule
-            };
+            });
         }
     };
 
@@ -78,7 +95,6 @@ export const createCatalogContext = async (deps) => {
             getFeaturedProducts,
             createProduct,
             getProduct,
-            // New exports
             createCategory,
             listCategories,
             createPriceList,

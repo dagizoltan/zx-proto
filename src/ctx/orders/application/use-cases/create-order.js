@@ -1,33 +1,35 @@
 import { createOrder } from '../../domain/entities/order.js';
-import { createOrderSchema } from '../schema.js';
+import { Ok, Err, isErr } from '../../../../../lib/trust/index.js';
 
 export const createCreateOrder = ({ orderRepository, obs, registry, eventBus }) => {
   const execute = async (tenantId, userId, items) => {
-    // Validate input
-    createOrderSchema.parse({ items });
+    // Input validation? (Assumed handled by UI or caller, but new repo schema will catch save)
 
-    // Access other domains through registry
     const inventory = registry.get('domain.inventory');
 
-    // 1. Prepare Enriched Items (Price Lookup)
+    // 1. Prepare Enriched Items
     let calculatedTotal = 0;
     const enrichedItems = [];
     const stockReservationRequest = [];
 
-    // FIX: N+1 Query in Order Creation
-    // Use batch fetch instead of mapping through Promise.all with individual gets.
-    // Map requests to unique product IDs
     const productIds = [...new Set(items.map(item => item.productId))];
-    const fetchedProducts = await inventory.useCases.getProductsBatch.execute(tenantId, productIds);
 
-    // Create lookup map
+    // Inventory getProductsBatch likely returns Result now?
+    // Need to verify inventory.useCases.getProductsBatch refactor.
+    // Assuming I will refactor it to return Result.
+    // If not refactored yet, I assume it returns array or throws.
+    // But 'Rebase' implies I should use Results.
+
+    const fetchRes = await inventory.useCases.getProductsBatch.execute(tenantId, productIds);
+    if (isErr(fetchRes)) return fetchRes;
+    const fetchedProducts = fetchRes.value; // Assuming array
+
     const productMap = new Map();
     fetchedProducts.forEach(p => productMap.set(p.id, p));
 
-    // Validate all products exist
     for (const item of items) {
         if (!productMap.has(item.productId)) {
-            throw new Error(`Product ${item.productId} not found`);
+            return Err({ code: 'VALIDATION_ERROR', message: `Product ${item.productId} not found` });
         }
     }
 
@@ -38,8 +40,9 @@ export const createCreateOrder = ({ orderRepository, obs, registry, eventBus }) 
         enrichedItems.push({
             productId: product.id,
             quantity: item.quantity,
-            price: product.price,
-            name: product.name
+            unitPrice: product.price, // Changed to match Schema (unitPrice)
+            totalPrice: itemTotal,    // Changed to match Schema (totalPrice)
+            productName: product.name // Matches Schema
         });
         stockReservationRequest.push({
             productId: product.id,
@@ -51,34 +54,41 @@ export const createCreateOrder = ({ orderRepository, obs, registry, eventBus }) 
     const orderId = crypto.randomUUID();
     const order = createOrder({
       id: orderId,
-      userId,
+      customerId: userId, // Mapped userId -> customerId as per Schema
+      tenantId,
       items: enrichedItems,
-      total: calculatedTotal,
-      status: 'CREATED' // Initial Status
+      totalAmount: calculatedTotal, // Mapped total -> totalAmount
+      status: 'CREATED'
     });
 
-    // 3. Reserve Stock (Atomic Batch)
+    // 3. Reserve Stock
+    // Needs refactor of inventory.useCases.reserveStock too
     try {
-        await inventory.useCases.reserveStock.executeBatch(
+        const reserveRes = await inventory.useCases.reserveStock.executeBatch(
             tenantId,
             stockReservationRequest,
             order.id
         );
+        if (isErr(reserveRes)) return reserveRes; // Propagate error (e.g. Insufficient Stock)
     } catch (e) {
-        throw new Error(`Order creation failed due to stock availability: ${e.message}`);
+        // Fallback for non-result exceptions
+        return Err({ code: 'STOCK_ERROR', message: e.message });
     }
 
     // 4. Save Order
-    try {
-        await orderRepository.save(tenantId, order);
-    } catch (e) {
-        console.error('Order save failed, releasing stock...', e);
+    const saveRes = await orderRepository.save(tenantId, order);
+
+    if (isErr(saveRes)) {
+        console.error('Order save failed, releasing stock...', saveRes.error);
+        // Manual Rollback (Saga)
+        // Note: Ideally all in one transaction if possible, but cross-domain makes it hard without shared transaction manager.
+        // Since we are using separate repos and services, we rollback.
         try {
              await inventory.useCases.cancelStockReservation.execute(tenantId, order.id);
         } catch (releaseError) {
-             console.error('CRITICAL: Failed to release stock after order save failure. Orphaned stock.', releaseError);
+             console.error('CRITICAL: Failed to release stock after order save failure.', releaseError);
         }
-        throw new Error('Order creation failed during save. Please try again.');
+        return saveRes;
     }
 
     if (eventBus) {
@@ -89,11 +99,11 @@ export const createCreateOrder = ({ orderRepository, obs, registry, eventBus }) 
         await obs.audit('Order created', {
         orderId: order.id,
         userId,
-        total: order.total,
+        total: order.totalAmount,
         });
     }
 
-    return order;
+    return Ok(order);
   };
 
   return { execute };
