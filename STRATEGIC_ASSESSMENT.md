@@ -77,24 +77,26 @@ The "On-Chain" backing significantly shortens the path to Enterprise compliance.
 
 ---
 
-## 5. Future Architecture: The IMS Ecosystem
+## 5. Future Architecture: The Trust Platform Evolution
 
-To support the scaling from a single "Shopfront" to a multi-application Enterprise Platform, the repository will transition to a **Deno Workspace Monorepo**.
+The evolution of the platform will follow a phased approach to manage complexity while delivering the "Trust Engine".
 
-### 5.1. Component Topology
+### Phase 1: Local Library Integration (Immediate)
+We will implement the **Trust Platform Core** as a local module (`lib/trust`) within the current repository.
+*   **Goal:** Rapid prototyping and verification with the existing IMS system.
+*   **Structure:**
+    *   `lib/trust/`: Contains the Vault, Repository Factory, and Plugins.
+    *   `src/`: Consumes `lib/trust` for critical domains (Inventory, Orders).
+    *   `src/infra/obs`: Continues to handle telemetry, integrated into the Trust Core via the plugin system.
 
-| Component | Type | Responsibility | Dependencies |
-| :--- | :--- | :--- | :--- |
-| **IMS Backend** | `App` | The "Brain". Handles Inventory, Manufacturing, Procurement Logic. | `trust-core`, `obs-client` |
-| **Shopfront API** | `App` | Headless API for B2B/B2C storefronts. High-throughput, simplified logic. | `trust-core` (read-only views), `obs-client` |
-| **Obs Control Center** | `App` | Central Telemetry & Audit UI. Visualizes data from all apps. | `trust-core` (audit logs), `obs-client` |
-| **Trust Core** | `Package` | The Database Engine. Handles Encryption, Ledger, and Indexing. | *None* |
-| **Obs Client** | `Package` | Shared library for emitting logs/traces to the Obs system. | *None* |
+### Phase 2: JSR Extraction (Future)
+Once the Trust Core is proven in production with IMS:
+*   **Action:** Move `lib/trust` to a dedicated JSR package (e.g., `@zx/trust-core`).
+*   **Benefit:** Allows other applications (Shopfront, Auditor UI) to consume the same trusted engine with independent versioning.
 
-### 5.2. Data Flow
-1.  **IMS & Shopfront** write data using `Trust Core`.
-2.  **Trust Core** transparently handles Encryption (HIPAA) and Merkle Anchoring (Web3).
-3.  **All Apps** emit telemetry signals via `Obs Client`.
-4.  **Obs Control Center** reads the `Trust Chain` to verify integrity and display audit trails.
+### Phase 3: The Ecosystem (Long Term)
+*   **IMS Backend:** The "Brain".
+*   **Shopfront API:** Headless API consuming the Trust Core.
+*   **Control Center:** Central Audit UI reading the Chain.
 
-This structure enforces strict separation of concerns, ensuring the "Trust Layer" remains pure and reusable across all future applications.
+This strategy avoids premature optimization (Monorepo complexity) while ensuring the architecture is ready for scale.
