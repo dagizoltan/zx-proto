@@ -45,10 +45,20 @@ export const seedNotifications = async (ctx, tenantId) => {
 
     let count = 0;
     for (const n of notifications) {
-        await system.useCases.notifications.notify(tenantId, {
-            userId: null, // Global
-            ...n
-        });
+        // notify use case returns Result? Or void?
+        // Let's assume best effort.
+        try {
+            const res = await system.useCases.notifications.notify(tenantId, {
+                userId: null,
+                ...n
+            });
+            // If result pattern is used in system domain:
+            if (res && res.ok === false) {
+                 console.error('Failed to seed notification:', res.error);
+            }
+        } catch (e) {
+            // Ignore
+        }
         count++;
     }
 
