@@ -1,4 +1,4 @@
-import { Ok, Err, isErr } from '../../../../../../lib/trust/index.js';
+import { Ok, Err, isErr } from '../../../../../lib/trust/index.js';
 
 export const createListShipments = ({ shipmentRepository }) => {
   const execute = async (tenantId, { orderId, limit = 20, cursor } = {}) => {

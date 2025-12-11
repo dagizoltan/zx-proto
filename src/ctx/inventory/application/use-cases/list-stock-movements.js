@@ -1,4 +1,4 @@
-import { Ok, Err, isErr } from '../../../../../../lib/trust/index.js';
+import { Ok, Err, isErr } from '../../../../../lib/trust/index.js';
 
 export const createListStockMovements = ({ stockMovementRepository }) => {
   const execute = async (tenantId, productId, { limit = 20, cursor } = {}) => {
