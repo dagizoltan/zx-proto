@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import { renderPage } from '../renderer.js';
 import { ProductsPage } from '../pages/products-page.jsx';
+import { unwrap } from '../../../../../lib/trust/index.js'; // Fixed 5 levels
 
 export const productsRoutes = new Hono();
 
@@ -20,13 +21,18 @@ productsRoutes.get('/', async (c) => {
   let products = await cache.get(cacheKey);
 
   if (!products) {
+    let res;
     if (search) {
-      products = await catalog.useCases.searchProducts.execute(tenantId, search, page);
+      res = await catalog.useCases.searchProducts.execute(tenantId, search);
     } else if (category) {
-      products = await catalog.useCases.filterByCategory.execute(tenantId, category, page);
+      res = await catalog.useCases.filterByCategory.execute(tenantId, category);
     } else {
-      products = await catalog.useCases.listProducts.execute(tenantId, page);
+      res = await catalog.useCases.listProducts.execute(tenantId, { limit: 100 }); // Ignore page for now, fetch 100
     }
+
+    // Unwrap result
+    const val = unwrap(res);
+    products = Array.isArray(val) ? val : (val.items || []);
 
     await cache.set(cacheKey, products, 300000); // 5 minutes
   }

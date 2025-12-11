@@ -1,17 +1,18 @@
 import { toApiLocation } from '../../transformers/inventory.transformer.js';
+import { unwrap } from '../../../../../../lib/trust/index.js';
 
 export const listLocationsHandler = async (c) => {
     const tenantId = c.get('tenantId');
     const inventory = c.ctx.get('domain.inventory');
 
-    // Similar to warehouses, use case might be missing.
-    // "The Locations page ... aggregates locations by iterating through all warehouses"
-    // I will iterate warehouses and get locations.
+    const warehouseRes = await inventory.repositories.warehouse.list(tenantId, { limit: 100 });
+    const warehouses = unwrap(warehouseRes).items;
 
-    const warehouses = await inventory.repositories.warehouse.findAll(tenantId);
     let allLocations = [];
     for (const wh of warehouses) {
-        const locs = await inventory.repositories.location.findByWarehouse(tenantId, wh.id);
+        // findByWarehouse -> queryByIndex
+        const locRes = await inventory.repositories.location.queryByIndex(tenantId, 'warehouse', wh.id, { limit: 1000 });
+        const locs = unwrap(locRes).items;
         allLocations = allLocations.concat(locs);
     }
 
@@ -23,6 +24,6 @@ export const createLocationHandler = async (c) => {
     const inventory = c.ctx.get('domain.inventory');
     const data = c.get('validatedData');
 
-    const loc = await inventory.useCases.createLocation.execute(tenantId, data);
+    const loc = unwrap(await inventory.useCases.createLocation.execute(tenantId, data));
     return c.json(toApiLocation(loc), 201);
 };

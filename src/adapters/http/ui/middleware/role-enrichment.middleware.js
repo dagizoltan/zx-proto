@@ -1,17 +1,4 @@
-import { unwrap } from '../../../../../../lib/trust/index.js'; // 6 levels?
-// src(1)/adapters(2)/http(3)/ui(4)/middleware(5).
-// ../ -> ui
-// ../../ -> http
-// ../../../ -> adapters
-// ../../../../ -> src
-// ../../../../../ -> root
-// So ../../../../../lib/trust.
-// Wait, create-order.handler.js was depth 6 and used 6 dots.
-// Let's verify depth of middleware.
-// src/adapters/http/ui/middleware/role-enrichment.middleware.js
-// 1   2        3    4  5
-// So 5 levels.
-// I will use 5 levels.
+import { unwrap } from '../../../../../lib/trust/index.js'; // Fixed 5 levels
 
 /**
  * Middleware to enrich user object with role names

@@ -1,4 +1,5 @@
 import { toApiUser } from '../../transformers/system.transformer.js';
+import { unwrap } from '../../../../../../lib/trust/index.js';
 
 export const assignRolesHandler = async (c) => {
     const tenantId = c.get('tenantId');
@@ -7,7 +8,7 @@ export const assignRolesHandler = async (c) => {
 
     const { roleIds } = c.get('validatedData');
 
-    const updatedUser = await ac.useCases.assignRole.execute(tenantId, { userId, roleIds });
+    const updatedUser = unwrap(await ac.useCases.assignRole.execute(tenantId, { userId, roleIds }));
 
     return c.json(toApiUser(updatedUser));
 };

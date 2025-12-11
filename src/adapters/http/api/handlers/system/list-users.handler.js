@@ -1,4 +1,5 @@
 import { toApiUserList } from '../../transformers/system.transformer.js';
+import { unwrap } from '../../../../../../lib/trust/index.js';
 
 export const listUsersHandler = async (c) => {
   const tenantId = c.get('tenantId');
@@ -7,11 +8,11 @@ export const listUsersHandler = async (c) => {
   const query = c.get('validatedQuery');
   const searchTerm = query.q || query.search;
 
-  const result = await ac.useCases.listUsers.execute(tenantId, {
+  const result = unwrap(await ac.useCases.listUsers.execute(tenantId, {
       limit: query.limit,
       cursor: query.cursor,
       search: searchTerm
-  });
+  }));
 
   return c.json(toApiUserList(result));
 };

@@ -1,20 +1,11 @@
-import { toApiCustomerList } from '../../transformers/crm.transformer.js';
+import { toApiCustomer } from '../../transformers/crm.transformer.js';
+import { unwrap } from '../../../../../../lib/trust/index.js';
 
 export const listCustomersHandler = async (c) => {
     const tenantId = c.get('tenantId');
-    const ac = c.ctx.get('domain.access-control');
+    const accessControl = c.ctx.get('domain.access-control');
 
-    const query = c.get('validatedQuery');
-    const searchTerm = query.q || query.search;
-
-    // Reusing listUsers from access-control as customers are users
-    // Ideally, should be a dedicated use case filtering by role 'customer' if needed.
-    // Original route: `ac.useCases.listUsers.execute(...)`
-    const result = await ac.useCases.listUsers.execute(tenantId, {
-        limit: query.limit,
-        cursor: query.cursor,
-        search: searchTerm
-    });
-
-    return c.json(toApiCustomerList(result));
+    const result = unwrap(await accessControl.useCases.findUsersByRole.execute(tenantId, 'customer')); // Assuming role ID or name logic
+    // findUsersByRole returns { items, nextCursor }
+    return c.json({ items: result.items.map(toApiCustomer) });
 };

@@ -1,16 +1,22 @@
 import { toApiRole } from '../../transformers/system.transformer.js';
+import { unwrap } from '../../../../../../lib/trust/index.js';
 
 export const listRolesHandler = async (c) => {
     const tenantId = c.get('tenantId');
     const ac = c.ctx.get('domain.access-control');
 
-    // Note: listRoles use case might not support pagination in current impl
-    // based on original route: `await ac.useCases.listRoles.execute(tenantId)`
-    const roles = await ac.useCases.listRoles.execute(tenantId);
+    const result = unwrap(await ac.useCases.listRoles.execute(tenantId));
 
-    // If it returns array directly
-    if (Array.isArray(roles)) {
-        return c.json({ items: roles.map(toApiRole) });
+    // listRoles returns items array directly or inside object?
+    // In Step 2, I implemented listRoles.js to return Ok(items).
+    // So result IS items (array).
+
+    if (Array.isArray(result)) {
+        return c.json({ items: result.map(toApiRole) });
+    }
+    // If it returns { items }
+    if (result.items) {
+        return c.json({ items: result.items.map(toApiRole) });
     }
 
     return c.json({ items: [] });
