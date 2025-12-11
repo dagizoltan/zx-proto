@@ -1,4 +1,4 @@
-# Trust ODM: Technical Specification (v1.1)
+# Trust ODM: Technical Specification (v1.2)
 
 **Date:** October 26, 2024
 **Status:** DRAFT / RFC
@@ -16,6 +16,7 @@ The **Trust ODM (Object Document Mapper)** is a custom persistence layer built o
 3.  **Trust Tiering:** Configurable data storage modes (`Standard`, `Chain`, `Web3`) enabling native cryptographic verification.
 4.  **Advanced Indexing:** Automatic management of secondary indexes to support complex queries.
 5.  **Schema Evolution:** Zero-downtime lazy migrations.
+6.  **Native Observability:** Built-in integration with the platform's `obs` layer for integrity alerts and performance metrics.
 
 ---
 
@@ -106,8 +107,10 @@ The architecture follows a "Pipeline" pattern. Data flows through a series of pu
 
 ### 5.1. The Repository Factory
 
+The factory now accepts an `obs` adapter to emit high-fidelity telemetry.
+
 ```javascript
-export const createTrustRepository = (kv, schema, config) => {
+export const createTrustRepository = (kv, schema, config, obs) => {
 
   // Pipeline Composition
   const validate = createValidator(schema);
@@ -116,54 +119,87 @@ export const createTrustRepository = (kv, schema, config) => {
   const hash = createHasher(schema);
 
   const save = async (tenantId, data) => {
-    // 1. Validation
-    const validData = validate(data);
+    return obs.traceSpan(`odm.save.${schema.name}`, async () => {
+        // 1. Validation
+        const validData = validate(data);
 
-    // 2. Envelope Encryption
-    const { payload, wrappedKey } = await encrypt(tenantId, validData);
+        // 2. Envelope Encryption
+        const { payload, wrappedKey } = await encrypt(tenantId, validData);
 
-    // 3. Chain/Hashing
-    const { finalData, versionKey } = await hash(kv, tenantId, { ...payload, _k: wrappedKey });
+        // 3. Chain/Hashing
+        const { finalData, versionKey } = await hash(kv, tenantId, { ...payload, _k: wrappedKey });
 
-    // 4. Persistence (Atomic)
-    const primaryKey = ['data', schema.name, validData.id];
-    const atom = kv.atomic()
-        .check({ key: primaryKey, versionstamp: null })
-        .set(primaryKey, finalData)
-        .set(versionKey, finalData);
+        // 4. Persistence (Atomic)
+        const primaryKey = ['data', schema.name, validData.id];
+        const atom = kv.atomic()
+            .check({ key: primaryKey, versionstamp: null })
+            .set(primaryKey, finalData)
+            .set(versionKey, finalData);
 
-    applyIndexes(schema, validData, atom);
+        applyIndexes(schema, validData, atom);
 
-    await atom.commit();
-    return validData;
+        const result = await atom.commit();
+
+        if (!result.ok) {
+            obs.warn('odm.concurrency_conflict', { schema: schema.name, id: validData.id });
+            throw new Error('Concurrency Conflict');
+        }
+
+        // 5. Audit Log (Side Effect)
+        if (schema.trustTier !== 'Standard') {
+            obs.audit(`Trust Record Created (${schema.trustTier})`, {
+               schema: schema.name,
+               id: validData.id,
+               hash: finalData.hash,
+               tenantId
+            });
+        }
+
+        return validData;
+    });
   };
 
   const find = async (tenantId, query, options = {}) => {
-      const keys = await queryResolver(kv, schema, tenantId, query);
-      const rawDocs = await kv.getMany(keys);
+      return obs.traceSpan(`odm.find.${schema.name}`, async () => {
+          const keys = await queryResolver(kv, schema, tenantId, query);
+          const rawDocs = await kv.getMany(keys);
 
-      const results = await Promise.all(rawDocs.map(async (d) => {
-          if (!d.value) return null;
+          const results = await Promise.all(rawDocs.map(async (d) => {
+              if (!d.value) return null;
 
-          // 1. Decrypt
-          let doc = await decrypt(tenantId, d.value);
+              // 1. Decrypt (Trace this heavy op)
+              let doc = await obs.traceSpan('odm.decrypt', () => decrypt(tenantId, d.value));
 
-          // 2. Lazy Migration (Schema Evolution)
-          if (doc._v < schema.version) {
-             doc = migrate(doc);
-             // Optional: Async 'heal' (save back migrated version)
-             healBackground(tenantId, doc);
-          }
+              // 2. Integrity Check (Verify Hash Chain on Read)
+              if (schema.trustTier === 'Chain' || schema.trustTier === 'Web3') {
+                  const isValid = verifyIntegrity(doc);
+                  if (!isValid) {
+                      obs.error('trust.integrity_violation', {
+                          schema: schema.name,
+                          id: doc.id,
+                          tenantId
+                      });
+                      throw new Error('Data Integrity Violation');
+                  }
+              }
 
-          // 3. Populate Relations
-          if (options.populate) {
-             doc = await populate(kv, schema, doc, options.populate);
-          }
+              // 3. Lazy Migration (Schema Evolution)
+              if (doc._v < schema.version) {
+                 doc = migrate(doc);
+                 obs.info('odm.migration_applied', { schema: schema.name, version: doc._v });
+                 healBackground(tenantId, doc);
+              }
 
-          return doc;
-      }));
+              // 4. Populate Relations
+              if (options.populate) {
+                 doc = await populate(kv, schema, doc, options.populate);
+              }
 
-      return results.filter(Boolean);
+              return doc;
+          }));
+
+          return results.filter(Boolean);
+      });
   };
 
   return { save, find };
@@ -174,7 +210,7 @@ export const createTrustRepository = (kv, schema, config) => {
 
 *   **`createMigrator(schema)`**: Returns a function that checks `_v` (version) and runs the chain of migration functions `1->2`, `2->3` sequentially until up to date.
 *   **`populate(kv, schema, doc, fields)`**: Pure utility. Looks up `ref` definitions in the schema. E.g., if `fields=['assignedDoctorId']`, it fetches the doctor record and merges it: `doc.assignedDoctor = { ... }`.
-*   **`healBackground(tenantId, doc)`**: A "fire-and-forget" function that saves the migrated document back to the DB so the next read is fast.
+*   **`verifyIntegrity(doc)`**: Re-calculates the hash of the payload and confirms it matches the stored `hash`.
 
 ---
 
