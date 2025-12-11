@@ -3,7 +3,7 @@ import { renderPage } from '../renderer.js';
 import { LoginPage } from '../pages/auth/login-page.jsx';
 import { RegisterPage } from '../pages/auth/register-page.jsx';
 import { AuthLayout } from '../layouts/auth-layout.jsx';
-import { unwrap } from '../../../../../../lib/trust/index.js';
+import { unwrap } from '../../../../../lib/trust/index.js';
 
 export const authRoutes = new Hono();
 
