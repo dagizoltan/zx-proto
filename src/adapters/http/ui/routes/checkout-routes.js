@@ -3,6 +3,7 @@ import { renderPage } from '../renderer.js';
 import { CheckoutPage } from '../pages/checkout-page.jsx';
 import { authMiddleware } from '../middleware/auth-middleware.js';
 import { addItem, removeItem } from '../../../../ctx/orders/domain/entities/cart.js';
+import { unwrap, isErr } from '../../../../../lib/trust/index.js'; // 5 levels
 
 export const checkoutRoutes = new Hono();
 
@@ -13,7 +14,7 @@ checkoutRoutes.get('/', async (c) => {
   const user = c.get('user');
   const tenantId = c.get('tenantId');
   const cache = c.ctx.get('infra.persistence').cache;
-  const inventory = c.ctx.get('domain.inventory');
+  const catalog = c.ctx.get('domain.catalog'); // Was inventory, now catalog has getProduct
 
   // Get cart from cache/session
   const cartKey = `${tenantId}:cart:${user.id}`;
@@ -24,8 +25,9 @@ checkoutRoutes.get('/', async (c) => {
   const enrichedItems = [];
 
   for (const item of cart.items) {
-      const product = await inventory.useCases.getProduct.execute(tenantId, item.productId);
-      if (product) {
+      const res = await catalog.useCases.getProduct.execute(tenantId, item.productId);
+      if (res.ok) {
+          const product = res.value;
           enrichedItems.push({
               ...item,
               name: product.name,
@@ -74,7 +76,8 @@ checkoutRoutes.post('/', async (c) => {
 
       try {
         // Create order
-        const order = await orders.useCases.createOrder.execute(tenantId, user.id, cart.items);
+        // Unwrap Result
+        const order = unwrap(await orders.useCases.createOrder.execute(tenantId, user.id, cart.items));
 
         // Clear cart
         await cache.del(cartKey);
@@ -82,7 +85,7 @@ checkoutRoutes.post('/', async (c) => {
         await obs.success('Order placed', {
           orderId: order.id,
           userId: user.id,
-          total: order.total,
+          total: order.totalAmount, // Fixed: total -> totalAmount
         });
 
         // Redirect to order confirmation (mocked)

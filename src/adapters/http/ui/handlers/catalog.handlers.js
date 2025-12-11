@@ -9,6 +9,7 @@ import { PriceListsPage } from '../pages/ims/catalog/price-lists-page.jsx';
 import { CreatePriceListPage } from '../pages/ims/catalog/create-price-list-page.jsx';
 import { PriceListDetailPage } from '../pages/ims/catalog/price-list-detail-page.jsx';
 import { ProductDetailPage } from '../pages/ims/product-detail-page.jsx';
+import { unwrap, isErr } from '../../../../../lib/trust/index.js'; // 5 levels
 
 // Products
 export const listProductsHandler = async (c) => {
@@ -19,11 +20,17 @@ export const listProductsHandler = async (c) => {
     const query = c.req.query('q');
 
     let products;
+    let res;
     if (query) {
-        products = await catalog.useCases.searchProducts.execute(tenantId, query);
+        res = await catalog.useCases.searchProducts.execute(tenantId, query);
     } else {
-        products = await catalog.useCases.listProducts.execute(tenantId, page, 50);
+        res = await catalog.useCases.listProducts.execute(tenantId, { limit: 50 }); // Ignore page for now
     }
+
+    // Unwrap
+    // searchProducts returns Ok(items). listProducts returns Ok({ items, nextCursor }).
+    const val = unwrap(res);
+    products = Array.isArray(val) ? val : (val.items || []);
 
     const html = await renderPage(CatalogPage, {
         user,
@@ -41,9 +48,11 @@ export const createProductPageHandler = async (c) => {
     const tenantId = c.get('tenantId');
     const catalog = c.ctx.get('domain.catalog');
 
-    // Increased limit to 1000 for dropdowns
-    const { items: categories } = await catalog.useCases.listCategories.execute(tenantId, { limit: 1000 });
-    const { items: priceLists } = await catalog.useCases.listPriceLists.execute(tenantId, { limit: 1000 });
+    const catRes = await catalog.useCases.listCategories.execute(tenantId, { limit: 1000 });
+    const plRes = await catalog.useCases.listPriceLists.execute(tenantId, { limit: 1000 });
+
+    const categories = unwrap(catRes).items;
+    const priceLists = unwrap(plRes).items;
 
     const html = await renderPage(CreateProductPage, {
         user,
@@ -63,7 +72,7 @@ export const createProductHandler = async (c) => {
     const body = await c.req.parseBody();
 
     try {
-        await catalog.useCases.createProduct.execute(tenantId, {
+        unwrap(await catalog.useCases.createProduct.execute(tenantId, {
             name: body.name,
             sku: body.sku,
             description: body.description,
@@ -71,11 +80,14 @@ export const createProductHandler = async (c) => {
             costPrice: body.costPrice ? parseFloat(body.costPrice) : undefined,
             categoryId: body.categoryId || undefined,
             type: body.type
-        });
+        }));
         return c.redirect('/ims/catalog/products');
     } catch (e) {
-        const { items: categories } = await catalog.useCases.listCategories.execute(tenantId, { limit: 1000 });
-        const { items: priceLists } = await catalog.useCases.listPriceLists.execute(tenantId, { limit: 1000 });
+        // Fetch cats/pls again for render
+        const catRes = await catalog.useCases.listCategories.execute(tenantId, { limit: 1000 });
+        const plRes = await catalog.useCases.listPriceLists.execute(tenantId, { limit: 1000 });
+        const categories = unwrap(catRes).items;
+        const priceLists = unwrap(plRes).items;
 
         const html = await renderPage(CreateProductPage, {
             user,
@@ -96,24 +108,29 @@ export const productDetailHandler = async (c) => {
   const tenantId = c.get('tenantId');
   const productId = c.req.param('id');
   const inventory = c.ctx.get('domain.inventory');
+  const catalog = c.ctx.get('domain.catalog'); // for getProduct
   const cursor = c.req.query('cursor');
 
-  const product = await inventory.useCases.getProduct.execute(tenantId, productId);
-  if (!product) return c.text('Product not found', 404);
+  const prodRes = await catalog.useCases.getProduct.execute(tenantId, productId);
+  if (isErr(prodRes)) return c.text('Product not found', 404);
+  const product = prodRes.value;
 
-  const [{ items: movements, nextCursor }, stockEntries] = await Promise.all([
+  const [moveRes, stockRes] = await Promise.all([
     inventory.useCases.listStockMovements.execute(tenantId, productId, { limit: 20, cursor }),
-    inventory.repositories.stock.getEntriesForProduct(tenantId, productId)
+    inventory.repositories.stock.queryByIndex(tenantId, 'product', productId, { limit: 1000 })
   ]);
+
+  const moveData = unwrap(moveRes); // { items, nextCursor }
+  const stockEntries = unwrap(stockRes).items;
 
   const currentStock = stockEntries.reduce((sum, e) => sum + (e.quantity - e.reservedQuantity), 0);
 
   const html = await renderPage(ProductDetailPage, {
     user,
     product,
-    movements,
+    movements: moveData.items,
     stock: currentStock,
-    nextCursor,
+    nextCursor: moveData.nextCursor,
     currentUrl: c.req.url,
     layout: AdminLayout,
     title: `${product.name} - IMS Admin`
@@ -129,7 +146,8 @@ export const listCategoriesHandler = async (c) => {
     const catalog = c.ctx.get('domain.catalog');
     const cursor = c.req.query('cursor');
 
-    const { items: categories, nextCursor } = await catalog.useCases.listCategories.execute(tenantId, { limit: 50, cursor });
+    const res = await catalog.useCases.listCategories.execute(tenantId, { limit: 50, cursor });
+    const { items: categories, nextCursor } = unwrap(res);
 
     const html = await renderPage(CategoriesPage, {
         user,
@@ -147,7 +165,8 @@ export const createCategoryPageHandler = async (c) => {
     const tenantId = c.get('tenantId');
     const catalog = c.ctx.get('domain.catalog');
 
-    const { items: categories } = await catalog.useCases.listCategories.execute(tenantId, { limit: 1000 });
+    const res = await catalog.useCases.listCategories.execute(tenantId, { limit: 1000 });
+    const { items: categories } = unwrap(res);
 
     const html = await renderPage(CreateCategoryPage, {
         user,
@@ -165,11 +184,11 @@ export const createCategoryHandler = async (c) => {
     const body = await c.req.parseBody();
 
     try {
-        await catalog.useCases.createCategory.execute(tenantId, {
+        unwrap(await catalog.useCases.createCategory.execute(tenantId, {
             name: body.name,
             description: body.description,
             parentId: body.parentId || undefined
-        });
+        }));
         return c.redirect('/ims/catalog/categories');
     } catch (e) {
         return c.text(e.message, 400);
@@ -182,10 +201,12 @@ export const categoryDetailHandler = async (c) => {
     const categoryId = c.req.param('id');
     const catalog = c.ctx.get('domain.catalog');
 
-    const category = await catalog.repositories.category.findById(tenantId, categoryId);
-    if (!category) return c.text('Category not found', 404);
+    const catRes = await catalog.repositories.category.findById(tenantId, categoryId);
+    if (isErr(catRes)) return c.text('Category not found', 404);
+    const category = catRes.value;
 
-    const { items: allCats } = await catalog.useCases.listCategories.execute(tenantId, { limit: 1000 });
+    const res = await catalog.useCases.listCategories.execute(tenantId, { limit: 1000 });
+    const { items: allCats } = unwrap(res);
     const subCategories = allCats.filter(cat => cat.parentId === categoryId);
 
     const html = await renderPage(CategoryDetailPage, {
@@ -206,7 +227,8 @@ export const listPriceListsHandler = async (c) => {
     const catalog = c.ctx.get('domain.catalog');
     const cursor = c.req.query('cursor');
 
-    const { items: priceLists, nextCursor } = await catalog.useCases.listPriceLists.execute(tenantId, { limit: 50, cursor });
+    const res = await catalog.useCases.listPriceLists.execute(tenantId, { limit: 50, cursor });
+    const { items: priceLists, nextCursor } = unwrap(res);
 
     const html = await renderPage(PriceListsPage, {
         user,
@@ -237,12 +259,12 @@ export const createPriceListHandler = async (c) => {
     const body = await c.req.parseBody();
 
     try {
-        await catalog.useCases.createPriceList.execute(tenantId, {
+        unwrap(await catalog.useCases.createPriceList.execute(tenantId, {
             name: body.name,
             currency: body.currency,
             description: body.description,
             prices: {}
-        });
+        }));
         return c.redirect('/ims/catalog/price-lists');
     } catch (e) {
         return c.text(e.message, 400);
@@ -255,8 +277,9 @@ export const priceListDetailHandler = async (c) => {
     const plId = c.req.param('id');
     const catalog = c.ctx.get('domain.catalog');
 
-    const priceList = await catalog.repositories.priceList.findById(tenantId, plId);
-    if (!priceList) return c.text('Price List not found', 404);
+    const res = await catalog.repositories.priceList.findById(tenantId, plId);
+    if (isErr(res)) return c.text('Price List not found', 404);
+    const priceList = res.value;
 
     const html = await renderPage(PriceListDetailPage, {
         user,

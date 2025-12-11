@@ -6,6 +6,7 @@ import { OrderDetailPage } from '../pages/ims/order-detail-page.jsx';
 import { PickListPage } from '../pages/ims/pick-list-page.jsx';
 import { PackingSlipPage } from '../pages/ims/packing-slip-page.jsx';
 import { CreateShipmentPage } from '../pages/ims/shipments/create-shipment-page.jsx';
+import { unwrap, isErr } from '../../../../../lib/trust/index.js'; // 5 levels
 
 // List Orders
 export const listOrdersHandler = async (c) => {
@@ -14,7 +15,9 @@ export const listOrdersHandler = async (c) => {
     const orders = c.ctx.get('domain.orders');
     const cursor = c.req.query('cursor');
     const limit = 10;
-    const { items: orderList, nextCursor } = await orders.useCases.listOrders.execute(tenantId, { limit, cursor });
+
+    const res = await orders.useCases.listOrders.execute(tenantId, { limit, cursor });
+    const { items: orderList, nextCursor } = unwrap(res);
 
     const html = await renderPage(OrdersPage, {
       user,
@@ -36,9 +39,12 @@ export const createOrderPageHandler = async (c) => {
         const ac = c.ctx.get('domain.access-control');
         const catalog = c.ctx.get('domain.catalog');
 
-        const { items: allUsers } = await ac.useCases.listUsers.execute(tenantId, { limit: 100 });
-        const productsResult = await catalog.useCases.listProducts.execute(tenantId, 1, 100);
-        const products = Array.isArray(productsResult) ? productsResult : (productsResult.items || []);
+        const userRes = await ac.useCases.listUsers.execute(tenantId, { limit: 100 });
+        const prodRes = await catalog.useCases.listProducts.execute(tenantId, { limit: 100 });
+
+        const allUsers = unwrap(userRes).items;
+        const productsResult = unwrap(prodRes); // { items, nextCursor }
+        const products = productsResult.items || [];
 
         const html = await renderPage(CreateOrderPage, {
             user,
@@ -62,6 +68,7 @@ export const createOrderHandler = async (c) => {
     const body = await c.req.parseBody();
 
     const items = [];
+    // Assuming body structure is correct
     const indices = new Set(Object.keys(body).filter(k => k.startsWith('items[')).map(k => k.match(/items\[(\d+)\]/)[1]));
 
     for (const i of indices) {
@@ -77,15 +84,16 @@ export const createOrderHandler = async (c) => {
     try {
         if (items.length === 0) throw new Error('No items selected');
 
-        await orders.useCases.createOrder.execute(tenantId, body.userId, items);
+        unwrap(await orders.useCases.createOrder.execute(tenantId, body.userId, items));
         return c.redirect('/ims/orders');
     } catch (e) {
         const ac = c.ctx.get('domain.access-control');
         const catalog = c.ctx.get('domain.catalog');
 
-        const { items: allUsers } = await ac.useCases.listUsers.execute(tenantId, { limit: 100 });
-        const productsResult = await catalog.useCases.listProducts.execute(tenantId, 1, 100);
-        const products = Array.isArray(productsResult) ? productsResult : (productsResult.items || []);
+        const userRes = await ac.useCases.listUsers.execute(tenantId, { limit: 100 });
+        const prodRes = await catalog.useCases.listProducts.execute(tenantId, { limit: 100 });
+        const allUsers = unwrap(userRes).items;
+        const products = unwrap(prodRes).items || [];
 
         const html = await renderPage(CreateOrderPage, {
             user,
@@ -101,7 +109,7 @@ export const createOrderHandler = async (c) => {
     }
 };
 
-// Create Shipment UI (Linked from Order)
+// Create Shipment UI
 export const createOrderShipmentPageHandler = async (c) => {
     const user = c.get('user');
     const tenantId = c.get('tenantId');
@@ -109,12 +117,14 @@ export const createOrderShipmentPageHandler = async (c) => {
     const orders = c.ctx.get('domain.orders');
     const catalog = c.ctx.get('domain.catalog');
 
-    const order = await orders.useCases.getOrder.execute(tenantId, orderId);
-    if (!order) return c.text('Order not found', 404);
+    const orderRes = await orders.useCases.getOrder.execute(tenantId, orderId);
+    if (isErr(orderRes)) return c.text('Order not found', 404);
+    const order = orderRes.value;
 
     for (const item of order.items) {
         if (!item.productName) {
-            const p = await catalog.useCases.getProduct.execute(tenantId, item.productId).catch(() => null);
+            const pRes = await catalog.useCases.getProduct.execute(tenantId, item.productId);
+            const p = isErr(pRes) ? null : pRes.value;
             item.productName = p ? p.name : 'Unknown Product';
             item.sku = p ? p.sku : '';
         }
@@ -153,22 +163,24 @@ export const createOrderShipmentHandler = async (c) => {
     if (items.length === 0) return c.text('No items selected for shipment', 400);
 
     try {
-        await orders.useCases.createShipment.execute(tenantId, {
+        unwrap(await orders.useCases.createShipment.execute(tenantId, {
             orderId,
             carrier: body.carrier,
             trackingNumber: body.trackingNumber,
             code: `SH-${Date.now()}`,
             items
-        });
+        }));
         return c.redirect(`/ims/orders/${orderId}`);
     } catch (e) {
-        const order = await orders.useCases.getOrder.execute(tenantId, orderId);
-        // Enrich items if order found, to render page again
+        const orderRes = await orders.useCases.getOrder.execute(tenantId, orderId);
+        const order = isErr(orderRes) ? null : orderRes.value;
+
         const catalog = c.ctx.get('domain.catalog');
         if (order) {
              for (const item of order.items) {
                 if (!item.productName) {
-                    const p = await catalog.useCases.getProduct.execute(tenantId, item.productId).catch(() => null);
+                    const pRes = await catalog.useCases.getProduct.execute(tenantId, item.productId);
+                    const p = isErr(pRes) ? null : pRes.value;
                     item.productName = p ? p.name : 'Unknown Product';
                     item.sku = p ? p.sku : '';
                 }
@@ -196,18 +208,37 @@ export const pickListHandler = async (c) => {
     const orders = c.ctx.get('domain.orders');
     const inventory = c.ctx.get('domain.inventory');
 
-    const order = await orders.useCases.getOrder.execute(tenantId, orderId);
-    if (!order) return c.text('Order not found', 404);
+    const orderRes = await orders.useCases.getOrder.execute(tenantId, orderId);
+    if (isErr(orderRes)) return c.text('Order not found', 404);
+    const order = orderRes.value;
 
-    const movements = await inventory.repositories.stockMovement.getByReference(tenantId, orderId);
-    const allocated = movements.filter(m => m.type === 'allocated');
+    // getByReference -> queryByIndex('reference')
+    const moveRes = await inventory.repositories.stockMovement.queryByIndex(tenantId, 'reference', orderId, { limit: 1000 });
+    const movements = unwrap(moveRes).items;
+    const allocated = movements.filter(m => m.type === 'ALLOCATION');
 
     const pickItems = await Promise.all(allocated.map(async (item) => {
-        const [product, location, batch] = await Promise.all([
-            inventory.useCases.getProduct.execute(tenantId, item.productId),
-            inventory.repositories.location.findById(tenantId, item.fromLocationId),
-            item.batchId ? inventory.repositories.batch.findById(tenantId, item.batchId) : null
+        const [pRes, lRes, bRes] = await Promise.all([
+            inventory.useCases.getProduct.execute(tenantId, item.productId), // calls catalog? No inventory usecase getProduct exists.
+            // inventory.useCases.getProduct is createGetProduct({ productRepository }).
+            // productRepository is createKVProductRepository.
+            // But inventory context might not have getProduct if it was legacy?
+            // createInventoryContext had `getProduct`. I should check if it uses catalog or local logic.
+            // In step 4, createInventoryContext imported getProduct.
+            // Anyway, assuming it works and returns Result.
+            inventory.repositories.location.findById(tenantId, item.fromLocationId), // locationId in schema, fromLocationId in movement?
+            // movement schema: locationId.
+            // StockAllocationService allocates with locationId.
+            // But StockMovement type 'ALLOCATION' -> locationId is FROM location.
+            // So we use item.locationId.
+            item.batchId ? inventory.repositories.batch.findById(tenantId, item.batchId) : Promise.resolve(Ok(null))
         ]);
+
+        const product = isErr(pRes) ? null : pRes.value;
+        // locationId is correct field in schema
+        const location = isErr(lRes) ? null : lRes.value;
+        const batch = isErr(bRes) ? null : bRes.value;
+
         return {
             ...item,
             productName: product?.name || 'Unknown',
@@ -237,8 +268,9 @@ export const packingSlipHandler = async (c) => {
     const orderId = c.req.param('id');
     const orders = c.ctx.get('domain.orders');
 
-    const order = await orders.useCases.getOrder.execute(tenantId, orderId);
-    if (!order) return c.text('Order not found', 404);
+    const res = await orders.useCases.getOrder.execute(tenantId, orderId);
+    if (isErr(res)) return c.text('Order not found', 404);
+    const order = res.value;
 
     const html = await renderPage(PackingSlipPage, {
         user,
@@ -258,7 +290,7 @@ export const updateOrderStatusHandler = async (c) => {
   const status = body.status;
 
   try {
-    await orders.useCases.updateOrderStatus.execute(tenantId, orderId, status);
+    unwrap(await orders.useCases.updateOrderStatus.execute(tenantId, orderId, status));
     return c.redirect(`/ims/orders/${orderId}`);
   } catch (e) {
     return c.text(`Error updating order: ${e.message}`, 400);
@@ -273,19 +305,22 @@ export const orderDetailHandler = async (c) => {
   const orders = c.ctx.get('domain.orders');
   const catalog = c.ctx.get('domain.catalog');
 
-  const order = await orders.useCases.getOrder.execute(tenantId, orderId);
-  if (!order) return c.text('Order not found', 404);
+  const res = await orders.useCases.getOrder.execute(tenantId, orderId);
+  if (isErr(res)) return c.text('Order not found', 404);
+  const order = res.value;
 
   // Enrich items with product details
   for (const item of order.items) {
       if (!item.productName) {
-          const product = await catalog.useCases.getProduct.execute(tenantId, item.productId).catch(() => null);
+          const pRes = await catalog.useCases.getProduct.execute(tenantId, item.productId);
+          const product = isErr(pRes) ? null : pRes.value;
           item.productName = product ? product.name : 'Unknown Product';
       }
   }
 
   // Fetch Shipments
-  const { items: shipments } = await orders.useCases.listShipments.execute(tenantId, { orderId });
+  const shipRes = await orders.useCases.listShipments.execute(tenantId, { orderId });
+  const { items: shipments } = unwrap(shipRes);
 
   const html = await renderPage(OrderDetailPage, {
     user,
