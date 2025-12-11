@@ -37,3 +37,12 @@ export const BatchSchema = z.object({
     supplierId: z.string().optional(),
     cost: z.number().optional()
 });
+
+export const LocationSchema = z.object({
+  id: z.string().uuid(),
+  warehouseId: z.string().uuid(),
+  code: z.string().min(1),
+  name: z.string().optional(),
+  type: z.enum(['BIN', 'RACK', 'PALLET', 'FLOOR']).default('BIN'),
+  createdAt: z.string().datetime().optional()
+});
