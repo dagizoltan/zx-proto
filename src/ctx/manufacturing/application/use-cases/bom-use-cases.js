@@ -15,7 +15,7 @@ export const createCreateBOM = ({ bomRepository }) => {
 
 export const createListBOMs = ({ bomRepository }) => {
   const execute = async (tenantId, options) => {
-    return await bomRepository.findAll(tenantId, options);
+    return await bomRepository.list(tenantId, options);
   };
 
   return { execute };

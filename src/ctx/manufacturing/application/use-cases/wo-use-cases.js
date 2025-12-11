@@ -1,9 +1,11 @@
 import { createWorkOrder } from '../../domain/entities/bom.js';
+import { Ok, Err, isErr, unwrap } from '../../../../../../lib/trust/index.js';
 
 export const createCreateWorkOrder = ({ woRepository, bomRepository }) => {
   const execute = async (tenantId, data) => {
-    const bom = await bomRepository.findById(tenantId, data.bomId);
-    if (!bom) throw new Error('BOM not found');
+    // bomRepository.findById -> Result
+    const bomRes = await bomRepository.findById(tenantId, data.bomId);
+    if (isErr(bomRes)) return Err({ code: 'VALIDATION_ERROR', message: 'BOM not found' });
 
     const wo = createWorkOrder({
       ...data,
@@ -19,7 +21,7 @@ export const createCreateWorkOrder = ({ woRepository, bomRepository }) => {
 
 export const createListWorkOrders = ({ woRepository }) => {
   const execute = async (tenantId, options) => {
-    return await woRepository.findAll(tenantId, options);
+    return await woRepository.list(tenantId, options);
   };
 
   return { execute };
@@ -28,20 +30,23 @@ export const createListWorkOrders = ({ woRepository }) => {
 export const createCompleteWorkOrder = ({ woRepository, bomRepository, inventoryService }) => {
   const execute = async (tenantId, woId, completionData) => {
     // completionData: { locationId, inputLocationId }
-    // locationId = Output Location (Finished Goods)
-    // inputLocationId = Input Location (Raw Materials). Defaults to Output if not provided.
 
-    const wo = await woRepository.findById(tenantId, woId);
-    if (!wo) throw new Error('Work Order not found');
-    if (wo.status === 'COMPLETED') throw new Error('Work Order already completed');
+    // Unwrap wo
+    const woRes = await woRepository.findById(tenantId, woId);
+    if (isErr(woRes)) return woRes;
+    const wo = woRes.value;
 
-    const bom = await bomRepository.findById(tenantId, wo.bomId);
-    if (!bom) throw new Error('Associated BOM not found');
+    if (wo.status === 'COMPLETED') return Err({ code: 'INVALID_STATE', message: 'Work Order already completed' });
 
-    const outputLocationId = completionData.locationId;
+    // Unwrap bom
+    const bomRes = await bomRepository.findById(tenantId, wo.bomId);
+    if (isErr(bomRes)) return Err({ code: 'DATA_INTEGRITY_ERROR', message: 'Associated BOM not found' });
+    const bom = bomRes.value;
+
+    const outputLocationId = completionData.locationId; // Seeder passes locationId as output
     const inputLocationId = completionData.inputLocationId || outputLocationId;
 
-    if (!outputLocationId) throw new Error('Output location is required');
+    if (!outputLocationId) return Err({ code: 'VALIDATION_ERROR', message: 'Output location is required' });
 
     // Prepare Production Plan
     const consumeList = bom.components.map(component => ({
@@ -54,16 +59,17 @@ export const createCompleteWorkOrder = ({ woRepository, bomRepository, inventory
         productId: bom.productId,
         quantity: wo.quantity,
         locationId: outputLocationId,
-        batchId: `LOT-${wo.code}` // Traceability: Link Batch to WO Code
+        batchId: `LOT-${wo.code}`
     };
 
-    // Execute Atomic Production via Use Case Interface
-    await inventoryService.executeProduction.execute(tenantId, {
+    // Execute Atomic Production
+    const prodRes = await inventoryService.executeProduction.execute(tenantId, {
         consume: consumeList,
         produce: produceItem,
         reason: `WO ${wo.code}`,
         userId: completionData.userId || null
     });
+    if (isErr(prodRes)) return prodRes;
 
     wo.status = 'COMPLETED';
     wo.completionDate = new Date().toISOString();

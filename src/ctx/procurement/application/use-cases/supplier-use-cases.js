@@ -15,7 +15,7 @@ export const createCreateSupplier = ({ supplierRepository }) => {
 
 export const createListSuppliers = ({ supplierRepository }) => {
   const execute = async (tenantId, options) => {
-    return await supplierRepository.findAll(tenantId, options);
+    return await supplierRepository.list(tenantId, options);
   };
 
   return { execute };
