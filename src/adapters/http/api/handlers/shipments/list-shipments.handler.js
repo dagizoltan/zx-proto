@@ -1,4 +1,4 @@
-import { toApiShipment } from '../../transformers/orders.transformer.js';
+import { toApiShipment } from '../../transformers/shipments.transformer.js';
 import { unwrap } from '../../../../../../lib/trust/index.js';
 
 export const listShipmentsHandler = async (c) => {
