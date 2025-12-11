@@ -1,3 +1,5 @@
+import { unwrap } from '../../../../../../lib/trust/index.js';
+
 export const registerHandler = async (c) => {
     const { email, password, name } = c.get('validatedData');
     const tenantId = c.get('tenantId');
@@ -6,11 +8,11 @@ export const registerHandler = async (c) => {
     const obs = c.ctx.get('infra.obs');
 
     try {
-      const user = await accessControl.useCases.registerUser.execute(tenantId, {
+      const user = unwrap(await accessControl.useCases.registerUser.execute(tenantId, {
         email,
         password,
         name,
-      });
+      }));
 
       await obs.audit('User registered', {
         tenantId,

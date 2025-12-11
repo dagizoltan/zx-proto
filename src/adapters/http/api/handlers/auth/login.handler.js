@@ -1,3 +1,5 @@
+import { unwrap } from '../../../../../../lib/trust/index.js'; // 6 levels
+
 export const loginHandler = async (c) => {
     const { email, password } = c.get('validatedData');
     const tenantId = c.get('tenantId');
@@ -6,7 +8,7 @@ export const loginHandler = async (c) => {
     const obs = c.ctx.get('infra.obs');
 
     try {
-      const result = await accessControl.useCases.loginUser.execute(tenantId, email, password);
+      const result = unwrap(await accessControl.useCases.loginUser.execute(tenantId, email, password));
 
       await obs.audit('User logged in', {
         tenantId,

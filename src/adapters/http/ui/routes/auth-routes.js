@@ -3,6 +3,7 @@ import { renderPage } from '../renderer.js';
 import { LoginPage } from '../pages/auth/login-page.jsx';
 import { RegisterPage } from '../pages/auth/register-page.jsx';
 import { AuthLayout } from '../layouts/auth-layout.jsx';
+import { unwrap } from '../../../../../../lib/trust/index.js';
 
 export const authRoutes = new Hono();
 
@@ -20,19 +21,20 @@ authRoutes.post('/login', async (c) => {
   const tenantId = c.get('tenantId');
 
   try {
-    const { token } = await accessControl.useCases.loginUser.execute(tenantId, email, password);
+    const res = await accessControl.useCases.loginUser.execute(tenantId, email, password);
+    const { token } = unwrap(res);
 
     // Set cookie
     c.header('Set-Cookie', `session=${token}; Path=/; HttpOnly; SameSite=Strict`);
 
     // Redirect to home or intended url
-    const redirect = c.req.query('redirect') || '/';
+    const redirect = c.req.query('redirect') || '/ims/dashboard'; // Changed from '/' to '/ims/dashboard'
     return c.redirect(redirect);
   } catch (error) {
     const html = await renderPage(LoginPage, {
       layout: AuthLayout,
       title: 'Sign In - IMS Shopfront',
-      error: error.message,
+      error: error.message || 'Invalid credentials', // Handle error properly
       email
     });
     return c.html(html);
@@ -59,13 +61,15 @@ authRoutes.post('/register', async (c) => {
 
   try {
     // Register
-    await accessControl.useCases.registerUser.execute(tenantId, { email, password, name });
+    unwrap(await accessControl.useCases.registerUser.execute(tenantId, { email, password, name }));
 
     // Auto login
-    const { token } = await accessControl.useCases.loginUser.execute(tenantId, email, password);
+    const loginRes = await accessControl.useCases.loginUser.execute(tenantId, email, password);
+    const { token } = unwrap(loginRes);
+
     c.header('Set-Cookie', `session=${token}; Path=/; HttpOnly; SameSite=Strict`);
 
-    return c.redirect('/');
+    return c.redirect('/ims/dashboard'); // Changed from '/'
   } catch (error) {
     const html = await renderPage(RegisterPage, {
       layout: AuthLayout,
