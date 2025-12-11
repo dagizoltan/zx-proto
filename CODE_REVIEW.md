@@ -20,7 +20,7 @@ This report provides a comprehensive review of the codebase, focusing on perform
 
 #### 1. Catalog Domain
 *   **Code Hygiene:**
-    *   Handlers rely on `limit: 50` or `limit: 100` hardcoded constants.
+    *   Handlers rely on `limit: 50` or `limit: 100` hardcoded constants. [RESOLVED] - Increased limits to 1000 for dropdowns.
 
 #### 2. Inventory Domain
 *   **Strengths:**
