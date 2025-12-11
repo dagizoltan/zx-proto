@@ -3,14 +3,15 @@
 **Date:** October 26, 2024
 **Status:** DRAFT / RFC
 **Context:** IMS Shopfront "High-Trust Provenance Platform"
+**Style:** Functional Programming (No Classes/OOP)
 
 ---
 
 ## 1. Overview
-The **Trust ODM (Object Document Mapper)** is a custom persistence layer built on top of Deno KV. It bridges the gap between a standard Key-Value store and an Enterprise-Grade Compliance Platform.
+The **Trust ODM (Object Document Mapper)** is a custom persistence layer built on top of Deno KV. It bridges the gap between a standard Key-Value store and an Enterprise-Grade Compliance Platform, strictly adhering to functional programming principles.
 
 **Core Capabilities:**
-1.  **Strict Schemas:** Type validation and structure enforcement.
+1.  **Strict Schemas:** Type validation and structure enforcement via Zod-like functional schemas.
 2.  **Compliance by Default:** Native field-level encryption (HIPAA) and Data Residency tagging (GDPR).
 3.  **Trust Tiering:** Configurable data storage modes (`Standard`, `Chain`, `Web3`) enabling native cryptographic verification.
 4.  **Advanced Indexing:** Automatic management of secondary indexes to support complex queries.
@@ -62,9 +63,9 @@ The ODM supports three distinct storage modes, configurable per-schema or per-en
 
 ---
 
-## 4. Schema Definition
+## 4. Functional Schema Definition
 
-Schemas are defined as JavaScript objects (or JSON) registered at startup.
+Schemas are defined as immutable objects passed to repository factories.
 
 ```javascript
 import { defineSchema, Types } from '@ims/trust-odm';
@@ -115,45 +116,102 @@ export const PatientRecordSchema = defineSchema({
 
 ## 5. Architecture & Implementation Plan
 
-### 5.1. The `TrustRepository`
-A generic repository wrapper that intercepts `save()`, `find()`, and `delete()`.
+The architecture follows a "Pipeline" pattern. Data flows through a series of pure functions before persistence.
+
+### 5.1. The Repository Factory
+Instead of a class, we export a factory function `createTrustRepository`.
 
 ```javascript
-class TrustRepository<T> {
-  async save(data: T): Promise<T> {
-    // 1. Validate Schema
-    // 2. Encrypt Fields (if HIPAA)
-    // 3. Calculate Hash
-    // 4. If Chain/Web3: Fetch Prev Version -> Link Hash
-    // 5. If Web3: Insert Hash into Merkle Tree
-    // 6. Manage Secondary Indexes (Atomic Trans)
-    // 7. Commit to KV
-  }
-}
+/**
+ * Creates a repository instance for a specific schema.
+ * @param {Deno.Kv} kv - The Deno KV handle
+ * @param {Schema} schema - The Schema definition
+ * @param {Object} config - Encryption keys, etc.
+ */
+export const createTrustRepository = (kv, schema, config) => {
+
+  // Internal pipeline functions
+  const validate = createValidator(schema);
+  const encrypt = createEncryptor(schema, config); // Returns (data) -> Promise<EncryptedData>
+  const hash = createHasher(schema);               // Returns (data) -> { ...data, hash, prevHash }
+  const anchor = createMerkleAnchor(kv);           // (Optional) Adds to tree
+
+  const save = async (tenantId, data) => {
+    // Pipeline: Input -> Validate -> Encrypt -> Hash -> Anchor? -> Persist
+
+    // 1. Validation
+    const validData = validate(data);
+
+    // 2. Encryption (Pure transformation)
+    const encryptedData = await encrypt(tenantId, validData);
+
+    // 3. Chain/Hashing (Dependent on current DB state for prevHash)
+    const { finalData, versionKey } = await hash(kv, tenantId, encryptedData);
+
+    // 4. Persistence (Atomic Transaction)
+    const primaryKey = ['data', schema.name, validData.id];
+
+    const atom = kv.atomic()
+        .check({ key: primaryKey, versionstamp: null }) // Optimistic Lock
+        .set(primaryKey, finalData)
+        .set(versionKey, finalData); // Historical Version
+
+    // 5. Indexing (Side-effect: add index keys to atom)
+    applyIndexes(schema, validData, atom);
+
+    // 6. Web3 Anchor (Side-effect: add merkle node to atom or batch queue)
+    if (schema.trustTier === 'Web3') {
+        await anchor(atom, finalData.hash);
+    }
+
+    const result = await atom.commit();
+    return result.ok ? validData : null;
+  };
+
+  const find = async (tenantId, query) => {
+      // 1. Query Resolution (Index Lookup)
+      const keys = await queryResolver(kv, schema, tenantId, query);
+
+      // 2. Fetch
+      const rawDocs = await kv.getMany(keys);
+
+      // 3. Decrypt & Inflate
+      return Promise.all(rawDocs.map(d => decrypt(tenantId, d.value)));
+  };
+
+  return { save, find };
+};
 ```
 
-### 5.2. Secondary Indexing Strategy
-Deno KV lacks native queries. The ODM manages indexes manually:
+### 5.2. Functional Components
+
+*   **`createValidator(schema)`**: Returns a pure function `(data) => validData | throw Error`.
+*   **`createEncryptor(schema, config)`**: Returns an async function `(tenantId, data) => encryptedData`. Uses pure input/output.
+*   **`queryResolver(kv, schema, tenantId, query)`**: A pure logic function that determines *which* keys to fetch based on the query object (e.g., `{ status: 'ACTIVE' }` maps to `['idx', 'status', 'ACTIVE']`).
+
+### 5.3. Secondary Indexing Strategy
+Deno KV lacks native queries. The ODM manages indexes via atomic operations.
 
 *   **Data Key:** `['data', entityId]` -> `{ ...data }`
 *   **Index Key:** `['idx', schemaName, 'status', 'ACTIVE', entityId]` -> `true`
 
 **Query Logic:**
-`db.patients.find({ status: 'ACTIVE' })`
-1.  Scan keys starting with `['idx', 'patient', 'status', 'ACTIVE']`.
-2.  Extract `entityId`s.
-3.  Batch fetch Data Keys (`kv.getMany`).
-4.  Decrypt & Return.
+`find(tenantId, { status: 'ACTIVE' })`
+1.  **Index Scan:** Iterate keys `['idx', 'patient', 'status', 'ACTIVE']`.
+2.  **Key Extraction:** Map results to `entityId`s.
+3.  **Batch Fetch:** `kv.getMany(keys)`.
+4.  **Decryption:** Transform ciphertext back to plaintext.
 
-### 5.3. The Merkle Engine
-*   **Storage:** The tree is stored as nodes in KV: `['merkle', 'node', hash]`.
-*   **Batching:** To maintain performance, Merkle updates can be batched (e.g., every minute) or executed inline for high-value transactions.
+### 5.4. The Merkle Engine (Functional)
+*   **Storage:** Nodes stored as `['merkle', 'node', hash]`.
+*   **Operation:** `insertLeaf(root, newHash)` returns `newRoot`.
+*   **State:** The current tree state is passed into the function, and the new state is returned (or committed atomically).
 
 ---
 
 ## 6. Migration Strategy
 
-1.  **Phase 1: Standard ODM:** Refactor current entities (Product, Order) to use the Schema definition but keep storage as `Standard`.
-2.  **Phase 2: Indexing:** Enable the Indexing Engine to replace manual `listBy...` repository methods.
-3.  **Phase 3: Chain Activation:** Enable `Chain` mode for Orders and Inventory Movements.
-4.  **Phase 4: Encryption & Web3:** Roll out HIPAA encryption and Public Merkle Anchoring for specific enterprise clients.
+1.  **Phase 1: Standard ODM:** Refactor current `createProduct`, `createOrder` use cases to use `createTrustRepository`.
+2.  **Phase 2: Indexing:** Replace manual `listBy...` implementations with the generic `find` using declared indexes.
+3.  **Phase 3: Chain Activation:** Enable `Chain` mode for critical entities.
+4.  **Phase 4: Encryption & Web3:** Enable HIPAA encryption and Public Merkle Anchoring for Enterprise tiers.
