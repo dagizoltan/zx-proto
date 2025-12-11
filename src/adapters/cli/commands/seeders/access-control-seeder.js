@@ -1,5 +1,5 @@
 import { Random, Log } from './utils.js';
-import { unwrap, isErr } from '../../../../../../lib/trust/index.js';
+import { unwrap, isErr } from '../../../../../lib/trust/index.js'; // Fixed 5 levels
 
 export const seedAccessControl = async (ctx, tenantId) => {
     Log.step('Seeding Access Control (Roles & Users)');
@@ -19,11 +19,8 @@ export const seedAccessControl = async (ctx, tenantId) => {
         if (res.ok) {
             roleIds[name] = res.value.id;
         } else {
-            // listRoles returns Result<{ items... }>
             const allRes = await ac.useCases.listRoles.execute(tenantId);
             if (allRes.ok) {
-                // listRoles use case unwraps Result? No, I implemented it to return Ok(items).
-                // Let's assume it returns Ok(items).
                 const existing = allRes.value.find(r => r.name === name);
                 if (existing) {
                     roleIds[name] = existing.id;
@@ -44,7 +41,6 @@ export const seedAccessControl = async (ctx, tenantId) => {
     ];
 
     for (const u of users) {
-        // Create User
         let userId;
         const res = await ac.useCases.registerUser.execute(tenantId, {
             email: u.email,
@@ -55,24 +51,6 @@ export const seedAccessControl = async (ctx, tenantId) => {
         if (res.ok) {
             userId = res.value.id;
         } else if (res.error.code === 'CONFLICT' || res.error.message.includes('exists')) {
-            // findByEmail (repo wrapper returns value, not Result? No, I removed wrapper.)
-            // userRepo.findByEmail in Step 2: "repo.queryByIndex(...)".
-            // It returns Result.
-            const findRes = await ac.repositories.user.findByEmail(tenantId, u.email);
-            // I implemented `findByEmail` in `kv-user-repository.js` to return `null` or value directly?
-            // Let's check `kv-user-repository.js` in a moment.
-            // Step 2 overwrite:
-            // `findByEmail: (tenantId, email) => repo.queryByIndex(...).then(res => ... return res.value.items[0])`
-            // Yes, I left legacy wrapper logic there!
-            // "Wrap to match legacy interface but using new core"
-            // Wait, did I UNWRAP it later?
-            // "I should remove the wrappers in the repositories now... and update the Use Cases."
-            // Step 2 part 2: I overwrote `kv-user-repository.js` with `return createRepository(...)`.
-            // So `findByEmail` DOES NOT EXIST on the repo object anymore.
-            // The repo object has `queryByIndex`.
-            // So `ac.repositories.user.findByEmail` will CRASH if called.
-
-            // I must use `queryByIndex`.
             const findRes = await ac.repositories.user.queryByIndex(tenantId, 'email', u.email);
             if (findRes.ok && findRes.value.items.length > 0) {
                 userId = findRes.value.items[0].id;
@@ -83,7 +61,6 @@ export const seedAccessControl = async (ctx, tenantId) => {
         }
 
         if (userId) {
-            // Assign Role
             const assignRes = await ac.useCases.assignRole.execute(tenantId, { userId, roleIds: [roleIds[u.role]] });
             if (!assignRes.ok) {
                  console.error(`Failed to assign role to ${u.email}:`, assignRes.error);
@@ -122,5 +99,5 @@ export const seedAccessControl = async (ctx, tenantId) => {
     }
 
     Log.success(`Created ${users.length} core users and ${customers.length} random customers`);
-    return { roleIds, customers }; // Return customers array, not object
+    return { roleIds, customers };
 };
