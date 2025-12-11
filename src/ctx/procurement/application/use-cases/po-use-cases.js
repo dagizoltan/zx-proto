@@ -1,5 +1,5 @@
 import { createPurchaseOrder } from '../../domain/entities/supplier.js';
-import { Ok, Err, isErr, unwrap } from '../../../../../../lib/trust/index.js';
+import { Ok, Err, isErr, unwrap } from '../../../../../lib/trust/index.js';
 
 export const createCreatePurchaseOrder = ({ poRepository }) => {
   const execute = async (tenantId, data) => {

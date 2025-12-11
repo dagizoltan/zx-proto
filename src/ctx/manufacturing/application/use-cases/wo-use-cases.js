@@ -1,5 +1,5 @@
 import { createWorkOrder } from '../../domain/entities/bom.js';
-import { Ok, Err, isErr, unwrap } from '../../../../../../lib/trust/index.js';
+import { Ok, Err, isErr, unwrap } from '../../../../../lib/trust/index.js';
 
 export const createCreateWorkOrder = ({ woRepository, bomRepository }) => {
   const execute = async (tenantId, data) => {
