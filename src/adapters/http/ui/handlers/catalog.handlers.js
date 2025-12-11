@@ -41,8 +41,9 @@ export const createProductPageHandler = async (c) => {
     const tenantId = c.get('tenantId');
     const catalog = c.ctx.get('domain.catalog');
 
-    const { items: categories } = await catalog.useCases.listCategories.execute(tenantId, { limit: 100 });
-    const { items: priceLists } = await catalog.useCases.listPriceLists.execute(tenantId, { limit: 100 });
+    // Increased limit to 1000 for dropdowns
+    const { items: categories } = await catalog.useCases.listCategories.execute(tenantId, { limit: 1000 });
+    const { items: priceLists } = await catalog.useCases.listPriceLists.execute(tenantId, { limit: 1000 });
 
     const html = await renderPage(CreateProductPage, {
         user,
@@ -73,8 +74,8 @@ export const createProductHandler = async (c) => {
         });
         return c.redirect('/ims/catalog/products');
     } catch (e) {
-        const { items: categories } = await catalog.useCases.listCategories.execute(tenantId, { limit: 100 });
-        const { items: priceLists } = await catalog.useCases.listPriceLists.execute(tenantId, { limit: 100 });
+        const { items: categories } = await catalog.useCases.listCategories.execute(tenantId, { limit: 1000 });
+        const { items: priceLists } = await catalog.useCases.listPriceLists.execute(tenantId, { limit: 1000 });
 
         const html = await renderPage(CreateProductPage, {
             user,
@@ -146,7 +147,7 @@ export const createCategoryPageHandler = async (c) => {
     const tenantId = c.get('tenantId');
     const catalog = c.ctx.get('domain.catalog');
 
-    const { items: categories } = await catalog.useCases.listCategories.execute(tenantId, { limit: 100 });
+    const { items: categories } = await catalog.useCases.listCategories.execute(tenantId, { limit: 1000 });
 
     const html = await renderPage(CreateCategoryPage, {
         user,
@@ -184,7 +185,7 @@ export const categoryDetailHandler = async (c) => {
     const category = await catalog.repositories.category.findById(tenantId, categoryId);
     if (!category) return c.text('Category not found', 404);
 
-    const { items: allCats } = await catalog.useCases.listCategories.execute(tenantId, { limit: 100 });
+    const { items: allCats } = await catalog.useCases.listCategories.execute(tenantId, { limit: 1000 });
     const subCategories = allCats.filter(cat => cat.parentId === categoryId);
 
     const html = await renderPage(CategoryDetailPage, {
