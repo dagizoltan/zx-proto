@@ -30,6 +30,7 @@ export const seedAccessControl = async (ctx, tenantId) => {
                 }
             }
         }
+        await new Promise(r => setTimeout(r, 50)); // Throttle
     }
 
     // 2. Users
@@ -66,7 +67,7 @@ export const seedAccessControl = async (ctx, tenantId) => {
                  console.error(`Failed to assign role to ${u.email}:`, assignRes.error);
             }
         }
-        await new Promise(r => setTimeout(r, 20));
+        await new Promise(r => setTimeout(r, 50)); // Throttle increased
     }
 
     // 3. Batch Customers
