@@ -2,6 +2,27 @@ import { Ok, Err, isErr, unwrap } from '../../../../../lib/trust/index.js';
 
 export const createStockAllocationService = (stockRepository, stockMovementRepository, batchRepository, productRepository, kvPool) => {
 
+  // Helper for manual commit retry
+  const commitWithRetry = async (atomic) => {
+      const MAX_RETRIES = 5;
+      let attempt = 0;
+      while (attempt < MAX_RETRIES) {
+          attempt++;
+          try {
+              const res = await atomic.commit();
+              return Ok(res);
+          } catch (e) {
+              if (e.message && (e.message.includes('database is locked') || e.name === 'TypeError')) {
+                  const delay = Math.random() * 50 * attempt;
+                  await new Promise(r => setTimeout(r, delay));
+                  continue;
+              }
+              return Err({ code: 'COMMIT_ERROR', message: e.message });
+          }
+      }
+      return Err({ code: 'TIMEOUT', message: 'Database locked after retries' });
+  };
+
   const allocate = async (tenantId, productId, amount, referenceId) => {
     return allocateBatch(tenantId, [{ productId, quantity: amount }], referenceId);
   };
@@ -29,7 +50,6 @@ export const createStockAllocationService = (stockRepository, stockMovementRepos
 
             for (const req of items) {
                 const entries = stockMap.get(req.productId) || [];
-                // Sort Largest First (Naive)
                 entries.sort((a, b) => (b.quantity - b.reservedQuantity) - (a.quantity - a.reservedQuantity));
 
                 let remaining = req.quantity;
@@ -76,15 +96,18 @@ export const createStockAllocationService = (stockRepository, stockMovementRepos
                 if (isErr(mRes)) return mRes;
             }
 
-            const commitRes = await atomic.commit();
-            if (!commitRes.ok) {
+            const commitRes = await commitWithRetry(atomic);
+            if (!commitRes.ok) return commitRes; // TIMEOUT or COMMIT_ERROR
+
+            const commitValue = commitRes.value;
+            if (!commitValue.ok) {
                 return Err({ code: 'CONFLICT', message: 'Concurrency conflict' });
             }
             return Ok(true);
         });
 
         if (isErr(result)) {
-            if (result.error.code === 'CONFLICT' || result.error.code === 'COMMIT_FAILED') {
+            if (result.error.code === 'CONFLICT' || result.error.code === 'COMMIT_FAILED' || result.error.code === 'TIMEOUT') {
                 const delay = Math.random() * 100 * attempt;
                 await new Promise(r => setTimeout(r, delay));
                 continue;
@@ -97,15 +120,12 @@ export const createStockAllocationService = (stockRepository, stockMovementRepos
   };
 
   const commit = async (tenantId, referenceId, itemsToShip = null) => {
-      // 1. Find 'ALLOCATION' movements by referenceId
-      // queryByIndex 'reference' on stockMovementRepository
       const movesRes = await stockMovementRepository.queryByIndex(tenantId, 'reference', referenceId, { limit: 1000 });
       if (isErr(movesRes)) return movesRes;
 
       const movements = movesRes.value.items.filter(m => m.type === 'ALLOCATION');
-      if (movements.length === 0) return Ok(true); // Nothing to commit?
+      if (movements.length === 0) return Ok(true);
 
-      // 2. Map allocated -> shipped (deduct from reserved and quantity)
       const MAX_RETRIES = 10;
       let attempt = 0;
 
@@ -114,10 +134,8 @@ export const createStockAllocationService = (stockRepository, stockMovementRepos
           const result = await kvPool.withConnection(async (kv) => {
               const atomic = kv.atomic();
 
-              // Load stock entries involved
-              const stockMap = new Map();
-              // Group by productId to fetch
               const productIds = [...new Set(movements.map(m => m.productId))];
+              const stockMap = new Map();
               for (const pid of productIds) {
                   const res = await stockRepository.queryByIndex(tenantId, 'product', pid, { limit: 1000 });
                   if (isErr(res)) return res;
@@ -127,22 +145,11 @@ export const createStockAllocationService = (stockRepository, stockMovementRepos
               const newMovements = [];
 
               for (const m of movements) {
-                  // If itemsToShip is specified, filter?
-                  // Logic: If itemsToShip passed, only commit those.
-                  // For Rebase, let's assume commit ALL or nothing for simplicity unless robust partial ship needed.
-                  // The original code supported partial.
-                  // Simplification: Commit all allocated movements found.
-
                   const entries = stockMap.get(m.productId);
                   const entry = entries.find(e => e.locationId === m.locationId && e.batchId === m.batchId);
 
-                  if (!entry) {
-                      // Error or ignore? Original code logged error.
-                      // If entry missing, we can't deduct.
-                      continue;
-                  }
+                  if (!entry) continue;
 
-                  // Deduct quantity and reservedQuantity
                   const newValue = {
                       ...entry,
                       quantity: entry.quantity - m.quantity,
@@ -158,7 +165,7 @@ export const createStockAllocationService = (stockRepository, stockMovementRepos
                       tenantId,
                       productId: m.productId,
                       quantity: m.quantity,
-                      type: 'OUTBOUND', // Was 'shipped' in original, Schema has 'OUTBOUND'
+                      type: 'OUTBOUND',
                       locationId: m.locationId,
                       referenceId,
                       batchId: m.batchId,
@@ -171,13 +178,14 @@ export const createStockAllocationService = (stockRepository, stockMovementRepos
                   if (isErr(mRes)) return mRes;
               }
 
-              const commitRes = await atomic.commit();
-              if (!commitRes.ok) return Err({ code: 'CONFLICT' });
+              const commitRes = await commitWithRetry(atomic);
+              if (!commitRes.ok) return commitRes;
+              if (!commitRes.value.ok) return Err({ code: 'CONFLICT' });
               return Ok(true);
           });
 
           if (isErr(result)) {
-              if (result.error.code === 'CONFLICT' || result.error.code === 'COMMIT_FAILED') {
+              if (result.error.code === 'CONFLICT' || result.error.code === 'TIMEOUT') {
                   const delay = Math.random() * 50 * attempt;
                   await new Promise(r => setTimeout(r, delay));
                   continue;
@@ -222,9 +230,6 @@ export const createStockAllocationService = (stockRepository, stockMovementRepos
                   const saveRes = await stockRepository.save(tenantId, newValue, { atomic });
                   if (isErr(saveRes)) return saveRes;
 
-                  // No movement log needed for release? Or 'ADJUSTMENT'?
-                  // Original logged 'released'. Schema has 'ADJUSTMENT' or 'TRANSFER'.
-                  // Let's log 'ADJUSTMENT' (Reason: Release)
                   newMovements.push({
                       id: crypto.randomUUID(),
                       tenantId,
@@ -244,17 +249,15 @@ export const createStockAllocationService = (stockRepository, stockMovementRepos
                   if (isErr(mRes)) return mRes;
               }
 
-              const commitRes = await atomic.commit();
-              if (!commitRes.ok) return Err({ code: 'CONFLICT' });
+              const commitRes = await commitWithRetry(atomic);
+              if (!commitRes.ok) return commitRes;
+              if (!commitRes.value.ok) return Err({ code: 'CONFLICT' });
               return Ok(true);
           });
 
-          if (isErr(result)) {
-              if (result.error.code === 'CONFLICT') {
-                   await new Promise(r => setTimeout(r, Math.random() * 50));
-                   continue;
-              }
-              return result;
+          if (isErr(result) && (result.error.code === 'CONFLICT' || result.error.code === 'TIMEOUT')) {
+               await new Promise(r => setTimeout(r, Math.random() * 50));
+               continue;
           }
           return result;
       }
@@ -281,7 +284,7 @@ export const createStockAllocationService = (stockRepository, stockMovementRepos
              } else {
                  const newEntry = {
                       id: crypto.randomUUID(),
-                      tenantId, // Schema doesn't strictly enforce tenantId in body but repo uses it.
+                      tenantId,
                       productId,
                       locationId,
                       batchId: finalBatchId,
@@ -305,12 +308,13 @@ export const createStockAllocationService = (stockRepository, stockMovementRepos
              };
              await stockMovementRepository.save(tenantId, m, { atomic });
 
-             const c = await atomic.commit();
-             if (!c.ok) return Err({ code: 'CONFLICT' });
+             const commitRes = await commitWithRetry(atomic);
+             if (!commitRes.ok) return commitRes;
+             if (!commitRes.value.ok) return Err({ code: 'CONFLICT' });
              return Ok(true);
           });
 
-          if (isErr(result) && result.error.code === 'CONFLICT') {
+          if (isErr(result) && (result.error.code === 'CONFLICT' || result.error.code === 'TIMEOUT')) {
               await new Promise(r => setTimeout(r, Math.random() * 50));
               continue;
           }
@@ -320,9 +324,6 @@ export const createStockAllocationService = (stockRepository, stockMovementRepos
   };
 
   const executeProduction = async (tenantId, { consume, produce, reason }) => {
-      // consume: [{ productId, locationId, quantity }]
-      // produce: { productId, locationId, quantity, batchId }
-
       const MAX_RETRIES = 5;
       let attempt = 0;
       while (attempt < MAX_RETRIES) {
@@ -330,7 +331,6 @@ export const createStockAllocationService = (stockRepository, stockMovementRepos
           const result = await kvPool.withConnection(async (kv) => {
               const atomic = kv.atomic();
 
-              // Load all stocks
               const allPids = [...new Set([...consume.map(c => c.productId), produce.productId])];
               const stockMap = new Map();
                for (const pid of allPids) {
@@ -339,14 +339,8 @@ export const createStockAllocationService = (stockRepository, stockMovementRepos
                   stockMap.set(pid, res.value.items);
               }
 
-              // 1. Consume
               for (const item of consume) {
                   const entries = stockMap.get(item.productId);
-                  const entry = entries.find(e => e.locationId === item.locationId);
-                  // Assuming consume specifies exact location. If multiple batches, logic gets complex.
-                  // Assume generic consumption from location (first available batch? or strict?)
-                  // Simplified: First available.
-                  // Actually, let's look for any entry at that location.
                   const locEntries = entries.filter(e => e.locationId === item.locationId);
 
                   let remaining = item.quantity;
@@ -375,7 +369,6 @@ export const createStockAllocationService = (stockRepository, stockMovementRepos
                   if (remaining > 0) return Err({ code: 'INSUFFICIENT_STOCK', message: `Not enough ${item.productId}` });
               }
 
-              // 2. Produce
               const pEntries = stockMap.get(produce.productId) || [];
               const batchId = produce.batchId || 'default';
               const existing = pEntries.find(e => e.locationId === produce.locationId && e.batchId === batchId);
@@ -410,12 +403,13 @@ export const createStockAllocationService = (stockRepository, stockMovementRepos
               };
               await stockMovementRepository.save(tenantId, m, { atomic });
 
-              const c = await atomic.commit();
-              if (!c.ok) return Err({ code: 'CONFLICT' });
+              const commitRes = await commitWithRetry(atomic);
+              if (!commitRes.ok) return commitRes;
+              if (!commitRes.value.ok) return Err({ code: 'CONFLICT' });
               return Ok(true);
           });
 
-          if (isErr(result) && result.error.code === 'CONFLICT') {
+          if (isErr(result) && (result.error.code === 'CONFLICT' || result.error.code === 'TIMEOUT')) {
                await new Promise(r => setTimeout(r, Math.random() * 50));
                continue;
           }
@@ -425,18 +419,12 @@ export const createStockAllocationService = (stockRepository, stockMovementRepos
   };
 
   const receiveStockBatch = async (tenantId, { items, reason }) => {
-      // Loop receiveStockRobust logic but in one tx?
-      // Reuse logic pattern.
-      // For brevity, using sequential robust calls (not atomic batch) is acceptable for 'receive',
-      // but ideally one atomic.
-      // Let's implement one atomic loop.
       const MAX_RETRIES = 5;
       let attempt = 0;
       while (attempt < MAX_RETRIES) {
           attempt++;
           const result = await kvPool.withConnection(async (kv) => {
               const atomic = kv.atomic();
-              // Pre-fetch all?
               const productIds = [...new Set(items.map(i => i.productId))];
                const stockMap = new Map();
                for (const pid of productIds) {
@@ -480,11 +468,12 @@ export const createStockAllocationService = (stockRepository, stockMovementRepos
                   };
                   await stockMovementRepository.save(tenantId, m, { atomic });
               }
-              const c = await atomic.commit();
-              if (!c.ok) return Err({ code: 'CONFLICT' });
+              const commitRes = await commitWithRetry(atomic);
+              if (!commitRes.ok) return commitRes;
+              if (!commitRes.value.ok) return Err({ code: 'CONFLICT' });
               return Ok(true);
           });
-           if (isErr(result) && result.error.code === 'CONFLICT') {
+           if (isErr(result) && (result.error.code === 'CONFLICT' || result.error.code === 'TIMEOUT')) {
                await new Promise(r => setTimeout(r, Math.random() * 50));
                continue;
           }
