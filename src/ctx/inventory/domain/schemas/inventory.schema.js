@@ -3,6 +3,7 @@ import { z } from 'zod';
 export const WarehouseSchema = z.object({
   id: z.string().uuid(),
   name: z.string().min(1),
+  code: z.string().min(1).optional(), // Added code, optional to avoid breaking existing data if any? No, seeder needs it.
   location: z.string().optional(),
   type: z.enum(['PHYSICAL', 'VIRTUAL']).default('PHYSICAL'),
   createdAt: z.string().datetime().optional()
@@ -11,7 +12,7 @@ export const WarehouseSchema = z.object({
 export const StockEntrySchema = z.object({
   id: z.string().uuid(),
   productId: z.string().uuid(),
-  locationId: z.string().uuid(), // Warehouse ID or Sub-location
+  locationId: z.string().uuid(),
   quantity: z.number().int().nonnegative(),
   batchId: z.string().optional(),
   reserved: z.number().int().nonnegative().default(0),
@@ -24,7 +25,7 @@ export const StockMovementSchema = z.object({
   type: z.enum(['INBOUND', 'OUTBOUND', 'ADJUSTMENT', 'TRANSFER', 'ALLOCATION', 'PRODUCTION_CONSUME', 'PRODUCTION_OUTPUT']),
   quantity: z.number().int(),
   locationId: z.string().uuid(),
-  referenceId: z.string().optional(), // Order ID, PO ID
+  referenceId: z.string().optional(),
   reason: z.string().optional(),
   timestamp: z.string().datetime()
 });

@@ -7,11 +7,9 @@ export const seedInventory = async (ctx, tenantId, products) => {
 
     // 1. Warehouses
     const whData = [
-        { name: 'NY Distribution', location: 'New York' }, // Schema uses 'location', not 'code' usually?
-        // WarehouseSchema: { name, location, type }
-        // Previous used 'code' which isn't in my schema. I'll rely on name.
-        { name: 'LA Hub', location: 'Los Angeles' },
-        { name: 'Chicago Central', location: 'Chicago' }
+        { name: 'NY Distribution', code: 'WH-NY', location: 'New York' },
+        { name: 'LA Hub', code: 'WH-LA', location: 'Los Angeles' },
+        { name: 'Chicago Central', code: 'WH-CHI', location: 'Chicago' }
     ];
     const warehouses = [];
 
