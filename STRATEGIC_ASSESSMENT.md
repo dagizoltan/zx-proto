@@ -77,6 +77,24 @@ The "On-Chain" backing significantly shortens the path to Enterprise compliance.
 
 ---
 
-### Reality Check
-You still need the **$10k of "Business Finish"** (PDFs, Settings) to open the door.
-However, once those are done, you should **NOT** market this to small shops. You should pivot immediately to **Regulated Industries** where the "On-Chain Database" is a killer feature, not just an implementation detail.
+## 5. Future Architecture: The IMS Ecosystem
+
+To support the scaling from a single "Shopfront" to a multi-application Enterprise Platform, the repository will transition to a **Deno Workspace Monorepo**.
+
+### 5.1. Component Topology
+
+| Component | Type | Responsibility | Dependencies |
+| :--- | :--- | :--- | :--- |
+| **IMS Backend** | `App` | The "Brain". Handles Inventory, Manufacturing, Procurement Logic. | `trust-core`, `obs-client` |
+| **Shopfront API** | `App` | Headless API for B2B/B2C storefronts. High-throughput, simplified logic. | `trust-core` (read-only views), `obs-client` |
+| **Obs Control Center** | `App` | Central Telemetry & Audit UI. Visualizes data from all apps. | `trust-core` (audit logs), `obs-client` |
+| **Trust Core** | `Package` | The Database Engine. Handles Encryption, Ledger, and Indexing. | *None* |
+| **Obs Client** | `Package` | Shared library for emitting logs/traces to the Obs system. | *None* |
+
+### 5.2. Data Flow
+1.  **IMS & Shopfront** write data using `Trust Core`.
+2.  **Trust Core** transparently handles Encryption (HIPAA) and Merkle Anchoring (Web3).
+3.  **All Apps** emit telemetry signals via `Obs Client`.
+4.  **Obs Control Center** reads the `Trust Chain` to verify integrity and display audit trails.
+
+This structure enforces strict separation of concerns, ensuring the "Trust Layer" remains pure and reusable across all future applications.

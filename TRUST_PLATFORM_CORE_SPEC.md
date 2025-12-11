@@ -1,4 +1,4 @@
-# Trust Platform Core: Technical Specification (v2.0)
+# Trust Platform Core: Technical Specification (v2.1)
 
 **Date:** October 26, 2024
 **Status:** DRAFT / FINAL ARCHITECTURE
@@ -30,13 +30,13 @@ const PatientRepo = createRepository(kv, [
   // 1. Validation (Schema)
   useSchema(PatientSchema),
 
-  // 2. Security (HIPAA)
+  // 2. Security (HIPAA/SOC2)
   useEncryption({ provider: 'kms', keyId: 'tenant-key' }),
 
-  // 3. Integrity (Blockchain)
+  // 3. Integrity (Blockchain/SOC2)
   useVersionedChain({ tier: 'Chain' }),
 
-  // 4. Observability
+  // 4. Observability (SOC2 Audit)
   useTelemetry({ span: 'patient.save' })
 ]);
 ```
@@ -84,9 +84,19 @@ For high-frequency systems (e.g., Sensor Data), we can run an **In-Memory Ledger
 *   **Definition:** `defineView({ map: ..., reduce: ... })`.
 *   **Result:** Real-time dashboards with O(1) read cost.
 
-### 4.3. Compliance (HIPAA / GDPR)
-*   **Envelope Encryption:** Implemented as a standard middleware `useEnvelopeEncryption()`.
-*   **Crypto-Shredding:** `deleteKey(id)` permanently erases data even in immutable logs.
+### 4.3. Compliance (HIPAA / GDPR / SOC2)
+This section maps platform features to standard compliance controls.
+
+*   **SOC2 Common Criteria / Security:**
+    *   **Encryption:** `useEncryption` ensures data is encrypted at rest using Envelope Encryption (CC6.1).
+    *   **Access Control:** Tenant isolation is enforced by the `useTenantScope` middleware (CC6.1).
+*   **SOC2 Processing Integrity:**
+    *   **Immutable Ledger:** `useVersionedChain` ensures no record is modified without a cryptographic audit trail (CC7.1).
+    *   **Audit Logging:** `useTelemetry` emits structured logs for all write operations, satisfying system activity monitoring (CC3.2).
+*   **SOC2 Availability:**
+    *   **Edge Mode:** Deploying to Deno Deploy provides multi-region redundancy automatically (A1.2).
+*   **HIPAA / GDPR:**
+    *   **Crypto-Shredding:** `deleteKey(id)` permanently erases PHI/PII even from immutable backups by destroying the DEK.
 
 ---
 
