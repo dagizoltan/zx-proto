@@ -1,48 +1,39 @@
-import { createKVFeedRepository, createKVMessageRepository, createKVNotificationRepository, createKVConversationRepository } from './domain/repositories/repositories.js';
-import { createFeedService, createConversationService, createNotificationService } from './domain/services/services.js';
+import {
+    createKVFeedRepository,
+    createKVNotificationRepository,
+    createKVConversationRepository,
+    createKVMessageRepository
+} from '../../infra/persistence/kv/repositories/kv-communication-repositories.js';
+
+import { createPostFeedItem } from './application/use-cases/post-feed-item.js';
+import { createSendMessage } from './application/use-cases/send-message.js';
+import { createNotificationService } from './domain/services/notification-service.js';
 
 export const createCommunicationContext = (deps) => {
-    const kvPool = deps.persistence.kvPool;
-    const eventBus = deps.messaging ? deps.messaging.eventBus : null;
+    const { persistence, messaging } = deps;
+    const { kvPool } = persistence;
+    const { eventBus } = messaging;
 
-    // Repos
     const feedRepo = createKVFeedRepository(kvPool);
-    const messageRepo = createKVMessageRepository(kvPool);
     const notificationRepo = createKVNotificationRepository(kvPool);
     const conversationRepo = createKVConversationRepository(kvPool);
+    const messageRepo = createKVMessageRepository(kvPool);
 
-    // Services
-    const feedService = createFeedService({ feedRepository: feedRepo });
-    const conversationService = createConversationService({ conversationRepository: conversationRepo, messageRepository: messageRepo });
-    const notificationService = createNotificationService({ notificationRepo });
-
-    // Listener for System Events -> Feed
-    if (eventBus) {
-        import('./application/listeners/communication-listener.js').then(({ createCommunicationListener }) => {
-             const listener = createCommunicationListener({ feedService, eventBus });
-             listener.setupSubscriptions();
-        });
-    }
+    const notificationService = createNotificationService({ notificationRepo, eventBus });
 
     return {
         repositories: {
             feed: feedRepo,
-            messages: messageRepo,
             notifications: notificationRepo,
-            conversations: conversationRepo
+            conversations: conversationRepo,
+            messages: messageRepo
+        },
+        services: {
+            notification: notificationService
         },
         useCases: {
-            // Feed
-            getFeed: feedService.getFeed,
-            postFeedItem: feedService.postItem,
-
-            // Conversations (Replaces simple messages)
-            listConversations: conversationService.listConversations,
-            getConversation: conversationService.getConversation,
-            sendMessage: conversationService.sendMessage,
-
-            // Notifications
-            notifications: notificationService
+            postFeedItem: createPostFeedItem({ feedRepository: feedRepo, eventBus }),
+            sendMessage: createSendMessage({ conversationRepository: conversationRepo, messageRepository: messageRepo, eventBus })
         }
     };
 };

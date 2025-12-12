@@ -1,32 +1,46 @@
 
-import { createKVScheduledTaskRepository } from './domain/repositories/kv-scheduled-task-repository.js';
-import { createKVTaskExecutionRepository } from './domain/repositories/kv-task-execution-repository.js';
 import { createSchedulerService } from './domain/services/scheduler-service.js';
+import { createKVScheduledTaskRepository } from '../../infra/persistence/kv/repositories/kv-scheduled-task-repository.js';
+import { createKVTaskExecutionRepository } from '../../infra/persistence/kv/repositories/kv-task-execution-repository.js';
+import { schedulerTaskHandlers } from '../../adapters/scheduler/task-handlers.js';
 
-export const createSchedulerContext = (deps) => {
-    // 1. Resolve dependencies
-    const { persistence, messaging, registry } = deps;
-    const { kvPool } = persistence;
-    const { eventBus } = messaging;
+export const createSchedulerContext = async (deps) => {
+  const { persistence, registry, messaging } = deps;
+  const { eventBus } = messaging;
 
-    // 2. Create Repositories
-    const taskRepo = createKVScheduledTaskRepository(kvPool);
-    const executionRepo = createKVTaskExecutionRepository(kvPool);
+  const taskRepo = createKVScheduledTaskRepository(persistence.kvPool);
+  const executionRepo = createKVTaskExecutionRepository(persistence.kvPool);
 
-    // 3. Create Services
-    const service = createSchedulerService({
-        taskRepo,
-        executionRepo,
-        registry,
-        eventBus
-    });
+  const service = createSchedulerService({
+      taskRepo,
+      executionRepo,
+      registry,
+      eventBus
+  });
 
-    // 4. Return Interface
-    return {
-        service,
-        repositories: {
-            task: taskRepo,
-            execution: executionRepo
-        }
-    };
+  if (schedulerTaskHandlers) {
+      for (const [key, handler] of Object.entries(schedulerTaskHandlers)) {
+          service.registerHandler(key, handler);
+      }
+  }
+
+  const definitions = Object.keys(schedulerTaskHandlers || {}).map(key => ({
+      handlerKey: key,
+      name: key.replace(/-/g, ' ').toUpperCase(),
+      description: 'System Task',
+      defaultSchedule: '0 0 * * *'
+  }));
+
+  await service.syncDefinitions('default', definitions);
+
+  return {
+    name: 'scheduler',
+    repositories: {
+        tasks: taskRepo,
+        executions: executionRepo
+    },
+    services: {
+        scheduler: service
+    }
+  };
 };
