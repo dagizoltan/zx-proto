@@ -1,5 +1,5 @@
 import { Random, Log } from './utils.js';
-import { unwrap, isErr } from '../../../../../lib/trust/index.js';
+import { unwrap, isErr } from '@lib/trust/index.js';
 
 export const seedCatalog = async (ctx, tenantId) => {
     Log.step('Seeding Catalog (Categories, PriceLists, Products)');
@@ -98,13 +98,6 @@ export const seedCatalog = async (ctx, tenantId) => {
     }
 
     // 4. Update Price Lists with Prices
-    // We can't update price list via useCase (no updatePriceList usecase exposed usually, or check catalog-use-cases.js).
-    // Let's check `catalog.handlers.js` or `catalog-use-cases.js` if there is an update mechanism.
-    // If not, we might need to use repository directly.
-    // Assuming `catalog.repositories.priceList` is available.
-
-    // Actually, `catalog` variable here is the context which has repositories.
-
     Log.info('Seeding Prices...');
     for (const plId of plIds) {
         const plRes = await catalog.repositories.priceList.findById(tenantId, plId);
@@ -124,7 +117,6 @@ export const seedCatalog = async (ctx, tenantId) => {
             }
 
             // Save back
-            // PriceList repo uses `save`.
             await catalog.repositories.priceList.save(tenantId, {
                 ...pl,
                 prices: newPrices

@@ -1,20 +1,20 @@
-import { createContextRegistry } from '../../../../utils/registry/context-registry.js';
-import { createConfigService } from '../../../../utils/config/config-service.js';
-import { createPersistenceContext } from '../../../../infra/persistence/index.js';
-import { createMessagingContext } from '../../../../infra/messaging/index.js';
-import { createObsContext } from '../../../../infra/obs/index.js';
-import { createSecurityContext } from '../../../../infra/security/index.js';
-import { createAccessControlContext } from '../../../../ctx/access-control/index.js';
-import { createInventoryContext } from '../../../../ctx/inventory/index.js';
-import { createOrdersContext } from '../../../../ctx/orders/index.js';
-import { createCatalogContext } from '../../../../ctx/catalog/index.js';
-import { createProcurementContext } from '../../../../ctx/procurement/index.js';
-import { createManufacturingContext } from '../../../../ctx/manufacturing/index.js';
-import { createSystemContext } from '../../../../ctx/system/index.js';
-import { createObservabilityContext } from '../../../../ctx/observability/index.js';
-import { createCommunicationContext } from '../../../../ctx/communication/index.js';
-import { createSchedulerContext } from '../../../../ctx/scheduler/index.js';
-import { createQueriesContext } from '../../../../ctx/queries/index.js';
+import { createContextRegistry } from '@src/utils/registry/context-registry.js';
+import { createConfigService } from '@src/utils/config/config-service.js';
+import { createPersistenceContext } from '@src/infra/persistence/index.js';
+import { createMessagingContext } from '@src/infra/messaging/index.js';
+import { createObsContext } from '@src/infra/obs/index.js';
+import { createSecurityContext } from '@src/infra/security/index.js';
+import { createAccessControlContext } from '@src/ctx/access-control/index.js';
+import { createInventoryContext } from '@src/ctx/inventory/index.js';
+import { createOrdersContext } from '@src/ctx/orders/index.js';
+import { createCatalogContext } from '@src/ctx/catalog/index.js';
+import { createProcurementContext } from '@src/ctx/procurement/index.js';
+import { createManufacturingContext } from '@src/ctx/manufacturing/index.js';
+import { createSystemContext } from '@src/ctx/system/index.js';
+import { createObservabilityContext } from '@src/ctx/observability/index.js';
+import { createCommunicationContext } from '@src/ctx/communication/index.js';
+import { createSchedulerContext } from '@src/ctx/scheduler/index.js';
+import { createQueriesContext } from '@src/ctx/queries/index.js';
 
 import { seedAccessControl } from './seeders/access-control-seeder.js';
 import { seedCatalog } from './seeders/catalog-seeder.js';
@@ -26,7 +26,7 @@ import { seedNotifications } from './seeders/notification-seeder.js';
 import { seedCommunication } from './seeders/communication-seeder.js';
 import { seedObservability } from './seeders/observability-seeder.js';
 import { Log } from './seeders/utils.js';
-import { DenoKV } from '../../../../infra/persistence/kv/deno-kv.js';
+import { DenoKV } from '@src/infra/persistence/kv/deno-kv.js';
 
 const run = async () => {
     console.log('🌱 Starting Database Seed...');
