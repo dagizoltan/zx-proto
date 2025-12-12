@@ -9,6 +9,7 @@ import { CreateLocationPage } from '../pages/ims/inventory/create-location-page.
 import { LocationDetailPage } from '../pages/ims/inventory/location-detail-page.jsx';
 import { TransferStockPage } from '../pages/ims/inventory/transfer-stock-page.jsx';
 import { ReceiveStockPage } from '../pages/ims/inventory/receive-stock-page.jsx';
+import { StockMovementsPage } from '../pages/ims/inventory/stock-movements-page.jsx';
 import { unwrap, isErr } from '../../../../../lib/trust/index.js';
 
 // Dashboard / All Products Stock
@@ -51,11 +52,7 @@ export const transferStockPageHandler = async (c) => {
     const wRes = await inventory.repositories.warehouse.list(tenantId, { limit: 100 });
     const warehouses = unwrap(wRes).items;
 
-    // Use repo.query for Locations to avoid manual loop
-    // But we need ALL locations for this dropdown?
-    // Limit 1000?
-    // Let's use repo.query(tenantId, { limit: 1000 }) which does a scan.
-
+    // Optimized fetch
     const lRes = await inventory.repositories.location.query(tenantId, { limit: 1000 });
     const allLocations = unwrap(lRes).items;
 
@@ -97,7 +94,9 @@ export const receiveStockPageHandler = async (c) => {
     const pRes = await inventory.useCases.listAllProducts.execute(tenantId, { limit: 100 });
     const { items: products } = unwrap(pRes);
 
-    // Optimized location fetching
+    const wRes = await inventory.repositories.warehouse.list(tenantId, { limit: 100 });
+    const warehouses = unwrap(wRes).items;
+
     const lRes = await inventory.repositories.location.query(tenantId, { limit: 1000 });
     const allLocations = unwrap(lRes).items;
 
@@ -209,19 +208,15 @@ export const listLocationsHandler = async (c) => {
     const inventory = c.ctx.get('domain.inventory');
     const cursor = c.req.query('cursor');
 
-    // Fetch warehouses for display/filtering context if needed
     const wRes = await inventory.repositories.warehouse.list(tenantId, { limit: 100 });
     const warehouses = unwrap(wRes).items;
 
-    // Use repo.query instead of manual loop
-    // Populate warehouse name
     const resolvers = {
         warehouse: (ids) => inventory.repositories.warehouse.findByIds(tenantId, ids)
     };
 
-    // Note: locations page usually lists ALL.
     const lRes = await inventory.repositories.location.query(tenantId, {
-        limit: 50, // Page size
+        limit: 50,
         cursor,
         populate: ['warehouse']
     }, { resolvers });
@@ -248,7 +243,6 @@ export const createLocationPageHandler = async (c) => {
     const wRes = await inventory.repositories.warehouse.list(tenantId, { limit: 100 });
     const warehouses = unwrap(wRes).items;
 
-    // Optimized fetch
     const lRes = await inventory.repositories.location.query(tenantId, { limit: 1000 });
     const allLocations = unwrap(lRes).items;
 
@@ -308,6 +302,53 @@ export const locationDetailHandler = async (c) => {
         activePage: 'locations',
         layout: AdminLayout,
         title: `${location.code} - IMS Admin`
+    });
+    return c.html(html);
+};
+
+// Stock Movements (New)
+export const listStockMovementsHandler = async (c) => {
+    const user = c.get('user');
+    const tenantId = c.get('tenantId');
+    const inventory = c.ctx.get('domain.inventory');
+    const catalog = c.ctx.get('domain.catalog'); // Need product details
+    const cursor = c.req.query('cursor');
+    const q = c.req.query('q');
+
+    const resolvers = {
+        product: (ids) => catalog.repositories.product.findByIds(tenantId, ids),
+        location: (ids) => inventory.repositories.location.findByIds(tenantId, ids), // For locationId
+        fromLocation: (ids) => inventory.repositories.location.findByIds(tenantId, ids),
+        toLocation: (ids) => inventory.repositories.location.findByIds(tenantId, ids),
+        batch: (ids) => inventory.repositories.batch.findByIds(tenantId, ids)
+    };
+
+    const res = await inventory.repositories.stockMovement.query(tenantId, {
+        limit: 50,
+        cursor,
+        filter: { search: q },
+        searchFields: ['referenceId', 'type'], // Assuming Search on ref
+        populate: ['product', 'location', 'fromLocation', 'toLocation', 'batch']
+    }, { resolvers });
+
+    const { items: movements, nextCursor } = unwrap(res);
+
+    const viewMovements = movements.map(m => ({
+        ...m,
+        productName: m.product?.name || 'Unknown',
+        sku: m.product?.sku || '',
+        locationCode: (m.location?.code || m.fromLocation?.code || m.toLocation?.code) || 'Transit',
+        batchNumber: m.batch?.batchNumber
+    }));
+
+    const html = await renderPage(StockMovementsPage, {
+        user,
+        movements: viewMovements,
+        nextCursor,
+        query: q,
+        currentUrl: c.req.url,
+        layout: AdminLayout,
+        title: 'Stock Movements - IMS Admin'
     });
     return c.html(html);
 };

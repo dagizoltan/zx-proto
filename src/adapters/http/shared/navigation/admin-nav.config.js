@@ -142,7 +142,6 @@ export const adminNavigation = {
           label: 'Stock Movements',
           href: '/ims/inventory/movements',
           icon: 'TrendingUp',
-          disabled: true,
           roles: ['admin', 'manager']
         }
       ]
@@ -197,7 +196,7 @@ export const adminNavigation = {
         {
           id: 'customers',
           label: 'Customers',
-          href: '/ims/customers',
+          href: '/ims/crm/customers',
           icon: 'UserCircle',
           roles: ['admin', 'manager']
         },

@@ -14,6 +14,9 @@ inventoryRoutes.post('/transfer', handlers.transferStockHandler);
 inventoryRoutes.get('/receive', handlers.receiveStockPageHandler);
 inventoryRoutes.post('/receive', handlers.receiveStockHandler);
 
+// Stock Movements
+inventoryRoutes.get('/movements', handlers.listStockMovementsHandler);
+
 // Warehouses
 inventoryRoutes.get('/warehouses', handlers.listWarehousesHandler);
 inventoryRoutes.get('/warehouses/new', handlers.createWarehousePageHandler);

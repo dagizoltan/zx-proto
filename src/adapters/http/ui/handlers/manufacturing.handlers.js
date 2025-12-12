@@ -15,19 +15,33 @@ export const listBOMsHandler = async (c) => {
     const tenantId = c.get('tenantId');
     const manufacturing = c.ctx.get('domain.manufacturing');
     const catalog = c.ctx.get('domain.catalog');
+    const cursor = c.req.query('cursor');
+    const q = c.req.query('q');
 
-    const res = await manufacturing.useCases.listBOMs.execute(tenantId);
-    const { items: boms } = unwrap(res);
+    const resolvers = {
+        product: (ids) => catalog.repositories.product.findByIds(tenantId, ids)
+    };
 
-    for (const bom of boms) {
-        const pRes = await catalog.useCases.getProduct.execute(tenantId, bom.productId);
-        const product = isErr(pRes) ? null : pRes.value;
-        bom.productName = product ? product.name : 'Unknown Product';
-    }
+    const res = await manufacturing.repositories.bom.query(tenantId, {
+        limit: 50,
+        cursor,
+        filter: { search: q },
+        searchFields: ['name'],
+        populate: ['product']
+    }, { resolvers });
+
+    const { items: boms, nextCursor } = unwrap(res);
+
+    const viewBoms = boms.map(bom => ({
+        ...bom,
+        productName: bom.product ? bom.product.name : 'Unknown Product'
+    }));
 
     const html = await renderPage(BOMsPage, {
         user,
-        boms,
+        boms: viewBoms,
+        nextCursor,
+        query: q,
         activePage: 'boms',
         layout: AdminLayout,
         title: 'Bill of Materials - IMS Admin'
@@ -40,7 +54,7 @@ export const createBOMPageHandler = async (c) => {
     const tenantId = c.get('tenantId');
     const catalog = c.ctx.get('domain.catalog');
 
-    const res = await catalog.useCases.listProducts.execute(tenantId, 1, 100);
+    const res = await catalog.useCases.listProducts.execute(tenantId, { limit: 100 });
     const { items: products } = unwrap(res);
 
     const html = await renderPage(CreateBOMPage, {
@@ -96,11 +110,16 @@ export const bomDetailHandler = async (c) => {
     const product = isErr(pRes) ? null : pRes.value;
     bom.productName = product ? product.name : 'Unknown';
 
-    for (const comp of bom.components) {
-        const cRes = await catalog.useCases.getProduct.execute(tenantId, comp.productId);
-        const p = isErr(cRes) ? null : cRes.value;
-        comp.productName = p ? p.name : 'Unknown';
-        comp.sku = p ? p.sku : '';
+    // Batch fetch components
+    const compIds = bom.components.map(c => c.productId);
+    const cRes = await catalog.repositories.product.findByIds(tenantId, compIds);
+    if (!isErr(cRes)) {
+        const pMap = new Map(cRes.value.map(p => [p.id, p]));
+        for (const comp of bom.components) {
+            const p = pMap.get(comp.productId);
+            comp.productName = p ? p.name : 'Unknown';
+            comp.sku = p ? p.sku : '';
+        }
     }
 
     const html = await renderPage(BOMDetailPage, {
@@ -118,21 +137,33 @@ export const listWorkOrdersHandler = async (c) => {
     const user = c.get('user');
     const tenantId = c.get('tenantId');
     const manufacturing = c.ctx.get('domain.manufacturing');
+    const cursor = c.req.query('cursor');
+    const q = c.req.query('q');
 
-    const res = await manufacturing.useCases.listWorkOrders.execute(tenantId);
-    const { items: workOrders } = unwrap(res);
+    const resolvers = {
+        bom: (ids) => manufacturing.repositories.bom.findByIds(tenantId, ids)
+    };
 
-    for (const wo of workOrders) {
-        const bRes = await manufacturing.repositories.bom.findById(tenantId, wo.bomId);
-        const bom = isErr(bRes) ? null : bRes.value;
-        if (bom) {
-             wo.productName = 'Product from BOM ' + bom.name;
-        }
-    }
+    const res = await manufacturing.repositories.workOrder.query(tenantId, {
+        limit: 50,
+        cursor,
+        filter: { search: q },
+        searchFields: ['code'],
+        populate: ['bom']
+    }, { resolvers });
+
+    const { items: workOrders, nextCursor } = unwrap(res);
+
+    const viewOrders = workOrders.map(wo => ({
+        ...wo,
+        productName: wo.bom ? 'Product from BOM ' + wo.bom.name : 'Unknown'
+    }));
 
     const html = await renderPage(WorkOrdersPage, {
         user,
-        workOrders,
+        workOrders: viewOrders,
+        nextCursor,
+        query: q,
         activePage: 'work-orders',
         layout: AdminLayout,
         title: 'Work Orders - IMS Admin'
@@ -252,14 +283,12 @@ export const completeWorkOrderHandler = async (c) => {
         const bom = isErr(bRes) ? null : bRes.value;
         wo.productName = 'Product from ' + (bom ? bom.name : 'Unknown BOM');
 
+        // Use query for locations
         const wRes = await inventory.repositories.warehouse.list(tenantId, { limit: 100 });
         const warehouses = unwrap(wRes).items;
-        let allLocations = [];
-        for (const w of warehouses) {
-            const lRes = await inventory.repositories.location.queryByIndex(tenantId, 'warehouse', w.id, { limit: 1000 });
-            const locs = unwrap(lRes).items;
-            allLocations = allLocations.concat(locs);
-        }
+
+        const lRes = await inventory.repositories.location.query(tenantId, { limit: 1000 });
+        const allLocations = unwrap(lRes).items;
 
         const html = await renderPage(CompleteWorkOrderPage, {
             user,

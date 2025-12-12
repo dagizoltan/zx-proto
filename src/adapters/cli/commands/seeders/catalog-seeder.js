@@ -32,12 +32,12 @@ export const seedCatalog = async (ctx, tenantId) => {
     for (const name of pls) {
         const res = await catalog.useCases.createPriceList.execute(tenantId, { name, currency: 'USD' });
         if (res.ok) {
-            plIds.push(res.value);
+            plIds.push(res.value.id); // Push ID
         } else {
              const allRes = await catalog.useCases.listPriceLists.execute(tenantId, { limit: 10 });
              if (allRes.ok) {
                  const found = allRes.value.items.find(l => l.name === name);
-                 if (found) plIds.push(found);
+                 if (found) plIds.push(found.id);
              }
         }
     }
@@ -95,6 +95,41 @@ export const seedCatalog = async (ctx, tenantId) => {
         if (pRes.ok) products.push(pRes.value);
 
         Log.progress(i + 1, 500);
+    }
+
+    // 4. Update Price Lists with Prices
+    // We can't update price list via useCase (no updatePriceList usecase exposed usually, or check catalog-use-cases.js).
+    // Let's check `catalog.handlers.js` or `catalog-use-cases.js` if there is an update mechanism.
+    // If not, we might need to use repository directly.
+    // Assuming `catalog.repositories.priceList` is available.
+
+    // Actually, `catalog` variable here is the context which has repositories.
+
+    Log.info('Seeding Prices...');
+    for (const plId of plIds) {
+        const plRes = await catalog.repositories.priceList.findById(tenantId, plId);
+        if (plRes.ok) {
+            const pl = plRes.value;
+            const newPrices = { ...pl.prices };
+
+            // Add prices for 50 random products
+            const sampleProducts = products.sort(() => 0.5 - Math.random()).slice(0, 50);
+            for (const p of sampleProducts) {
+                // Discount based on list name?
+                let multiplier = 1.0;
+                if (pl.name === 'Wholesale') multiplier = 0.8;
+                if (pl.name === 'VIP') multiplier = 0.9;
+
+                newPrices[p.id] = p.price * multiplier;
+            }
+
+            // Save back
+            // PriceList repo uses `save`.
+            await catalog.repositories.priceList.save(tenantId, {
+                ...pl,
+                prices: newPrices
+            });
+        }
     }
 
     Log.success(`Catalog seeded with ${products.length} active SKUs`);
