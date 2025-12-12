@@ -14,13 +14,22 @@ export const listSuppliersHandler = async (c) => {
     const user = c.get('user');
     const tenantId = c.get('tenantId');
     const procurement = c.ctx.get('domain.procurement');
+    const cursor = c.req.query('cursor');
+    const q = c.req.query('q');
 
-    const res = await procurement.useCases.listSuppliers.execute(tenantId);
-    const { items: suppliers } = unwrap(res);
+    const res = await procurement.repositories.supplier.query(tenantId, {
+        limit: 50,
+        cursor,
+        filter: { search: q },
+        searchFields: ['name', 'contactName', 'email']
+    });
+    const { items: suppliers, nextCursor } = unwrap(res);
 
     const html = await renderPage(SuppliersPage, {
         user,
         suppliers,
+        nextCursor,
+        query: q,
         activePage: 'suppliers',
         layout: AdminLayout,
         title: 'Suppliers - IMS Admin'
@@ -62,9 +71,14 @@ export const supplierDetailHandler = async (c) => {
     if (isErr(res)) return c.text('Supplier not found', 404);
     const supplier = res.value;
 
-    const poRes = await procurement.useCases.listPurchaseOrders.execute(tenantId);
-    const { items: allPOs } = unwrap(poRes);
-    const supplierPOs = allPOs.filter(po => po.supplierId === supplierId);
+    // Use query for POs
+    const poRes = await procurement.repositories.purchaseOrder.query(tenantId, {
+        limit: 100, // Should be enough for detail view list
+        filter: { supplier: supplierId } // Assuming indexed? Check KVPurchaseOrderRepository.
+        // Memory says: "KVPurchaseOrderRepository have been converted...". Indexes?
+        // Usually supplierId is indexed.
+    });
+    const supplierPOs = unwrap(poRes).items;
 
     const html = await renderPage(SupplierDetailPage, {
         user,
@@ -82,19 +96,34 @@ export const listPurchaseOrdersHandler = async (c) => {
     const user = c.get('user');
     const tenantId = c.get('tenantId');
     const procurement = c.ctx.get('domain.procurement');
+    const cursor = c.req.query('cursor');
+    const q = c.req.query('q');
 
-    const res = await procurement.useCases.listPurchaseOrders.execute(tenantId);
-    const { items: purchaseOrders } = unwrap(res);
+    const resolvers = {
+        supplier: (ids) => procurement.repositories.supplier.findByIds(tenantId, ids)
+    };
 
-    for (const po of purchaseOrders) {
-        const sRes = await procurement.repositories.supplier.findById(tenantId, po.supplierId);
-        const supplier = isErr(sRes) ? null : sRes.value;
-        po.supplierName = supplier ? supplier.name : 'Unknown';
-    }
+    const res = await procurement.repositories.purchaseOrder.query(tenantId, {
+        limit: 50,
+        cursor,
+        filter: { search: q },
+        searchFields: ['code', 'supplierId'], // Search by PO Code
+        populate: ['supplier']
+    }, { resolvers });
+
+    const { items: purchaseOrders, nextCursor } = unwrap(res);
+
+    // Flatten supplier name
+    const viewPOs = purchaseOrders.map(po => ({
+        ...po,
+        supplierName: po.supplier?.name || 'Unknown'
+    }));
 
     const html = await renderPage(PurchaseOrdersPage, {
         user,
-        purchaseOrders,
+        purchaseOrders: viewPOs,
+        nextCursor,
+        query: q,
         activePage: 'purchase-orders',
         layout: AdminLayout,
         title: 'Purchase Orders - IMS Admin'
@@ -108,8 +137,11 @@ export const createPurchaseOrderPageHandler = async (c) => {
     const procurement = c.ctx.get('domain.procurement');
     const catalog = c.ctx.get('domain.catalog');
 
-    const sRes = await procurement.useCases.listSuppliers.execute(tenantId);
-    const pRes = await catalog.useCases.listProducts.execute(tenantId, 1, 100);
+    // Use list instead of useCases? Or existing useCases are fine if they are simple wrappers.
+    // existing useCases.listSuppliers calls repo.list.
+    // But handler previously used useCases.
+    const sRes = await procurement.repositories.supplier.query(tenantId, { limit: 1000 });
+    const pRes = await catalog.repositories.product.query(tenantId, { limit: 1000 });
     const { items: suppliers } = unwrap(sRes);
     const { items: products } = unwrap(pRes);
 
@@ -165,11 +197,18 @@ export const purchaseOrderDetailHandler = async (c) => {
     if (isErr(poRes)) return c.text('PO not found', 404);
     const po = poRes.value;
 
-    for (const item of po.items) {
-        const pRes = await catalog.useCases.getProduct.execute(tenantId, item.productId);
-        const product = isErr(pRes) ? null : pRes.value;
-        item.productName = product ? product.name : 'Unknown';
-        item.sku = product ? product.sku : '';
+    // Populate Products manually (or via query if we fetched items via query, but items are embedded)
+    // Items are in PO.items array.
+    // We can use findByIds for products!
+    const productIds = po.items.map(i => i.productId);
+    const pRes = await catalog.repositories.product.findByIds(tenantId, productIds);
+    if (!isErr(pRes)) {
+        const pMap = new Map(pRes.value.map(p => [p.id, p]));
+        for (const item of po.items) {
+            const product = pMap.get(item.productId);
+            item.productName = product ? product.name : 'Unknown';
+            item.sku = product ? product.sku : '';
+        }
     }
 
     const sRes = await procurement.repositories.supplier.findById(tenantId, po.supplierId);
@@ -198,23 +237,21 @@ export const receivePurchaseOrderPageHandler = async (c) => {
     if (isErr(poRes)) return c.text('PO not found', 404);
     const po = poRes.value;
 
-    for (const item of po.items) {
-        const pRes = await catalog.useCases.getProduct.execute(tenantId, item.productId);
-        if (!isErr(pRes)) {
-             const product = pRes.value;
-             item.productName = product.name;
-             item.sku = product.sku;
+    const productIds = po.items.map(i => i.productId);
+    const pRes = await catalog.repositories.product.findByIds(tenantId, productIds);
+    if (!isErr(pRes)) {
+        const pMap = new Map(pRes.value.map(p => [p.id, p]));
+        for (const item of po.items) {
+             const product = pMap.get(item.productId);
+             if (product) {
+                 item.productName = product.name;
+                 item.sku = product.sku;
+             }
         }
     }
 
-    const wRes = await inventory.repositories.warehouse.list(tenantId, { limit: 100 });
-    const warehouses = unwrap(wRes).items;
-    let allLocations = [];
-    for (const w of warehouses) {
-        const lRes = await inventory.repositories.location.queryByIndex(tenantId, 'warehouse', w.id, { limit: 1000 });
-        const locs = unwrap(lRes).items;
-        allLocations = allLocations.concat(locs);
-    }
+    const lRes = await inventory.repositories.location.query(tenantId, { limit: 1000 });
+    const allLocations = unwrap(lRes).items;
 
     const html = await renderPage(ReceivePurchaseOrderPage, {
         user,
