@@ -1,6 +1,9 @@
-// Communication Seeder
-export const seedCommunication = async (tenantId, { postFeedItem, sendMessage, notifications }) => {
+import { Random } from './utils.js';
+
+export const seedCommunication = async (ctx, tenantId, users) => {
     console.log('🌱 Seeding Communication Data...');
+    const comms = ctx.get('domain.communication');
+    const { postFeedItem, sendMessage, notifications } = comms.useCases;
 
     // --- Seed Feed ---
     const feedItems = [
@@ -39,7 +42,10 @@ export const seedCommunication = async (tenantId, { postFeedItem, sendMessage, n
     }
 
     // --- Seed Conversations ---
-    // sendMessage handles starting conversations if no ID is passed
+    // Use real users if available, otherwise fallbacks
+    const userEmails = users && users.length > 0 ? users.map(u => u.email) : ['admin@test.com', 'manager@test.com', 'user@test.com'];
+    const getRandomUser = () => Random.element(userEmails);
+
     const conversationsData = [
         {
             from: 'system',
@@ -47,66 +53,68 @@ export const seedCommunication = async (tenantId, { postFeedItem, sendMessage, n
             content: 'Hello everyone! Please check the new feed.'
         },
         {
-            from: 'admin',
-            to: 'manager',
+            from: userEmails[0],
+            to: userEmails[1] || 'manager@test.com',
             content: 'Can you review the latest Q3 report?'
-        },
-        {
-            from: 'support',
-            to: 'admin',
-            content: 'Customer #420 is requesting a refund.'
         }
     ];
 
     // Create some threads
     for (const conv of conversationsData) {
         // Start conversation
-        const msg = await sendMessage(tenantId, conv);
+        const res = await sendMessage(tenantId, conv);
+        // Note: useCases return Results (ok/value)
+        if (!res || !res.ok) continue;
+        const msg = res.value;
 
         // Add a reply to the first one for demo
-        if (conv.from === 'admin') {
+        if (conv.from === userEmails[0]) {
             await sendMessage(tenantId, {
                 conversationId: msg.conversationId,
-                from: 'manager',
+                from: conv.to,
                 content: 'Sure, I will take a look this afternoon.'
             });
             await sendMessage(tenantId, {
                 conversationId: msg.conversationId,
-                from: 'admin',
+                from: conv.from,
                 content: 'Thanks, let me know if you spot any issues.'
             });
         }
     }
 
     // Generate more random conversations
-    const users = ['alice', 'bob', 'charlie', 'dave'];
     for (let i = 0; i < 8; i++) {
-        const user1 = users[i % users.length];
-        const user2 = users[(i + 1) % users.length];
+        const user1 = getRandomUser();
+        let user2 = getRandomUser();
+        while (user2 === user1 && userEmails.length > 1) {
+            user2 = getRandomUser();
+        }
 
-        const msg = await sendMessage(tenantId, {
+        const res = await sendMessage(tenantId, {
             from: user1,
             to: user2,
             content: `Hey ${user2}, update on project phase ${i}?`
         });
 
-        // Random replies
-        if (i % 2 === 0) {
-             await sendMessage(tenantId, {
-                conversationId: msg.conversationId,
-                from: user2,
-                content: `Working on it, ${user1}. Will accept PR shortly.`
-            });
+        if (res && res.ok) {
+            const msg = res.value;
+            // Random replies
+            if (i % 2 === 0) {
+                 await sendMessage(tenantId, {
+                    conversationId: msg.conversationId,
+                    from: user2,
+                    content: `Working on it, ${user1}. Will accept PR shortly.`
+                });
+            }
         }
     }
 
     // --- Seed Notifications ---
+    // Note: notification-seeder.js also exists. This adds communication-specific notifications.
     const notifs = [
         { level: 'INFO', title: 'System Update', message: 'Version 2.0 is live.' },
         { level: 'WARN', title: 'Low Stock', message: 'Product X is running low.', link: '/ims/inventory' },
-        { level: 'SUCCESS', title: 'Backup Complete', message: 'Daily backup finished successfully.' },
-        { level: 'ERROR', title: 'Failed Login', message: 'Multiple failed login attempts detected from IP 192.168.1.100' },
-        ...Array.from({ length: 12 }).map((_, i) => ({
+        ...Array.from({ length: 5 }).map((_, i) => ({
             level: ['INFO', 'SUCCESS', 'WARN'][i % 3],
             title: `Routine Check ${i}`,
             message: `Routine system check ${i} completed. Status: OK.`,
