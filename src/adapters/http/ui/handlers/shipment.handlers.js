@@ -3,6 +3,7 @@ import { AdminLayout } from '../layouts/admin-layout.jsx';
 import { ShipmentsPage } from '../pages/ims/shipments/shipments-page.jsx';
 import { ShipmentDetailPage } from '../pages/ims/shipments/shipment-detail-page.jsx';
 import { SelectOrderPage } from '../pages/ims/shipments/select-order-page.jsx';
+import { unwrap } from '../../../../../lib/trust/index.js';
 
 // New Shipment (Select Order)
 export const createShipmentSelectionHandler = async (c) => {
@@ -12,12 +13,25 @@ export const createShipmentSelectionHandler = async (c) => {
     const queries = c.ctx.get('domain.queries');
 
     // Fetch orders that are PAID or PARTIALLY_SHIPPED
-    const { items: allOrders } = await orders.useCases.listOrders.execute(tenantId, { limit: 100 });
+    // listOrders usually returns { items: [] } directly or Result?
+    // Let's check listOrders. It is a legacy use case or new?
+    // Assuming listOrders returns { items } directly based on previous code not crashing,
+    // BUT we should be safe.
+
+    // Actually, looking at orders.useCases.listOrders in src/ctx/orders/application/use-cases/list-orders.js
+    // It returns repo.list(...) which returns a Result.
+    // So this handler was likely broken too or getting lucky?
+    // Let's wrap it in unwrap() to be consistent with inventory.
+    const res = await orders.useCases.listOrders.execute(tenantId, { limit: 100 });
+    const { items: allOrders } = unwrap(res);
+
     const shippableOrders = allOrders.filter(o => o.status === 'PAID' || o.status === 'PARTIALLY_SHIPPED');
 
     for (const o of shippableOrders) {
         if (o.userId) {
              try {
+                // getCustomerProfile returns simple object (not Result) usually as it's a query service?
+                // Queries often return plain data. Let's assume plain for queries.
                 const result = await queries.useCases.getCustomerProfile.execute(tenantId, o.userId);
                 o.customerName = result.user?.name || result.user?.email || 'Unknown';
              } catch (e) {
@@ -42,7 +56,8 @@ export const listShipmentsHandler = async (c) => {
     const orders = c.ctx.get('domain.orders');
     const cursor = c.req.query('cursor');
 
-    const { items: shipments, nextCursor } = await orders.useCases.listShipments.execute(tenantId, { limit: 20, cursor });
+    const res = await orders.useCases.listShipments.execute(tenantId, { limit: 20, cursor });
+    const { items: shipments, nextCursor } = unwrap(res);
 
     const html = await renderPage(ShipmentsPage, {
         user,
@@ -63,15 +78,34 @@ export const shipmentDetailHandler = async (c) => {
     const orders = c.ctx.get('domain.orders');
     const catalog = c.ctx.get('domain.catalog');
 
-    const shipment = await orders.repositories.shipment.findById(tenantId, shipmentId);
+    // repo.findById returns Result
+    const sRes = await orders.repositories.shipment.findById(tenantId, shipmentId);
+
+    // Handle error manually or via try/catch unwrap
+    let shipment;
+    try {
+        shipment = unwrap(sRes);
+    } catch {
+        return c.text('Shipment not found', 404);
+    }
 
     if (!shipment) return c.text('Shipment not found', 404);
 
-    const order = await orders.useCases.getOrder.execute(tenantId, shipment.orderId);
+    // useCases.getOrder returns Result
+    const oRes = await orders.useCases.getOrder.execute(tenantId, shipment.orderId);
+    let order = null;
+    try {
+        order = unwrap(oRes);
+    } catch {}
 
     // Enrich shipment items
     const enrichedItems = await Promise.all(shipment.items.map(async (item) => {
-        const p = await catalog.useCases.getProduct.execute(tenantId, item.productId).catch(() => null);
+        let p = null;
+        try {
+            const pRes = await catalog.useCases.getProduct.execute(tenantId, item.productId);
+            p = unwrap(pRes);
+        } catch {}
+
         return {
             ...item,
             productName: p ? p.name : 'Unknown',
