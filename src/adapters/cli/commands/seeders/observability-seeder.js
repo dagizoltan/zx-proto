@@ -1,12 +1,10 @@
 // Observability Seeder (Logs)
 // Ideally we rely on the system generating logs, but we can backfill some for demo.
 
-export const seedObservability = async (tenantId, { obs }) => {
+export const seedObservability = async (ctx, tenantId) => {
     console.log('🌱 Seeding Observability Logs...');
 
-    // We can't easily inject into the repository directly if we only have the 'obs' service wrapper
-    // which usually just logs to console and async writes.
-    // So we will just trigger some logs.
+    const obs = ctx.get('infra.obs');
 
     // Past logs need manual insertion via repo if we want backdated ones,
     // but the obs service usually timestamps NOW.
