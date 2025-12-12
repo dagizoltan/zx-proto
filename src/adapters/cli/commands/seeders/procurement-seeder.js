@@ -1,5 +1,5 @@
 import { Random, Log, Time } from './utils.js';
-import { unwrap, isErr } from '../../../../../lib/trust/index.js'; // Fixed 5 levels
+import { unwrap, isErr } from '@lib/trust/index.js'; // Fixed 5 levels
 
 export const seedProcurementAndManufacturing = async (ctx, tenantId, locationIds) => {
     Log.step('Seeding Procurement & Manufacturing');

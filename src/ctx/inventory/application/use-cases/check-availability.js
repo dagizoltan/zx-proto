@@ -1,4 +1,4 @@
-import { Ok, Err, isErr, unwrap } from '../../../../../../lib/trust/index.js';
+import { Ok, Err, isErr, unwrap } from '@lib/trust/index.js';
 
 export const createCheckAvailability = ({ stockRepository, cache }) => {
   const execute = async (tenantId, productId, quantity) => {

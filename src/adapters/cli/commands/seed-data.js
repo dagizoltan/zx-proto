@@ -26,7 +26,6 @@ import { seedNotifications } from './seeders/notification-seeder.js';
 import { seedCommunication } from './seeders/communication-seeder.js';
 import { seedObservability } from './seeders/observability-seeder.js';
 import { Log } from './seeders/utils.js';
-import { DenoKV } from '@src/infra/persistence/kv/deno-kv.js';
 
 const run = async () => {
     console.log('🌱 Starting Database Seed...');
