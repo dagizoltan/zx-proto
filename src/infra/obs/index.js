@@ -13,8 +13,6 @@ export const createObsContext = async (deps) => {
   const traceRepo = createKVTraceRepository(kvPool);
   const metricRepo = createKVMetricRepository(kvPool);
 
-  console.log('DEBUG: createObsContext - logRepo:', !!logRepo);
-
   const obs = createObs({
       kvPool,
       minLevel,
