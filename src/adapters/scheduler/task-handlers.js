@@ -255,3 +255,6 @@ export const createTaskHandlers = ({
         }
     };
 };
+
+// Also export the old name for backward compatibility until refactor is complete
+export const schedulerTaskHandlers = createTaskHandlers;

@@ -114,7 +114,8 @@ async function bootstrap() {
   });
 
   // 5.5 Register Scheduled Tasks
-  const scheduler = ctx.get('domain.scheduler').service;
+  const schedulerCtx = ctx.get('domain.scheduler');
+  const scheduler = schedulerCtx?.services?.scheduler || schedulerCtx?.scheduler || schedulerCtx?.service;
 
   // Resolve dependencies for handlers
   const handlers = createTaskHandlers({
@@ -124,85 +125,86 @@ async function bootstrap() {
     catalog: ctx.get('domain.catalog'),
     manufacturing: ctx.get('domain.manufacturing'),
     procurement: ctx.get('domain.procurement'),
-    crm: ctx.get('domain.communication'), // Using communication or access-control? Usually crm is mixed. Let's pass access-control if needed or queries.
-    // Wait, the plan said CRM but we don't have a distinct CRM domain in context registration except 'communication' or 'access-control'.
-    // The previous prompt showed 'createCommunicationContext'.
-    // However, CRM routes exist. Let's pass 'access-control' and 'orders' which we already have.
-    // The handler uses 'orders' for LTV. It doesn't use 'crm' object directly.
+    crm: ctx.get('domain.communication'),
     obs: ctx.get('infra.obs')
   });
 
-  // Register all handlers
-  Object.entries(handlers).forEach(([key, handler]) => {
-      scheduler.registerHandler(key, handler);
-  });
+  if (scheduler && typeof scheduler.registerHandler === 'function') {
+      // Register all handlers
+      Object.entries(handlers).forEach(([key, handler]) => {
+          scheduler.registerHandler(key, handler);
+      });
 
-  // Sync definitions (default schedules)
-  await scheduler.syncDefinitions('default', [
-      {
-          handlerKey: 'system.cleanup_audit_logs',
-          name: 'Cleanup Old Audit Logs',
-          description: 'Deletes audit logs older than 90 days',
-          defaultSchedule: '0 3 * * *' // 3 AM Daily
-      },
-      {
-          handlerKey: 'inventory.snapshot',
-          name: 'Daily Inventory Snapshot',
-          description: 'Logs total inventory value and item count.',
-          defaultSchedule: '55 23 * * *' // 11:55 PM Daily
-      },
-      {
-          handlerKey: 'inventory.check_low_stock',
-          name: 'Check Low Stock',
-          description: 'Scans for products below threshold and logs warnings.',
-          defaultSchedule: '0 * * * *' // Hourly
-      },
-      {
-          handlerKey: 'orders.cancel_stale',
-          name: 'Cancel Stale Orders',
-          description: 'Cancels unpaid orders older than 48 hours.',
-          defaultSchedule: '0 */6 * * *' // Every 6 hours
-      },
-      {
-          handlerKey: 'orders.send_payment_reminders',
-          name: 'Send Payment Reminders',
-          description: 'Sends emails for unpaid orders older than 24h.',
-          defaultSchedule: '0 9 * * *' // 9 AM Daily
-      },
-      {
-          handlerKey: 'catalog.sync_search_index',
-          name: 'Sync Search Index',
-          description: 'Re-indexes products for search optimization.',
-          defaultSchedule: '0 2 * * *' // 2 AM Daily
-      },
-      {
-          handlerKey: 'system.database_backup',
-          name: 'Database Backup',
-          description: 'Full backup of KV store to external storage.',
-          defaultSchedule: '0 4 * * *' // 4 AM Daily
-      },
-      {
-          handlerKey: 'manufacturing.check_overdue_work_orders',
-          name: 'Check Overdue Work Orders',
-          description: 'Flags work orders past their due date.',
-          defaultSchedule: '0 8 * * *' // 8 AM Daily
-      },
-      {
-          handlerKey: 'procurement.check_pending_pos',
-          name: 'Check Pending POs',
-          description: 'Checks for delayed purchase orders.',
-          defaultSchedule: '0 10 * * *' // 10 AM Daily
-      },
-      {
-          handlerKey: 'crm.compute_customer_ltv',
-          name: 'Compute Customer LTV',
-          description: 'Updates Lifetime Value metrics for customers.',
-          defaultSchedule: '0 1 * * 1' // 1 AM Weekly (Monday)
+      // Sync definitions (default schedules)
+      await scheduler.syncDefinitions('default', [
+          {
+              handlerKey: 'system.cleanup_audit_logs',
+              name: 'Cleanup Old Audit Logs',
+              description: 'Deletes audit logs older than 90 days',
+              defaultSchedule: '0 3 * * *' // 3 AM Daily
+          },
+          {
+              handlerKey: 'inventory.snapshot',
+              name: 'Daily Inventory Snapshot',
+              description: 'Logs total inventory value and item count.',
+              defaultSchedule: '55 23 * * *' // 11:55 PM Daily
+          },
+          {
+              handlerKey: 'inventory.check_low_stock',
+              name: 'Check Low Stock',
+              description: 'Scans for products below threshold and logs warnings.',
+              defaultSchedule: '0 * * * *' // Hourly
+          },
+          {
+              handlerKey: 'orders.cancel_stale',
+              name: 'Cancel Stale Orders',
+              description: 'Cancels unpaid orders older than 48 hours.',
+              defaultSchedule: '0 */6 * * *' // Every 6 hours
+          },
+          {
+              handlerKey: 'orders.send_payment_reminders',
+              name: 'Send Payment Reminders',
+              description: 'Sends emails for unpaid orders older than 24h.',
+              defaultSchedule: '0 9 * * *' // 9 AM Daily
+          },
+          {
+              handlerKey: 'catalog.sync_search_index',
+              name: 'Sync Search Index',
+              description: 'Re-indexes products for search optimization.',
+              defaultSchedule: '0 2 * * *' // 2 AM Daily
+          },
+          {
+              handlerKey: 'system.database_backup',
+              name: 'Database Backup',
+              description: 'Full backup of KV store to external storage.',
+              defaultSchedule: '0 4 * * *' // 4 AM Daily
+          },
+          {
+              handlerKey: 'manufacturing.check_overdue_work_orders',
+              name: 'Check Overdue Work Orders',
+              description: 'Flags work orders past their due date.',
+              defaultSchedule: '0 8 * * *' // 8 AM Daily
+          },
+          {
+              handlerKey: 'procurement.check_pending_pos',
+              name: 'Check Pending POs',
+              description: 'Checks for delayed purchase orders.',
+              defaultSchedule: '0 10 * * *' // 10 AM Daily
+          },
+          {
+              handlerKey: 'crm.compute_customer_ltv',
+              name: 'Compute Customer LTV',
+              description: 'Updates Lifetime Value metrics for customers.',
+              defaultSchedule: '0 1 * * 1' // 1 AM Weekly (Monday)
       }
-  ]);
+      ]);
 
-  // Start Cron Ticker
-  createCronAdapter(scheduler).start();
+      // Start Cron Ticker
+      createCronAdapter(scheduler).start();
+  } else {
+      console.warn('⚠️ Scheduler service not available or invalid. Scheduled tasks disabled.');
+  }
+
 
   // 6. Create and start server with both API and UI apps
   console.log('🌐 Creating HTTP server...');

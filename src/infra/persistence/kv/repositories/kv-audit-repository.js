@@ -1,5 +1,5 @@
 import { createRepository, useSchema, useIndexing } from '../../../../../lib/trust/index.js';
-import { AuditLogSchema } from '../../../../ctx/observability/domain/schemas/observability.schema.js';
+import { AuditLogSchema } from '../../../../ctx/observability/domain/schemas/audit-log.schema.js';
 
 export const createKVAuditRepository = (kvPool) => {
     return createRepository(kvPool, 'audit_logs', [

@@ -11,16 +11,6 @@ const LogSchema = z.object({
     context: z.record(z.any()).optional()
 });
 
-export const createKVLogRepository = (kvPool) => {
-    return createRepository(kvPool, 'logs', [
-        useSchema(LogSchema),
-        useIndexing({
-            'level': (l) => l.level.toLowerCase(),
-            'timestamp_desc': (l) => l.timestamp
-        })
-    ]);
-};
-
 export const createKVActivityRepository = (kvPool) => {
     // Activity logs are just logs with level='activity'?
     // Or separate entity? Legacy used 'logs' with prefix.

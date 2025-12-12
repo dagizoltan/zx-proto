@@ -1,12 +1,8 @@
-import {
-    createKVFeedRepository,
-    createKVNotificationRepository,
-    createKVConversationRepository,
-    createKVMessageRepository
-} from '../../infra/persistence/kv/repositories/kv-communication-repositories.js';
+import { createKVFeedRepository } from '../../infra/persistence/kv/repositories/kv-feed-repository.js';
+import { createKVNotificationRepository } from '../../infra/persistence/kv/repositories/kv-notification-repository.js';
+import { createKVConversationRepository } from '../../infra/persistence/kv/repositories/kv-conversation-repository.js';
+import { createKVMessageRepository } from '../../infra/persistence/kv/repositories/kv-message-repository.js';
 
-import { createPostFeedItem } from './application/use-cases/post-feed-item.js';
-import { createSendMessage } from './application/use-cases/send-message.js';
 import { createNotificationService } from './domain/services/notification-service.js';
 
 export const createCommunicationContext = (deps) => {
@@ -31,9 +27,10 @@ export const createCommunicationContext = (deps) => {
         services: {
             notification: notificationService
         },
+        // TEMPORARY: Removed broken use cases until implementation is restored
         useCases: {
-            postFeedItem: createPostFeedItem({ feedRepository: feedRepo, eventBus }),
-            sendMessage: createSendMessage({ conversationRepository: conversationRepo, messageRepository: messageRepo, eventBus })
+            // postFeedItem: createPostFeedItem({ feedRepository: feedRepo, eventBus }),
+            // sendMessage: createSendMessage({ conversationRepository: conversationRepo, messageRepository: messageRepo, eventBus })
         }
     };
 };
