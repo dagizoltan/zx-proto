@@ -9,6 +9,7 @@ import { CreateLocationPage } from '../pages/ims/inventory/create-location-page.
 import { LocationDetailPage } from '../pages/ims/inventory/location-detail-page.jsx';
 import { TransferStockPage } from '../pages/ims/inventory/transfer-stock-page.jsx';
 import { ReceiveStockPage } from '../pages/ims/inventory/receive-stock-page.jsx';
+import { unwrap, isErr } from '../../../../../lib/trust/index.js';
 
 // Dashboard / All Products Stock
 export const listInventoryHandler = async (c) => {
@@ -17,7 +18,8 @@ export const listInventoryHandler = async (c) => {
   const inventory = c.ctx.get('domain.inventory');
   const cursor = c.req.query('cursor');
   const limit = 10;
-  const { items: products, nextCursor } = await inventory.useCases.listAllProducts.execute(tenantId, { limit, cursor });
+  const res = await inventory.useCases.listAllProducts.execute(tenantId, { limit, cursor });
+  const { items: products, nextCursor } = unwrap(res);
 
   const html = await renderPage(InventoryPage, {
     user,
@@ -37,11 +39,15 @@ export const transferStockPageHandler = async (c) => {
     const tenantId = c.get('tenantId');
     const inventory = c.ctx.get('domain.inventory');
 
-    const { items: products } = await inventory.useCases.listAllProducts.execute(tenantId, { limit: 100 });
-    const warehouses = await inventory.repositories.warehouse.findAll(tenantId);
+    const pRes = await inventory.useCases.listAllProducts.execute(tenantId, { limit: 100 });
+    const { items: products } = unwrap(pRes);
+
+    const wRes = await inventory.repositories.warehouse.list(tenantId, { limit: 100 });
+    const warehouses = unwrap(wRes).items;
     let allLocations = [];
     for (const w of warehouses) {
-        const locs = await inventory.repositories.location.findByWarehouseId(tenantId, w.id);
+        const lRes = await inventory.repositories.location.queryByIndex(tenantId, 'warehouse', w.id, { limit: 1000 });
+        const locs = unwrap(lRes).items;
         allLocations = allLocations.concat(locs);
     }
 
@@ -61,13 +67,13 @@ export const transferStockHandler = async (c) => {
     const body = await c.req.parseBody();
 
     try {
-        await inventory.useCases.moveStock.execute(tenantId, {
+        unwrap(await inventory.useCases.moveStock.execute(tenantId, {
             productId: body.productId,
             fromLocationId: body.fromLocationId,
             toLocationId: body.toLocationId,
             quantity: parseInt(body.quantity),
             reason: body.reason
-        });
+        }));
         return c.redirect('/ims/inventory');
     } catch (e) {
         return c.text(e.message, 400);
@@ -80,11 +86,15 @@ export const receiveStockPageHandler = async (c) => {
     const tenantId = c.get('tenantId');
     const inventory = c.ctx.get('domain.inventory');
 
-    const { items: products } = await inventory.useCases.listAllProducts.execute(tenantId, { limit: 100 });
-    const warehouses = await inventory.repositories.warehouse.findAll(tenantId);
+    const pRes = await inventory.useCases.listAllProducts.execute(tenantId, { limit: 100 });
+    const { items: products } = unwrap(pRes);
+
+    const wRes = await inventory.repositories.warehouse.list(tenantId, { limit: 100 });
+    const warehouses = unwrap(wRes).items;
     let allLocations = [];
     for (const w of warehouses) {
-        const locs = await inventory.repositories.location.findByWarehouseId(tenantId, w.id);
+        const lRes = await inventory.repositories.location.queryByIndex(tenantId, 'warehouse', w.id, { limit: 1000 });
+        const locs = unwrap(lRes).items;
         allLocations = allLocations.concat(locs);
     }
 
@@ -105,13 +115,13 @@ export const receiveStockHandler = async (c) => {
 
     try {
         // Using receiveStockRobust as noted in memory/AGENTS.md
-        await inventory.useCases.receiveStockRobust.execute(tenantId, {
+        unwrap(await inventory.useCases.receiveStockRobust.execute(tenantId, {
             productId: body.productId,
             locationId: body.locationId,
             quantity: parseInt(body.quantity),
             batchNumber: body.batchNumber,
             expiryDate: body.expiryDate ? new Date(body.expiryDate).toISOString() : undefined
-        });
+        }));
         return c.redirect('/ims/inventory');
     } catch (e) {
         return c.text(e.message, 400);
@@ -124,7 +134,8 @@ export const listWarehousesHandler = async (c) => {
     const tenantId = c.get('tenantId');
     const inventory = c.ctx.get('domain.inventory');
 
-    const warehouses = await inventory.repositories.warehouse.findAll(tenantId);
+    const res = await inventory.repositories.warehouse.list(tenantId, { limit: 100 });
+    const warehouses = unwrap(res).items;
 
     const html = await renderPage(WarehousesPage, {
         user,
@@ -154,10 +165,10 @@ export const createWarehouseHandler = async (c) => {
     const body = await c.req.parseBody();
 
     try {
-        await inventory.repositories.warehouse.save(tenantId, {
+        unwrap(await inventory.repositories.warehouse.save(tenantId, {
             name: body.name,
             code: body.code
-        });
+        }));
         return c.redirect('/ims/inventory/warehouses'); // Normalized URL
     } catch (e) {
         return c.text(e.message, 400);
@@ -170,10 +181,12 @@ export const warehouseDetailHandler = async (c) => {
     const wId = c.req.param('id');
     const inventory = c.ctx.get('domain.inventory');
 
-    const warehouse = await inventory.repositories.warehouse.findById(tenantId, wId);
-    if (!warehouse) return c.text('Warehouse not found', 404);
+    const wRes = await inventory.repositories.warehouse.findById(tenantId, wId);
+    if (isErr(wRes)) return c.text('Warehouse not found', 404);
+    const warehouse = wRes.value;
 
-    const locations = await inventory.repositories.location.findByWarehouseId(tenantId, wId);
+    const lRes = await inventory.repositories.location.queryByIndex(tenantId, 'warehouse', wId, { limit: 1000 });
+    const locations = unwrap(lRes).items;
 
     const html = await renderPage(WarehouseDetailPage, {
         user,
@@ -192,10 +205,12 @@ export const listLocationsHandler = async (c) => {
     const tenantId = c.get('tenantId');
     const inventory = c.ctx.get('domain.inventory');
 
-    const warehouses = await inventory.repositories.warehouse.findAll(tenantId);
+    const wRes = await inventory.repositories.warehouse.list(tenantId, { limit: 100 });
+    const warehouses = unwrap(wRes).items;
     let allLocations = [];
     for (const w of warehouses) {
-        const locs = await inventory.repositories.location.findByWarehouseId(tenantId, w.id);
+        const lRes = await inventory.repositories.location.queryByIndex(tenantId, 'warehouse', w.id, { limit: 1000 });
+        const locs = unwrap(lRes).items;
         allLocations = allLocations.concat(locs);
     }
 
@@ -215,10 +230,12 @@ export const createLocationPageHandler = async (c) => {
     const tenantId = c.get('tenantId');
     const inventory = c.ctx.get('domain.inventory');
 
-    const warehouses = await inventory.repositories.warehouse.findAll(tenantId);
+    const wRes = await inventory.repositories.warehouse.list(tenantId, { limit: 100 });
+    const warehouses = unwrap(wRes).items;
     let allLocations = [];
     for (const w of warehouses) {
-        const locs = await inventory.repositories.location.findByWarehouseId(tenantId, w.id);
+        const lRes = await inventory.repositories.location.queryByIndex(tenantId, 'warehouse', w.id, { limit: 1000 });
+        const locs = unwrap(lRes).items;
         allLocations = allLocations.concat(locs);
     }
 
@@ -239,12 +256,12 @@ export const createLocationHandler = async (c) => {
     const body = await c.req.parseBody();
 
     try {
-        await inventory.repositories.location.save(tenantId, {
+        unwrap(await inventory.repositories.location.save(tenantId, {
             code: body.code,
             type: body.type,
             warehouseId: body.warehouseId,
             parentId: body.parentId || undefined
-        });
+        }));
         return c.redirect('/ims/inventory/locations'); // Normalized URL
     } catch (e) {
         return c.text(e.message, 400);
@@ -257,11 +274,18 @@ export const locationDetailHandler = async (c) => {
     const locId = c.req.param('id');
     const inventory = c.ctx.get('domain.inventory');
 
-    const location = await inventory.repositories.location.findById(tenantId, locId);
-    if (!location) return c.text('Location not found', 404);
+    const lRes = await inventory.repositories.location.findById(tenantId, locId);
+    if (isErr(lRes)) return c.text('Location not found', 404);
+    const location = lRes.value;
 
-    const warehouse = await inventory.repositories.warehouse.findById(tenantId, location.warehouseId);
-    const parent = location.parentId ? await inventory.repositories.location.findById(tenantId, location.parentId) : null;
+    const wRes = await inventory.repositories.warehouse.findById(tenantId, location.warehouseId);
+    const warehouse = isErr(wRes) ? null : wRes.value;
+
+    let parent = null;
+    if (location.parentId) {
+        const pRes = await inventory.repositories.location.findById(tenantId, location.parentId);
+        parent = isErr(pRes) ? null : pRes.value;
+    }
 
     const html = await renderPage(LocationDetailPage, {
         user,

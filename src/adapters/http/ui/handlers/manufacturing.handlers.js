@@ -7,6 +7,7 @@ import { WorkOrdersPage } from '../pages/ims/manufacturing/work-orders-page.jsx'
 import { WorkOrderDetailPage } from '../pages/ims/manufacturing/wo-detail-page.jsx';
 import { CreateWorkOrderPage } from '../pages/ims/manufacturing/create-wo-page.jsx';
 import { CompleteWorkOrderPage } from '../pages/ims/manufacturing/complete-wo-page.jsx';
+import { unwrap, isErr } from '../../../../../lib/trust/index.js';
 
 // BOMs
 export const listBOMsHandler = async (c) => {
@@ -15,10 +16,12 @@ export const listBOMsHandler = async (c) => {
     const manufacturing = c.ctx.get('domain.manufacturing');
     const catalog = c.ctx.get('domain.catalog');
 
-    const { items: boms } = await manufacturing.useCases.listBOMs.execute(tenantId);
+    const res = await manufacturing.useCases.listBOMs.execute(tenantId);
+    const { items: boms } = unwrap(res);
 
     for (const bom of boms) {
-        const product = await catalog.useCases.getProduct.execute(tenantId, bom.productId).catch(() => null);
+        const pRes = await catalog.useCases.getProduct.execute(tenantId, bom.productId);
+        const product = isErr(pRes) ? null : pRes.value;
         bom.productName = product ? product.name : 'Unknown Product';
     }
 
@@ -37,7 +40,8 @@ export const createBOMPageHandler = async (c) => {
     const tenantId = c.get('tenantId');
     const catalog = c.ctx.get('domain.catalog');
 
-    const { items: products } = await catalog.useCases.listProducts.execute(tenantId, 1, 100);
+    const res = await catalog.useCases.listProducts.execute(tenantId, 1, 100);
+    const { items: products } = unwrap(res);
 
     const html = await renderPage(CreateBOMPage, {
         user,
@@ -65,12 +69,12 @@ export const createBOMHandler = async (c) => {
     }
 
     try {
-        await manufacturing.useCases.createBOM.execute(tenantId, {
+        unwrap(await manufacturing.useCases.createBOM.execute(tenantId, {
             name: body.name,
             productId: body.productId,
             laborCost: parseFloat(body.laborCost || 0),
             components
-        });
+        }));
         return c.redirect('/ims/manufacturing/boms');
     } catch (e) {
         return c.text(e.message, 400);
@@ -84,14 +88,17 @@ export const bomDetailHandler = async (c) => {
     const manufacturing = c.ctx.get('domain.manufacturing');
     const catalog = c.ctx.get('domain.catalog');
 
-    const bom = await manufacturing.repositories.bom.findById(tenantId, bomId);
-    if (!bom) return c.text('BOM not found', 404);
+    const res = await manufacturing.repositories.bom.findById(tenantId, bomId);
+    if (isErr(res)) return c.text('BOM not found', 404);
+    const bom = res.value;
 
-    const product = await catalog.useCases.getProduct.execute(tenantId, bom.productId).catch(() => null);
+    const pRes = await catalog.useCases.getProduct.execute(tenantId, bom.productId);
+    const product = isErr(pRes) ? null : pRes.value;
     bom.productName = product ? product.name : 'Unknown';
 
     for (const comp of bom.components) {
-        const p = await catalog.useCases.getProduct.execute(tenantId, comp.productId).catch(() => null);
+        const cRes = await catalog.useCases.getProduct.execute(tenantId, comp.productId);
+        const p = isErr(cRes) ? null : cRes.value;
         comp.productName = p ? p.name : 'Unknown';
         comp.sku = p ? p.sku : '';
     }
@@ -112,10 +119,12 @@ export const listWorkOrdersHandler = async (c) => {
     const tenantId = c.get('tenantId');
     const manufacturing = c.ctx.get('domain.manufacturing');
 
-    const { items: workOrders } = await manufacturing.useCases.listWorkOrders.execute(tenantId);
+    const res = await manufacturing.useCases.listWorkOrders.execute(tenantId);
+    const { items: workOrders } = unwrap(res);
 
     for (const wo of workOrders) {
-        const bom = await manufacturing.repositories.bom.findById(tenantId, wo.bomId);
+        const bRes = await manufacturing.repositories.bom.findById(tenantId, wo.bomId);
+        const bom = isErr(bRes) ? null : bRes.value;
         if (bom) {
              wo.productName = 'Product from BOM ' + bom.name;
         }
@@ -136,7 +145,8 @@ export const createWorkOrderPageHandler = async (c) => {
     const tenantId = c.get('tenantId');
     const manufacturing = c.ctx.get('domain.manufacturing');
 
-    const { items: boms } = await manufacturing.useCases.listBOMs.execute(tenantId);
+    const res = await manufacturing.useCases.listBOMs.execute(tenantId);
+    const { items: boms } = unwrap(res);
 
     const html = await renderPage(CreateWorkOrderPage, {
         user,
@@ -155,15 +165,16 @@ export const createWorkOrderHandler = async (c) => {
     const body = await c.req.parseBody();
 
     try {
-        await manufacturing.useCases.createWorkOrder.execute(tenantId, {
+        unwrap(await manufacturing.useCases.createWorkOrder.execute(tenantId, {
             bomId: body.bomId,
             quantity: parseInt(body.quantity),
             startDate: body.startDate ? new Date(body.startDate).toISOString() : undefined,
             code: body.code || undefined
-        });
+        }));
         return c.redirect('/ims/manufacturing/work-orders');
     } catch (e) {
-        const { items: boms } = await manufacturing.useCases.listBOMs.execute(tenantId);
+        const res = await manufacturing.useCases.listBOMs.execute(tenantId);
+        const { items: boms } = unwrap(res);
 
         const html = await renderPage(CreateWorkOrderPage, {
             user,
@@ -185,13 +196,16 @@ export const workOrderDetailHandler = async (c) => {
     const manufacturing = c.ctx.get('domain.manufacturing');
     const catalog = c.ctx.get('domain.catalog');
 
-    const wo = await manufacturing.repositories.workOrder.findById(tenantId, woId);
-    if (!wo) return c.text('Work Order not found', 404);
+    const woRes = await manufacturing.repositories.workOrder.findById(tenantId, woId);
+    if (isErr(woRes)) return c.text('Work Order not found', 404);
+    const wo = woRes.value;
 
-    const bom = await manufacturing.repositories.bom.findById(tenantId, wo.bomId);
+    const bRes = await manufacturing.repositories.bom.findById(tenantId, wo.bomId);
+    const bom = isErr(bRes) ? null : bRes.value;
 
     if (bom) {
-        const product = await catalog.useCases.getProduct.execute(tenantId, bom.productId).catch(() => null);
+        const pRes = await catalog.useCases.getProduct.execute(tenantId, bom.productId);
+        const product = isErr(pRes) ? null : pRes.value;
         wo.productName = product ? product.name : 'Unknown';
     } else {
         wo.productName = 'Unknown Product';
@@ -230,15 +244,20 @@ export const completeWorkOrderHandler = async (c) => {
         // Render selection page
         const user = c.get('user');
         const inventory = c.ctx.get('domain.inventory');
-        const wo = await manufacturing.repositories.workOrder.findById(tenantId, woId);
+        const woRes = await manufacturing.repositories.workOrder.findById(tenantId, woId);
+        if (isErr(woRes)) return c.text('WO not found', 404);
+        const wo = woRes.value;
 
-        const bom = await manufacturing.repositories.bom.findById(tenantId, wo.bomId);
+        const bRes = await manufacturing.repositories.bom.findById(tenantId, wo.bomId);
+        const bom = isErr(bRes) ? null : bRes.value;
         wo.productName = 'Product from ' + (bom ? bom.name : 'Unknown BOM');
 
-        const warehouses = await inventory.repositories.warehouse.findAll(tenantId);
+        const wRes = await inventory.repositories.warehouse.list(tenantId, { limit: 100 });
+        const warehouses = unwrap(wRes).items;
         let allLocations = [];
         for (const w of warehouses) {
-            const locs = await inventory.repositories.location.findByWarehouseId(tenantId, w.id);
+            const lRes = await inventory.repositories.location.queryByIndex(tenantId, 'warehouse', w.id, { limit: 1000 });
+            const locs = unwrap(lRes).items;
             allLocations = allLocations.concat(locs);
         }
 
