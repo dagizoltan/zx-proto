@@ -40,7 +40,8 @@ export const createCommunicationContext = (deps) => {
             listConversations: createListConversations({ conversationRepository: conversationRepo }),
             getConversation: createGetConversation({ conversationRepository: conversationRepo, messageRepository: messageRepo }),
             notifications: {
-                list: createListNotifications({ notificationRepository: notificationRepo })
+                list: createListNotifications({ notificationRepository: notificationRepo }),
+                notify: notificationService.notify // Expose service method as use case
             },
             postFeedItem: createPostFeedItem({ feedRepository: feedRepo, eventBus }),
             sendMessage: createSendMessage({ conversationRepository: conversationRepo, messageRepository: messageRepo, eventBus })
