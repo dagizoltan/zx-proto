@@ -22,7 +22,7 @@ export const TraceSchema = z.object({
 export const MetricSchema = z.object({
   id: z.string().uuid(),
   name: z.string(),
-  value: z.number(),
+  value: z.union([z.number(), z.string()]),
   tags: z.record(z.any()).optional(),
   timestamp: z.string().datetime()
 });

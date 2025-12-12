@@ -2,690 +2,689 @@
 🌱 Starting Database Seed...
 
 🔹 Cleaning Database...
-   ✅ Database cleaned (8765 entries removed).
-DEBUG: createObsContext - logRepo: true
+   ✅ Database cleaned (8685 entries removed).
    ✅ Contexts initialized.
 
 🔹 Seeding Access Control (Roles & Users)
 [AUDIT] Role created {
   tenantId: "default",
-  roleId: "d012ef9e-3a8c-4bf9-9d4f-da831ddeb247",
+  roleId: "051c409d-8474-47b3-b0c4-396c9b269411",
   name: "admin",
   action: "CREATE",
   resource: "Role",
-  resourceId: "d012ef9e-3a8c-4bf9-9d4f-da831ddeb247"
+  resourceId: "051c409d-8474-47b3-b0c4-396c9b269411"
 }
 [AUDIT] Role created {
   tenantId: "default",
-  roleId: "7fe779ad-eae2-40b1-9832-123a0325e009",
+  roleId: "7abe7ad7-3a5a-47fe-9a05-04c73411bb1d",
   name: "manager",
   action: "CREATE",
   resource: "Role",
-  resourceId: "7fe779ad-eae2-40b1-9832-123a0325e009"
+  resourceId: "7abe7ad7-3a5a-47fe-9a05-04c73411bb1d"
 }
 [AUDIT] Role created {
   tenantId: "default",
-  roleId: "5148477b-fb54-4817-8839-9eb518aea537",
+  roleId: "ce17c773-d259-491e-82f4-1a2a04cd6980",
   name: "warehouse_staff",
   action: "CREATE",
   resource: "Role",
-  resourceId: "5148477b-fb54-4817-8839-9eb518aea537"
+  resourceId: "ce17c773-d259-491e-82f4-1a2a04cd6980"
 }
 [AUDIT] Role created {
   tenantId: "default",
-  roleId: "79689925-7af1-47fb-bc17-52e141f5d588",
+  roleId: "6ac714cd-80ab-498a-a97a-af09aef862ca",
   name: "customer",
   action: "CREATE",
   resource: "Role",
-  resourceId: "79689925-7af1-47fb-bc17-52e141f5d588"
+  resourceId: "6ac714cd-80ab-498a-a97a-af09aef862ca"
 }
 [AUDIT] User registered {
   tenantId: "default",
-  userId: "7cd042c4-6916-4a85-bdee-ee10c57c56ba",
+  userId: "88585570-c6fc-4352-bd20-fc01f48053c8",
   userEmail: "admin@imsshop.com",
   action: "REGISTER",
   resource: "User",
-  resourceId: "7cd042c4-6916-4a85-bdee-ee10c57c56ba"
+  resourceId: "88585570-c6fc-4352-bd20-fc01f48053c8"
 }
 [AUDIT] User roles updated {
-  userId: "7cd042c4-6916-4a85-bdee-ee10c57c56ba",
-  roleIds: [ "d012ef9e-3a8c-4bf9-9d4f-da831ddeb247" ]
+  userId: "88585570-c6fc-4352-bd20-fc01f48053c8",
+  roleIds: [ "051c409d-8474-47b3-b0c4-396c9b269411" ]
 }
 [AUDIT] User registered {
   tenantId: "default",
-  userId: "ee322485-8115-487d-85f5-b0af4df9bc45",
+  userId: "fc7dee42-c0a0-4ebb-99fd-a7fc956b4226",
   userEmail: "manager@imsshop.com",
   action: "REGISTER",
   resource: "User",
-  resourceId: "ee322485-8115-487d-85f5-b0af4df9bc45"
+  resourceId: "fc7dee42-c0a0-4ebb-99fd-a7fc956b4226"
 }
 [AUDIT] User roles updated {
-  userId: "ee322485-8115-487d-85f5-b0af4df9bc45",
-  roleIds: [ "7fe779ad-eae2-40b1-9832-123a0325e009" ]
+  userId: "fc7dee42-c0a0-4ebb-99fd-a7fc956b4226",
+  roleIds: [ "7abe7ad7-3a5a-47fe-9a05-04c73411bb1d" ]
 }
 [AUDIT] User registered {
   tenantId: "default",
-  userId: "d7844a01-e9cc-4bd4-88a1-27ad22eebd4b",
+  userId: "6f880c47-ac3d-450d-9ce1-e0cbed04af97",
   userEmail: "staff@imsshop.com",
   action: "REGISTER",
   resource: "User",
-  resourceId: "d7844a01-e9cc-4bd4-88a1-27ad22eebd4b"
+  resourceId: "6f880c47-ac3d-450d-9ce1-e0cbed04af97"
 }
 [AUDIT] User roles updated {
-  userId: "d7844a01-e9cc-4bd4-88a1-27ad22eebd4b",
-  roleIds: [ "5148477b-fb54-4817-8839-9eb518aea537" ]
+  userId: "6f880c47-ac3d-450d-9ce1-e0cbed04af97",
+  roleIds: [ "ce17c773-d259-491e-82f4-1a2a04cd6980" ]
 }
 [AUDIT] User registered {
   tenantId: "default",
-  userId: "1dcc007d-f02d-41a0-9d5b-06f9c656419e",
+  userId: "b011c732-2700-4fbe-8749-bc605d4bda5a",
   userEmail: "customer@imsshop.com",
   action: "REGISTER",
   resource: "User",
-  resourceId: "1dcc007d-f02d-41a0-9d5b-06f9c656419e"
+  resourceId: "b011c732-2700-4fbe-8749-bc605d4bda5a"
 }
 [AUDIT] User roles updated {
-  userId: "1dcc007d-f02d-41a0-9d5b-06f9c656419e",
-  roleIds: [ "79689925-7af1-47fb-bc17-52e141f5d588" ]
+  userId: "b011c732-2700-4fbe-8749-bc605d4bda5a",
+  roleIds: [ "6ac714cd-80ab-498a-a97a-af09aef862ca" ]
 }
 [AUDIT] User registered {
   tenantId: "default",
-  userId: "56f811ff-935e-4970-8894-bc1192bef0db",
+  userId: "600cac4a-4f85-4635-baeb-771c69af4bfc",
   userEmail: "cust0@test.com",
   action: "REGISTER",
   resource: "User",
-  resourceId: "56f811ff-935e-4970-8894-bc1192bef0db"
+  resourceId: "600cac4a-4f85-4635-baeb-771c69af4bfc"
 }
 [AUDIT] User roles updated {
-  userId: "56f811ff-935e-4970-8894-bc1192bef0db",
-  roleIds: [ "79689925-7af1-47fb-bc17-52e141f5d588" ]
+  userId: "600cac4a-4f85-4635-baeb-771c69af4bfc",
+  roleIds: [ "6ac714cd-80ab-498a-a97a-af09aef862ca" ]
 }
 [AUDIT] User registered {
   tenantId: "default",
-  userId: "7622ee37-cbe4-428f-9edd-72cc307523b4",
+  userId: "f31d7022-933a-4b8e-ae91-877fa7c3e0ab",
   userEmail: "cust1@test.com",
   action: "REGISTER",
   resource: "User",
-  resourceId: "7622ee37-cbe4-428f-9edd-72cc307523b4"
+  resourceId: "f31d7022-933a-4b8e-ae91-877fa7c3e0ab"
 }
 [AUDIT] User roles updated {
-  userId: "7622ee37-cbe4-428f-9edd-72cc307523b4",
-  roleIds: [ "79689925-7af1-47fb-bc17-52e141f5d588" ]
+  userId: "f31d7022-933a-4b8e-ae91-877fa7c3e0ab",
+  roleIds: [ "6ac714cd-80ab-498a-a97a-af09aef862ca" ]
 }
 [AUDIT] User registered {
   tenantId: "default",
-  userId: "a53a57ba-81c0-4166-a7e6-c68c607657d6",
+  userId: "3dcd6a9f-e631-4b66-80aa-c9b4be6affb4",
   userEmail: "cust2@test.com",
   action: "REGISTER",
   resource: "User",
-  resourceId: "a53a57ba-81c0-4166-a7e6-c68c607657d6"
+  resourceId: "3dcd6a9f-e631-4b66-80aa-c9b4be6affb4"
 }
 [AUDIT] User roles updated {
-  userId: "a53a57ba-81c0-4166-a7e6-c68c607657d6",
-  roleIds: [ "79689925-7af1-47fb-bc17-52e141f5d588" ]
+  userId: "3dcd6a9f-e631-4b66-80aa-c9b4be6affb4",
+  roleIds: [ "6ac714cd-80ab-498a-a97a-af09aef862ca" ]
 }
 [AUDIT] User registered {
   tenantId: "default",
-  userId: "48f5adad-332d-44bb-85a3-608f568ec9b1",
+  userId: "7b611bcf-f9c3-42eb-87a7-70257127ef0c",
   userEmail: "cust3@test.com",
   action: "REGISTER",
   resource: "User",
-  resourceId: "48f5adad-332d-44bb-85a3-608f568ec9b1"
+  resourceId: "7b611bcf-f9c3-42eb-87a7-70257127ef0c"
 }
 [AUDIT] User roles updated {
-  userId: "48f5adad-332d-44bb-85a3-608f568ec9b1",
-  roleIds: [ "79689925-7af1-47fb-bc17-52e141f5d588" ]
+  userId: "7b611bcf-f9c3-42eb-87a7-70257127ef0c",
+  roleIds: [ "6ac714cd-80ab-498a-a97a-af09aef862ca" ]
 }
 [AUDIT] User registered {
   tenantId: "default",
-  userId: "49351c47-6ebe-494f-a40e-f1ea0e910b79",
+  userId: "ea33f93e-225f-4da0-ae93-183750525a98",
   userEmail: "cust4@test.com",
   action: "REGISTER",
   resource: "User",
-  resourceId: "49351c47-6ebe-494f-a40e-f1ea0e910b79"
+  resourceId: "ea33f93e-225f-4da0-ae93-183750525a98"
 }
 [AUDIT] User roles updated {
-  userId: "49351c47-6ebe-494f-a40e-f1ea0e910b79",
-  roleIds: [ "79689925-7af1-47fb-bc17-52e141f5d588" ]
+  userId: "ea33f93e-225f-4da0-ae93-183750525a98",
+  roleIds: [ "6ac714cd-80ab-498a-a97a-af09aef862ca" ]
 }
 [AUDIT] User registered {
   tenantId: "default",
-  userId: "2a115caf-bef6-435e-ac80-a97ddfd7836b",
+  userId: "f8afb67f-f507-4c1b-8de5-29bba0ad259e",
   userEmail: "cust5@test.com",
   action: "REGISTER",
   resource: "User",
-  resourceId: "2a115caf-bef6-435e-ac80-a97ddfd7836b"
+  resourceId: "f8afb67f-f507-4c1b-8de5-29bba0ad259e"
 }
 [AUDIT] User roles updated {
-  userId: "2a115caf-bef6-435e-ac80-a97ddfd7836b",
-  roleIds: [ "79689925-7af1-47fb-bc17-52e141f5d588" ]
+  userId: "f8afb67f-f507-4c1b-8de5-29bba0ad259e",
+  roleIds: [ "6ac714cd-80ab-498a-a97a-af09aef862ca" ]
 }
 [AUDIT] User registered {
   tenantId: "default",
-  userId: "c26838c4-ad4f-4b88-a836-7352801b6d3b",
+  userId: "931613d8-ad53-4bd7-b35d-1f87be426539",
   userEmail: "cust6@test.com",
   action: "REGISTER",
   resource: "User",
-  resourceId: "c26838c4-ad4f-4b88-a836-7352801b6d3b"
+  resourceId: "931613d8-ad53-4bd7-b35d-1f87be426539"
 }
 [AUDIT] User roles updated {
-  userId: "c26838c4-ad4f-4b88-a836-7352801b6d3b",
-  roleIds: [ "79689925-7af1-47fb-bc17-52e141f5d588" ]
+  userId: "931613d8-ad53-4bd7-b35d-1f87be426539",
+  roleIds: [ "6ac714cd-80ab-498a-a97a-af09aef862ca" ]
 }
 [AUDIT] User registered {
   tenantId: "default",
-  userId: "eeca0d94-84f8-4932-9bce-7593ef8d2127",
+  userId: "db6475ac-b7e1-46b5-9228-1321bb5e59ae",
   userEmail: "cust7@test.com",
   action: "REGISTER",
   resource: "User",
-  resourceId: "eeca0d94-84f8-4932-9bce-7593ef8d2127"
+  resourceId: "db6475ac-b7e1-46b5-9228-1321bb5e59ae"
 }
 [AUDIT] User roles updated {
-  userId: "eeca0d94-84f8-4932-9bce-7593ef8d2127",
-  roleIds: [ "79689925-7af1-47fb-bc17-52e141f5d588" ]
+  userId: "db6475ac-b7e1-46b5-9228-1321bb5e59ae",
+  roleIds: [ "6ac714cd-80ab-498a-a97a-af09aef862ca" ]
 }
 [AUDIT] User registered {
   tenantId: "default",
-  userId: "7c44345f-e5f9-49a9-95fc-c249e3d4032c",
+  userId: "d75edba8-2d45-48b6-98eb-aba57329b947",
   userEmail: "cust8@test.com",
   action: "REGISTER",
   resource: "User",
-  resourceId: "7c44345f-e5f9-49a9-95fc-c249e3d4032c"
+  resourceId: "d75edba8-2d45-48b6-98eb-aba57329b947"
 }
 [AUDIT] User roles updated {
-  userId: "7c44345f-e5f9-49a9-95fc-c249e3d4032c",
-  roleIds: [ "79689925-7af1-47fb-bc17-52e141f5d588" ]
+  userId: "d75edba8-2d45-48b6-98eb-aba57329b947",
+  roleIds: [ "6ac714cd-80ab-498a-a97a-af09aef862ca" ]
 }
 [AUDIT] User registered {
   tenantId: "default",
-  userId: "a77dccee-5bbe-48c7-9cb6-2708f6674ad7",
+  userId: "c7a5de8f-9fa1-4957-8dda-a3931ad4ee89",
   userEmail: "cust9@test.com",
   action: "REGISTER",
   resource: "User",
-  resourceId: "a77dccee-5bbe-48c7-9cb6-2708f6674ad7"
+  resourceId: "c7a5de8f-9fa1-4957-8dda-a3931ad4ee89"
 }
 [AUDIT] User roles updated {
-  userId: "a77dccee-5bbe-48c7-9cb6-2708f6674ad7",
-  roleIds: [ "79689925-7af1-47fb-bc17-52e141f5d588" ]
+  userId: "c7a5de8f-9fa1-4957-8dda-a3931ad4ee89",
+  roleIds: [ "6ac714cd-80ab-498a-a97a-af09aef862ca" ]
 }
 [AUDIT] User registered {
   tenantId: "default",
-  userId: "b8671a7e-a66f-48fc-9a95-083ec2e95047",
+  userId: "de73bb18-05dd-401f-8e35-ef9d06211331",
   userEmail: "cust10@test.com",
   action: "REGISTER",
   resource: "User",
-  resourceId: "b8671a7e-a66f-48fc-9a95-083ec2e95047"
+  resourceId: "de73bb18-05dd-401f-8e35-ef9d06211331"
 }
 [AUDIT] User roles updated {
-  userId: "b8671a7e-a66f-48fc-9a95-083ec2e95047",
-  roleIds: [ "79689925-7af1-47fb-bc17-52e141f5d588" ]
+  userId: "de73bb18-05dd-401f-8e35-ef9d06211331",
+  roleIds: [ "6ac714cd-80ab-498a-a97a-af09aef862ca" ]
 }
 [AUDIT] User registered {
   tenantId: "default",
-  userId: "b1406827-bd98-46cd-b4c8-bb36d91e83f8",
+  userId: "26d672c2-eb1a-4613-a4a0-d20cd44b0518",
   userEmail: "cust11@test.com",
   action: "REGISTER",
   resource: "User",
-  resourceId: "b1406827-bd98-46cd-b4c8-bb36d91e83f8"
+  resourceId: "26d672c2-eb1a-4613-a4a0-d20cd44b0518"
 }
 [AUDIT] User roles updated {
-  userId: "b1406827-bd98-46cd-b4c8-bb36d91e83f8",
-  roleIds: [ "79689925-7af1-47fb-bc17-52e141f5d588" ]
+  userId: "26d672c2-eb1a-4613-a4a0-d20cd44b0518",
+  roleIds: [ "6ac714cd-80ab-498a-a97a-af09aef862ca" ]
 }
 [AUDIT] User registered {
   tenantId: "default",
-  userId: "0075a778-ab26-4cb7-89ef-95c5e5f000b3",
+  userId: "92a09f65-92c3-45d7-bd90-ef77b428d7d0",
   userEmail: "cust12@test.com",
   action: "REGISTER",
   resource: "User",
-  resourceId: "0075a778-ab26-4cb7-89ef-95c5e5f000b3"
+  resourceId: "92a09f65-92c3-45d7-bd90-ef77b428d7d0"
 }
 [AUDIT] User roles updated {
-  userId: "0075a778-ab26-4cb7-89ef-95c5e5f000b3",
-  roleIds: [ "79689925-7af1-47fb-bc17-52e141f5d588" ]
+  userId: "92a09f65-92c3-45d7-bd90-ef77b428d7d0",
+  roleIds: [ "6ac714cd-80ab-498a-a97a-af09aef862ca" ]
 }
 [AUDIT] User registered {
   tenantId: "default",
-  userId: "ddb823d1-e6d6-4673-b8bc-0ecd5de799cf",
+  userId: "d45fad66-46ed-4140-8b25-3c9d60edd51e",
   userEmail: "cust13@test.com",
   action: "REGISTER",
   resource: "User",
-  resourceId: "ddb823d1-e6d6-4673-b8bc-0ecd5de799cf"
+  resourceId: "d45fad66-46ed-4140-8b25-3c9d60edd51e"
 }
 [AUDIT] User roles updated {
-  userId: "ddb823d1-e6d6-4673-b8bc-0ecd5de799cf",
-  roleIds: [ "79689925-7af1-47fb-bc17-52e141f5d588" ]
+  userId: "d45fad66-46ed-4140-8b25-3c9d60edd51e",
+  roleIds: [ "6ac714cd-80ab-498a-a97a-af09aef862ca" ]
 }
 [AUDIT] User registered {
   tenantId: "default",
-  userId: "ada11458-8a0a-4777-9138-6fa9a5603ae3",
+  userId: "a628ac53-7c90-4a81-b03c-e8f1bcecba2a",
   userEmail: "cust14@test.com",
   action: "REGISTER",
   resource: "User",
-  resourceId: "ada11458-8a0a-4777-9138-6fa9a5603ae3"
+  resourceId: "a628ac53-7c90-4a81-b03c-e8f1bcecba2a"
 }
 [AUDIT] User roles updated {
-  userId: "ada11458-8a0a-4777-9138-6fa9a5603ae3",
-  roleIds: [ "79689925-7af1-47fb-bc17-52e141f5d588" ]
+  userId: "a628ac53-7c90-4a81-b03c-e8f1bcecba2a",
+  roleIds: [ "6ac714cd-80ab-498a-a97a-af09aef862ca" ]
 }
 [AUDIT] User registered {
   tenantId: "default",
-  userId: "f943ac24-b496-4027-aaf0-50a4e30bb732",
+  userId: "3a80eec1-5b01-4577-ace9-7c8eaeef810a",
   userEmail: "cust15@test.com",
   action: "REGISTER",
   resource: "User",
-  resourceId: "f943ac24-b496-4027-aaf0-50a4e30bb732"
+  resourceId: "3a80eec1-5b01-4577-ace9-7c8eaeef810a"
 }
 [AUDIT] User roles updated {
-  userId: "f943ac24-b496-4027-aaf0-50a4e30bb732",
-  roleIds: [ "79689925-7af1-47fb-bc17-52e141f5d588" ]
+  userId: "3a80eec1-5b01-4577-ace9-7c8eaeef810a",
+  roleIds: [ "6ac714cd-80ab-498a-a97a-af09aef862ca" ]
 }
 [AUDIT] User registered {
   tenantId: "default",
-  userId: "87ee5dae-846b-46b7-9184-bcc6dfe90e07",
+  userId: "7959847a-f9ee-443d-91d5-5b5c04c0bf60",
   userEmail: "cust16@test.com",
   action: "REGISTER",
   resource: "User",
-  resourceId: "87ee5dae-846b-46b7-9184-bcc6dfe90e07"
+  resourceId: "7959847a-f9ee-443d-91d5-5b5c04c0bf60"
 }
 [AUDIT] User roles updated {
-  userId: "87ee5dae-846b-46b7-9184-bcc6dfe90e07",
-  roleIds: [ "79689925-7af1-47fb-bc17-52e141f5d588" ]
+  userId: "7959847a-f9ee-443d-91d5-5b5c04c0bf60",
+  roleIds: [ "6ac714cd-80ab-498a-a97a-af09aef862ca" ]
 }
 [AUDIT] User registered {
   tenantId: "default",
-  userId: "b5990ee1-84a0-4654-9c37-18fb0cc2bd54",
+  userId: "94d18f9e-5b1f-4362-bcd9-c162cdfd32d6",
   userEmail: "cust17@test.com",
   action: "REGISTER",
   resource: "User",
-  resourceId: "b5990ee1-84a0-4654-9c37-18fb0cc2bd54"
+  resourceId: "94d18f9e-5b1f-4362-bcd9-c162cdfd32d6"
 }
 [AUDIT] User roles updated {
-  userId: "b5990ee1-84a0-4654-9c37-18fb0cc2bd54",
-  roleIds: [ "79689925-7af1-47fb-bc17-52e141f5d588" ]
+  userId: "94d18f9e-5b1f-4362-bcd9-c162cdfd32d6",
+  roleIds: [ "6ac714cd-80ab-498a-a97a-af09aef862ca" ]
 }
 [AUDIT] User registered {
   tenantId: "default",
-  userId: "23b83c70-584a-4da1-a7db-5e7a6212318b",
+  userId: "4f5926a6-2b72-4fa8-be09-f2ddefcca8ee",
   userEmail: "cust18@test.com",
   action: "REGISTER",
   resource: "User",
-  resourceId: "23b83c70-584a-4da1-a7db-5e7a6212318b"
+  resourceId: "4f5926a6-2b72-4fa8-be09-f2ddefcca8ee"
 }
 [AUDIT] User roles updated {
-  userId: "23b83c70-584a-4da1-a7db-5e7a6212318b",
-  roleIds: [ "79689925-7af1-47fb-bc17-52e141f5d588" ]
+  userId: "4f5926a6-2b72-4fa8-be09-f2ddefcca8ee",
+  roleIds: [ "6ac714cd-80ab-498a-a97a-af09aef862ca" ]
 }
 [AUDIT] User registered {
   tenantId: "default",
-  userId: "ff8a1860-b61d-47de-9c04-1e75aa1b402f",
+  userId: "79736b69-a4c9-47c0-8510-122d65a01914",
   userEmail: "cust19@test.com",
   action: "REGISTER",
   resource: "User",
-  resourceId: "ff8a1860-b61d-47de-9c04-1e75aa1b402f"
+  resourceId: "79736b69-a4c9-47c0-8510-122d65a01914"
 }
 [AUDIT] User roles updated {
-  userId: "ff8a1860-b61d-47de-9c04-1e75aa1b402f",
-  roleIds: [ "79689925-7af1-47fb-bc17-52e141f5d588" ]
+  userId: "79736b69-a4c9-47c0-8510-122d65a01914",
+  roleIds: [ "6ac714cd-80ab-498a-a97a-af09aef862ca" ]
 }
 [AUDIT] User registered {
   tenantId: "default",
-  userId: "7275d49f-2bd6-494a-b39f-0e4393335dbc",
+  userId: "7c5f7e7c-3773-4362-8082-1a25b5523497",
   userEmail: "cust20@test.com",
   action: "REGISTER",
   resource: "User",
-  resourceId: "7275d49f-2bd6-494a-b39f-0e4393335dbc"
+  resourceId: "7c5f7e7c-3773-4362-8082-1a25b5523497"
 }
 [AUDIT] User roles updated {
-  userId: "7275d49f-2bd6-494a-b39f-0e4393335dbc",
-  roleIds: [ "79689925-7af1-47fb-bc17-52e141f5d588" ]
+  userId: "7c5f7e7c-3773-4362-8082-1a25b5523497",
+  roleIds: [ "6ac714cd-80ab-498a-a97a-af09aef862ca" ]
 }
 [AUDIT] User registered {
   tenantId: "default",
-  userId: "d4a36ba3-2786-42b6-b6f7-699228616f81",
+  userId: "e556afe9-cdaa-4750-9448-e675a7e7b314",
   userEmail: "cust21@test.com",
   action: "REGISTER",
   resource: "User",
-  resourceId: "d4a36ba3-2786-42b6-b6f7-699228616f81"
+  resourceId: "e556afe9-cdaa-4750-9448-e675a7e7b314"
 }
 [AUDIT] User roles updated {
-  userId: "d4a36ba3-2786-42b6-b6f7-699228616f81",
-  roleIds: [ "79689925-7af1-47fb-bc17-52e141f5d588" ]
+  userId: "e556afe9-cdaa-4750-9448-e675a7e7b314",
+  roleIds: [ "6ac714cd-80ab-498a-a97a-af09aef862ca" ]
 }
 [AUDIT] User registered {
   tenantId: "default",
-  userId: "9104788f-ba14-40d6-a3cb-599ce5319fd8",
+  userId: "e7a0c092-71ad-489b-b248-5b5cc4919dff",
   userEmail: "cust22@test.com",
   action: "REGISTER",
   resource: "User",
-  resourceId: "9104788f-ba14-40d6-a3cb-599ce5319fd8"
+  resourceId: "e7a0c092-71ad-489b-b248-5b5cc4919dff"
 }
 [AUDIT] User roles updated {
-  userId: "9104788f-ba14-40d6-a3cb-599ce5319fd8",
-  roleIds: [ "79689925-7af1-47fb-bc17-52e141f5d588" ]
+  userId: "e7a0c092-71ad-489b-b248-5b5cc4919dff",
+  roleIds: [ "6ac714cd-80ab-498a-a97a-af09aef862ca" ]
 }
 [AUDIT] User registered {
   tenantId: "default",
-  userId: "d3c9db94-51bc-47c9-963c-ef918d8f7fa1",
+  userId: "17b0fe2d-d677-4d4a-9041-cedd5d3ac6e7",
   userEmail: "cust23@test.com",
   action: "REGISTER",
   resource: "User",
-  resourceId: "d3c9db94-51bc-47c9-963c-ef918d8f7fa1"
+  resourceId: "17b0fe2d-d677-4d4a-9041-cedd5d3ac6e7"
 }
 [AUDIT] User roles updated {
-  userId: "d3c9db94-51bc-47c9-963c-ef918d8f7fa1",
-  roleIds: [ "79689925-7af1-47fb-bc17-52e141f5d588" ]
+  userId: "17b0fe2d-d677-4d4a-9041-cedd5d3ac6e7",
+  roleIds: [ "6ac714cd-80ab-498a-a97a-af09aef862ca" ]
 }
 [AUDIT] User registered {
   tenantId: "default",
-  userId: "b8b45e6c-67b7-4b1e-89e3-1579742b0756",
+  userId: "4f836a29-c6b4-49f4-8da9-d481bb856087",
   userEmail: "cust24@test.com",
   action: "REGISTER",
   resource: "User",
-  resourceId: "b8b45e6c-67b7-4b1e-89e3-1579742b0756"
+  resourceId: "4f836a29-c6b4-49f4-8da9-d481bb856087"
 }
 [AUDIT] User roles updated {
-  userId: "b8b45e6c-67b7-4b1e-89e3-1579742b0756",
-  roleIds: [ "79689925-7af1-47fb-bc17-52e141f5d588" ]
+  userId: "4f836a29-c6b4-49f4-8da9-d481bb856087",
+  roleIds: [ "6ac714cd-80ab-498a-a97a-af09aef862ca" ]
 }
 [AUDIT] User registered {
   tenantId: "default",
-  userId: "8a9a979d-f615-4a2b-9d34-e9b4c8f2016c",
+  userId: "f42cc175-706a-49b9-bc08-7076f5cb3b1c",
   userEmail: "cust25@test.com",
   action: "REGISTER",
   resource: "User",
-  resourceId: "8a9a979d-f615-4a2b-9d34-e9b4c8f2016c"
+  resourceId: "f42cc175-706a-49b9-bc08-7076f5cb3b1c"
 }
 [AUDIT] User roles updated {
-  userId: "8a9a979d-f615-4a2b-9d34-e9b4c8f2016c",
-  roleIds: [ "79689925-7af1-47fb-bc17-52e141f5d588" ]
+  userId: "f42cc175-706a-49b9-bc08-7076f5cb3b1c",
+  roleIds: [ "6ac714cd-80ab-498a-a97a-af09aef862ca" ]
 }
 [AUDIT] User registered {
   tenantId: "default",
-  userId: "8185d4ac-d451-42f8-a190-dd3dbebb4e59",
+  userId: "04e1e7a1-67fe-4af7-8269-a410d690efb0",
   userEmail: "cust26@test.com",
   action: "REGISTER",
   resource: "User",
-  resourceId: "8185d4ac-d451-42f8-a190-dd3dbebb4e59"
+  resourceId: "04e1e7a1-67fe-4af7-8269-a410d690efb0"
 }
 [AUDIT] User roles updated {
-  userId: "8185d4ac-d451-42f8-a190-dd3dbebb4e59",
-  roleIds: [ "79689925-7af1-47fb-bc17-52e141f5d588" ]
+  userId: "04e1e7a1-67fe-4af7-8269-a410d690efb0",
+  roleIds: [ "6ac714cd-80ab-498a-a97a-af09aef862ca" ]
 }
 [AUDIT] User registered {
   tenantId: "default",
-  userId: "cb4d420c-fce2-49d6-9bd0-89df229deb6e",
+  userId: "27b50c54-9626-4c65-a4c8-25d652dfefbc",
   userEmail: "cust27@test.com",
   action: "REGISTER",
   resource: "User",
-  resourceId: "cb4d420c-fce2-49d6-9bd0-89df229deb6e"
+  resourceId: "27b50c54-9626-4c65-a4c8-25d652dfefbc"
 }
 [AUDIT] User roles updated {
-  userId: "cb4d420c-fce2-49d6-9bd0-89df229deb6e",
-  roleIds: [ "79689925-7af1-47fb-bc17-52e141f5d588" ]
+  userId: "27b50c54-9626-4c65-a4c8-25d652dfefbc",
+  roleIds: [ "6ac714cd-80ab-498a-a97a-af09aef862ca" ]
 }
 [AUDIT] User registered {
   tenantId: "default",
-  userId: "35e1399f-fded-4d9a-a853-25a40a3e3396",
+  userId: "edd4ce19-339b-4389-b9bd-9b23a8222ea4",
   userEmail: "cust28@test.com",
   action: "REGISTER",
   resource: "User",
-  resourceId: "35e1399f-fded-4d9a-a853-25a40a3e3396"
+  resourceId: "edd4ce19-339b-4389-b9bd-9b23a8222ea4"
 }
 [AUDIT] User roles updated {
-  userId: "35e1399f-fded-4d9a-a853-25a40a3e3396",
-  roleIds: [ "79689925-7af1-47fb-bc17-52e141f5d588" ]
+  userId: "edd4ce19-339b-4389-b9bd-9b23a8222ea4",
+  roleIds: [ "6ac714cd-80ab-498a-a97a-af09aef862ca" ]
 }
 [AUDIT] User registered {
   tenantId: "default",
-  userId: "6f594c94-efdf-47ad-96b2-adafa2537347",
+  userId: "7ba52b97-b4c2-4777-838b-b6e24958593d",
   userEmail: "cust29@test.com",
   action: "REGISTER",
   resource: "User",
-  resourceId: "6f594c94-efdf-47ad-96b2-adafa2537347"
+  resourceId: "7ba52b97-b4c2-4777-838b-b6e24958593d"
 }
 [AUDIT] User roles updated {
-  userId: "6f594c94-efdf-47ad-96b2-adafa2537347",
-  roleIds: [ "79689925-7af1-47fb-bc17-52e141f5d588" ]
+  userId: "7ba52b97-b4c2-4777-838b-b6e24958593d",
+  roleIds: [ "6ac714cd-80ab-498a-a97a-af09aef862ca" ]
 }
 [AUDIT] User registered {
   tenantId: "default",
-  userId: "5efb06c5-8fb9-4bdf-92ee-4a31d1ccbb30",
+  userId: "8c8da746-9e19-4cde-8fb7-50a1a9caa8fa",
   userEmail: "cust30@test.com",
   action: "REGISTER",
   resource: "User",
-  resourceId: "5efb06c5-8fb9-4bdf-92ee-4a31d1ccbb30"
+  resourceId: "8c8da746-9e19-4cde-8fb7-50a1a9caa8fa"
 }
 [AUDIT] User roles updated {
-  userId: "5efb06c5-8fb9-4bdf-92ee-4a31d1ccbb30",
-  roleIds: [ "79689925-7af1-47fb-bc17-52e141f5d588" ]
+  userId: "8c8da746-9e19-4cde-8fb7-50a1a9caa8fa",
+  roleIds: [ "6ac714cd-80ab-498a-a97a-af09aef862ca" ]
 }
 [AUDIT] User registered {
   tenantId: "default",
-  userId: "3cb48070-7cec-4e0e-bcc0-97d1d57f6f77",
+  userId: "5d5b7126-65cf-4dcd-9f07-bd531d0fcffe",
   userEmail: "cust31@test.com",
   action: "REGISTER",
   resource: "User",
-  resourceId: "3cb48070-7cec-4e0e-bcc0-97d1d57f6f77"
+  resourceId: "5d5b7126-65cf-4dcd-9f07-bd531d0fcffe"
 }
 [AUDIT] User roles updated {
-  userId: "3cb48070-7cec-4e0e-bcc0-97d1d57f6f77",
-  roleIds: [ "79689925-7af1-47fb-bc17-52e141f5d588" ]
+  userId: "5d5b7126-65cf-4dcd-9f07-bd531d0fcffe",
+  roleIds: [ "6ac714cd-80ab-498a-a97a-af09aef862ca" ]
 }
 [AUDIT] User registered {
   tenantId: "default",
-  userId: "7b759e2e-4021-40ae-83fb-0adbc0b357d9",
+  userId: "84bdb114-4202-444b-a86c-7fa425abea23",
   userEmail: "cust32@test.com",
   action: "REGISTER",
   resource: "User",
-  resourceId: "7b759e2e-4021-40ae-83fb-0adbc0b357d9"
+  resourceId: "84bdb114-4202-444b-a86c-7fa425abea23"
 }
 [AUDIT] User roles updated {
-  userId: "7b759e2e-4021-40ae-83fb-0adbc0b357d9",
-  roleIds: [ "79689925-7af1-47fb-bc17-52e141f5d588" ]
+  userId: "84bdb114-4202-444b-a86c-7fa425abea23",
+  roleIds: [ "6ac714cd-80ab-498a-a97a-af09aef862ca" ]
 }
 [AUDIT] User registered {
   tenantId: "default",
-  userId: "12ebeb20-4fa1-418a-8ba4-d5d94062a91b",
+  userId: "9d75aa28-9cff-40dd-9085-b93d58883768",
   userEmail: "cust33@test.com",
   action: "REGISTER",
   resource: "User",
-  resourceId: "12ebeb20-4fa1-418a-8ba4-d5d94062a91b"
+  resourceId: "9d75aa28-9cff-40dd-9085-b93d58883768"
 }
 [AUDIT] User roles updated {
-  userId: "12ebeb20-4fa1-418a-8ba4-d5d94062a91b",
-  roleIds: [ "79689925-7af1-47fb-bc17-52e141f5d588" ]
+  userId: "9d75aa28-9cff-40dd-9085-b93d58883768",
+  roleIds: [ "6ac714cd-80ab-498a-a97a-af09aef862ca" ]
 }
 [AUDIT] User registered {
   tenantId: "default",
-  userId: "f6bdb2af-9256-4e41-a6f1-e193ea2241c3",
+  userId: "f83a31c5-8042-40d1-b63e-1a5830639563",
   userEmail: "cust34@test.com",
   action: "REGISTER",
   resource: "User",
-  resourceId: "f6bdb2af-9256-4e41-a6f1-e193ea2241c3"
+  resourceId: "f83a31c5-8042-40d1-b63e-1a5830639563"
 }
 [AUDIT] User roles updated {
-  userId: "f6bdb2af-9256-4e41-a6f1-e193ea2241c3",
-  roleIds: [ "79689925-7af1-47fb-bc17-52e141f5d588" ]
+  userId: "f83a31c5-8042-40d1-b63e-1a5830639563",
+  roleIds: [ "6ac714cd-80ab-498a-a97a-af09aef862ca" ]
 }
 [AUDIT] User registered {
   tenantId: "default",
-  userId: "df43f345-7a77-434c-a412-53f35822a944",
+  userId: "c1c3e6b7-26b1-4277-bb55-8c043ced6805",
   userEmail: "cust35@test.com",
   action: "REGISTER",
   resource: "User",
-  resourceId: "df43f345-7a77-434c-a412-53f35822a944"
+  resourceId: "c1c3e6b7-26b1-4277-bb55-8c043ced6805"
 }
 [AUDIT] User roles updated {
-  userId: "df43f345-7a77-434c-a412-53f35822a944",
-  roleIds: [ "79689925-7af1-47fb-bc17-52e141f5d588" ]
+  userId: "c1c3e6b7-26b1-4277-bb55-8c043ced6805",
+  roleIds: [ "6ac714cd-80ab-498a-a97a-af09aef862ca" ]
 }
 [AUDIT] User registered {
   tenantId: "default",
-  userId: "86244bea-92bb-48b3-a69c-6d4ee300dd19",
+  userId: "41e71aef-c81f-4ef3-abe2-fff6f30a54f1",
   userEmail: "cust36@test.com",
   action: "REGISTER",
   resource: "User",
-  resourceId: "86244bea-92bb-48b3-a69c-6d4ee300dd19"
+  resourceId: "41e71aef-c81f-4ef3-abe2-fff6f30a54f1"
 }
 [AUDIT] User roles updated {
-  userId: "86244bea-92bb-48b3-a69c-6d4ee300dd19",
-  roleIds: [ "79689925-7af1-47fb-bc17-52e141f5d588" ]
+  userId: "41e71aef-c81f-4ef3-abe2-fff6f30a54f1",
+  roleIds: [ "6ac714cd-80ab-498a-a97a-af09aef862ca" ]
 }
 [AUDIT] User registered {
   tenantId: "default",
-  userId: "3e0cc497-b53a-45f1-8dd0-679b041a67f3",
+  userId: "17cca74a-7cb9-41ba-98c6-be99d53b990f",
   userEmail: "cust37@test.com",
   action: "REGISTER",
   resource: "User",
-  resourceId: "3e0cc497-b53a-45f1-8dd0-679b041a67f3"
+  resourceId: "17cca74a-7cb9-41ba-98c6-be99d53b990f"
 }
 [AUDIT] User roles updated {
-  userId: "3e0cc497-b53a-45f1-8dd0-679b041a67f3",
-  roleIds: [ "79689925-7af1-47fb-bc17-52e141f5d588" ]
+  userId: "17cca74a-7cb9-41ba-98c6-be99d53b990f",
+  roleIds: [ "6ac714cd-80ab-498a-a97a-af09aef862ca" ]
 }
 [AUDIT] User registered {
   tenantId: "default",
-  userId: "f12ab6ca-ac7a-43b3-bf02-b198975d8cf7",
+  userId: "89e7f9b4-fc0f-45df-81d7-bb6c38c8634f",
   userEmail: "cust38@test.com",
   action: "REGISTER",
   resource: "User",
-  resourceId: "f12ab6ca-ac7a-43b3-bf02-b198975d8cf7"
+  resourceId: "89e7f9b4-fc0f-45df-81d7-bb6c38c8634f"
 }
 [AUDIT] User roles updated {
-  userId: "f12ab6ca-ac7a-43b3-bf02-b198975d8cf7",
-  roleIds: [ "79689925-7af1-47fb-bc17-52e141f5d588" ]
+  userId: "89e7f9b4-fc0f-45df-81d7-bb6c38c8634f",
+  roleIds: [ "6ac714cd-80ab-498a-a97a-af09aef862ca" ]
 }
 [AUDIT] User registered {
   tenantId: "default",
-  userId: "6600d510-17f9-49a0-aee2-02e05803804d",
+  userId: "c065507c-808b-4895-9fd6-34dd90fe6c70",
   userEmail: "cust39@test.com",
   action: "REGISTER",
   resource: "User",
-  resourceId: "6600d510-17f9-49a0-aee2-02e05803804d"
+  resourceId: "c065507c-808b-4895-9fd6-34dd90fe6c70"
 }
 [AUDIT] User roles updated {
-  userId: "6600d510-17f9-49a0-aee2-02e05803804d",
-  roleIds: [ "79689925-7af1-47fb-bc17-52e141f5d588" ]
+  userId: "c065507c-808b-4895-9fd6-34dd90fe6c70",
+  roleIds: [ "6ac714cd-80ab-498a-a97a-af09aef862ca" ]
 }
 [AUDIT] User registered {
   tenantId: "default",
-  userId: "2c3dc0bc-e125-4586-bd00-b53978c011b4",
+  userId: "cad83265-31b8-4c23-ba70-082af7f84167",
   userEmail: "cust40@test.com",
   action: "REGISTER",
   resource: "User",
-  resourceId: "2c3dc0bc-e125-4586-bd00-b53978c011b4"
+  resourceId: "cad83265-31b8-4c23-ba70-082af7f84167"
 }
 [AUDIT] User roles updated {
-  userId: "2c3dc0bc-e125-4586-bd00-b53978c011b4",
-  roleIds: [ "79689925-7af1-47fb-bc17-52e141f5d588" ]
+  userId: "cad83265-31b8-4c23-ba70-082af7f84167",
+  roleIds: [ "6ac714cd-80ab-498a-a97a-af09aef862ca" ]
 }
 [AUDIT] User registered {
   tenantId: "default",
-  userId: "ae7b04b7-1faf-4565-bbca-646e5cf276fc",
+  userId: "0fee2c0a-cc16-4db5-8215-b23b4766accb",
   userEmail: "cust41@test.com",
   action: "REGISTER",
   resource: "User",
-  resourceId: "ae7b04b7-1faf-4565-bbca-646e5cf276fc"
+  resourceId: "0fee2c0a-cc16-4db5-8215-b23b4766accb"
 }
 [AUDIT] User roles updated {
-  userId: "ae7b04b7-1faf-4565-bbca-646e5cf276fc",
-  roleIds: [ "79689925-7af1-47fb-bc17-52e141f5d588" ]
+  userId: "0fee2c0a-cc16-4db5-8215-b23b4766accb",
+  roleIds: [ "6ac714cd-80ab-498a-a97a-af09aef862ca" ]
 }
 [AUDIT] User registered {
   tenantId: "default",
-  userId: "2d074195-1452-4920-a1ff-cdca21ae74fe",
+  userId: "d432ce8a-c700-4fbc-a683-afed2818f3c6",
   userEmail: "cust42@test.com",
   action: "REGISTER",
   resource: "User",
-  resourceId: "2d074195-1452-4920-a1ff-cdca21ae74fe"
+  resourceId: "d432ce8a-c700-4fbc-a683-afed2818f3c6"
 }
 [AUDIT] User roles updated {
-  userId: "2d074195-1452-4920-a1ff-cdca21ae74fe",
-  roleIds: [ "79689925-7af1-47fb-bc17-52e141f5d588" ]
+  userId: "d432ce8a-c700-4fbc-a683-afed2818f3c6",
+  roleIds: [ "6ac714cd-80ab-498a-a97a-af09aef862ca" ]
 }
 [AUDIT] User registered {
   tenantId: "default",
-  userId: "9438972c-bcf4-4ed6-b160-47c3fc5a10cd",
+  userId: "9ef84819-affa-4313-9542-f85f5f22c3eb",
   userEmail: "cust43@test.com",
   action: "REGISTER",
   resource: "User",
-  resourceId: "9438972c-bcf4-4ed6-b160-47c3fc5a10cd"
+  resourceId: "9ef84819-affa-4313-9542-f85f5f22c3eb"
 }
 [AUDIT] User roles updated {
-  userId: "9438972c-bcf4-4ed6-b160-47c3fc5a10cd",
-  roleIds: [ "79689925-7af1-47fb-bc17-52e141f5d588" ]
+  userId: "9ef84819-affa-4313-9542-f85f5f22c3eb",
+  roleIds: [ "6ac714cd-80ab-498a-a97a-af09aef862ca" ]
 }
 [AUDIT] User registered {
   tenantId: "default",
-  userId: "b4d114f7-8920-41f1-b555-937fd043ed37",
+  userId: "0f96e840-c577-4f2b-a99a-b15aadca53f2",
   userEmail: "cust44@test.com",
   action: "REGISTER",
   resource: "User",
-  resourceId: "b4d114f7-8920-41f1-b555-937fd043ed37"
+  resourceId: "0f96e840-c577-4f2b-a99a-b15aadca53f2"
 }
 [AUDIT] User roles updated {
-  userId: "b4d114f7-8920-41f1-b555-937fd043ed37",
-  roleIds: [ "79689925-7af1-47fb-bc17-52e141f5d588" ]
+  userId: "0f96e840-c577-4f2b-a99a-b15aadca53f2",
+  roleIds: [ "6ac714cd-80ab-498a-a97a-af09aef862ca" ]
 }
 [AUDIT] User registered {
   tenantId: "default",
-  userId: "038e2fbc-c9f3-4bca-b9e3-eb0f8e4ed56e",
+  userId: "bbb48295-9670-45ef-9f1e-acfe8b2cefce",
   userEmail: "cust45@test.com",
   action: "REGISTER",
   resource: "User",
-  resourceId: "038e2fbc-c9f3-4bca-b9e3-eb0f8e4ed56e"
+  resourceId: "bbb48295-9670-45ef-9f1e-acfe8b2cefce"
 }
 [AUDIT] User roles updated {
-  userId: "038e2fbc-c9f3-4bca-b9e3-eb0f8e4ed56e",
-  roleIds: [ "79689925-7af1-47fb-bc17-52e141f5d588" ]
+  userId: "bbb48295-9670-45ef-9f1e-acfe8b2cefce",
+  roleIds: [ "6ac714cd-80ab-498a-a97a-af09aef862ca" ]
 }
 [AUDIT] User registered {
   tenantId: "default",
-  userId: "311a491c-ad4c-4aeb-bcf7-f29d38abbadb",
+  userId: "5501dc95-c5ef-4753-b56a-5327472cd542",
   userEmail: "cust46@test.com",
   action: "REGISTER",
   resource: "User",
-  resourceId: "311a491c-ad4c-4aeb-bcf7-f29d38abbadb"
+  resourceId: "5501dc95-c5ef-4753-b56a-5327472cd542"
 }
 [AUDIT] User roles updated {
-  userId: "311a491c-ad4c-4aeb-bcf7-f29d38abbadb",
-  roleIds: [ "79689925-7af1-47fb-bc17-52e141f5d588" ]
+  userId: "5501dc95-c5ef-4753-b56a-5327472cd542",
+  roleIds: [ "6ac714cd-80ab-498a-a97a-af09aef862ca" ]
 }
 [AUDIT] User registered {
   tenantId: "default",
-  userId: "3272a70c-45d8-4bca-83a6-8a6badceb6ef",
+  userId: "9bc3a474-f34b-43cb-ad12-8101d7bcaa44",
   userEmail: "cust47@test.com",
   action: "REGISTER",
   resource: "User",
-  resourceId: "3272a70c-45d8-4bca-83a6-8a6badceb6ef"
+  resourceId: "9bc3a474-f34b-43cb-ad12-8101d7bcaa44"
 }
 [AUDIT] User roles updated {
-  userId: "3272a70c-45d8-4bca-83a6-8a6badceb6ef",
-  roleIds: [ "79689925-7af1-47fb-bc17-52e141f5d588" ]
+  userId: "9bc3a474-f34b-43cb-ad12-8101d7bcaa44",
+  roleIds: [ "6ac714cd-80ab-498a-a97a-af09aef862ca" ]
 }
 [AUDIT] User registered {
   tenantId: "default",
-  userId: "15bd7777-501f-47fd-a9b3-47480bc4beb9",
+  userId: "991f4a4f-9a69-4348-a501-f14172df0d5a",
   userEmail: "cust48@test.com",
   action: "REGISTER",
   resource: "User",
-  resourceId: "15bd7777-501f-47fd-a9b3-47480bc4beb9"
+  resourceId: "991f4a4f-9a69-4348-a501-f14172df0d5a"
 }
 [AUDIT] User roles updated {
-  userId: "15bd7777-501f-47fd-a9b3-47480bc4beb9",
-  roleIds: [ "79689925-7af1-47fb-bc17-52e141f5d588" ]
+  userId: "991f4a4f-9a69-4348-a501-f14172df0d5a",
+  roleIds: [ "6ac714cd-80ab-498a-a97a-af09aef862ca" ]
 }
 [AUDIT] User registered {
   tenantId: "default",
-  userId: "027ab568-0804-4cdd-a39f-e44ffab5ddf4",
+  userId: "8b3f56be-4886-4578-a555-f59401687fcc",
   userEmail: "cust49@test.com",
   action: "REGISTER",
   resource: "User",
-  resourceId: "027ab568-0804-4cdd-a39f-e44ffab5ddf4"
+  resourceId: "8b3f56be-4886-4578-a555-f59401687fcc"
 }
 [AUDIT] User roles updated {
-  userId: "027ab568-0804-4cdd-a39f-e44ffab5ddf4",
-  roleIds: [ "79689925-7af1-47fb-bc17-52e141f5d588" ]
+  userId: "8b3f56be-4886-4578-a555-f59401687fcc",
+  roleIds: [ "6ac714cd-80ab-498a-a97a-af09aef862ca" ]
 }
    ✅ Created 4 core users and 50 random customers
 
@@ -697,8 +696,8 @@ DEBUG: createObsContext - logRepo: true
 
 🔹 Seeding Inventory (Warehouses, Locations, Initial Stock)
 [INFO] Distributing initial stock...
-   [█░░░░░░░░░░░░░░░░░░░] 5% (26/509)   [██░░░░░░░░░░░░░░░░░░] 10% (52/509)   [███░░░░░░░░░░░░░░░░░] 15% (78/509)   [████░░░░░░░░░░░░░░░░] 20% (104/509)   [█████░░░░░░░░░░░░░░░] 26% (130/509)   [██████░░░░░░░░░░░░░░] 31% (156/509)   [███████░░░░░░░░░░░░░] 36% (182/509)   [████████░░░░░░░░░░░░] 41% (208/509)   [█████████░░░░░░░░░░░] 46% (234/509)   [██████████░░░░░░░░░░] 51% (260/509)   [███████████░░░░░░░░░] 56% (286/509)   [████████████░░░░░░░░] 61% (312/509)   [█████████████░░░░░░░] 66% (338/509)   [██████████████░░░░░░] 72% (364/509)   [███████████████░░░░░] 77% (390/509)   [████████████████░░░░] 82% (416/509)   [█████████████████░░░] 87% (442/509)   [██████████████████░░] 92% (468/509)   [███████████████████░] 97% (494/509)   ✅ Inventory seeded
-   [████████████████████] 100% (509/509)
+   [█░░░░░░░░░░░░░░░░░░░] 5% (26/509)   [██░░░░░░░░░░░░░░░░░░] 10% (52/509)   [███░░░░░░░░░░░░░░░░░] 15% (78/509)   [████░░░░░░░░░░░░░░░░] 20% (104/509)   [█████░░░░░░░░░░░░░░░] 26% (130/509)   [██████░░░░░░░░░░░░░░] 31% (156/509)   [███████░░░░░░░░░░░░░] 36% (182/509)   [████████░░░░░░░░░░░░] 41% (208/509)   [█████████░░░░░░░░░░░] 46% (234/509)   [██████████░░░░░░░░░░] 51% (260/509)   [███████████░░░░░░░░░] 56% (286/509)   [████████████░░░░░░░░] 61% (312/509)   [█████████████░░░░░░░] 66% (338/509)   [██████████████░░░░░░] 72% (364/509)   [███████████████░░░░░] 77% (390/509)   [████████████████░░░░] 82% (416/509)   [█████████████████░░░] 87% (442/509)   [██████████████████░░] 92% (468/509)   [███████████████████░] 97% (494/509)   [████████████████████] 100% (509/509)   ✅ Inventory seeded
+
 🔹 Seeding Procurement (Suppliers, Purchase Orders)
 
 [INFO] Creating Historical POs...
@@ -715,10 +714,10 @@ DEBUG: createObsContext - logRepo: true
 🔹 🔔 Seeding Notifications...
    ✅ Created 5 initial notifications.
 🌱 Seeding Communication Data...
-   [██░░░░░░░░░░░░░░░░░░] 10% (20/200)   [███░░░░░░░░░░░░░░░░░] 15% (30/200)   [████░░░░░░░░░░░░░░░░] 20% (40/200)   [█████░░░░░░░░░░░░░░░] 25% (50/200)   [██████░░░░░░░░░░░░░░] 30% (60/200)   [███████░░░░░░░░░░░░░] 35% (70/200)   [████████░░░░░░░░░░░░] 40% (80/200)   [█████████░░░░░░░░░░░] 45% (90/200)   [██████████░░░░░░░░░░] 50% (100/200)   [███████████░░░░░░░░░] 55% (110/200)   [████████████░░░░░░░░] 60% (120/200)   [█████████████░░░░░░░] 65% (130/200)   [██████████████░░░░░░] 70% (140/200)   [███████████████░░░░░] 75% (150/200)   [████████████████░░░░] 80% (160/200)   [█████████████████░░░] 85% (170/200)   [██████████████████░░] 90% (180/200)   [███████████████████░] 95% (190/200)   [████████████████████] 100% (200/200)
-✅ Communication seeded.
+   [██░░░░░░░░░░░░░░░░░░] 10% (20/200)   [███░░░░░░░░░░░░░░░░░] 15% (30/200)   [████░░░░░░░░░░░░░░░░] 20% (40/200)   [█████░░░░░░░░░░░░░░░] 25% (50/200)   [██████░░░░░░░░░░░░░░] 30% (60/200)   [███████░░░░░░░░░░░░░] 35% (70/200)   [████████░░░░░░░░░░░░] 40% (80/200)   [█████████░░░░░░░░░░░] 45% (90/200)   [██████████░░░░░░░░░░] 50% (100/200)   [███████████░░░░░░░░░] 55% (110/200)   [████████████░░░░░░░░] 60% (120/200)   [█████████████░░░░░░░] 65% (130/200)   [██████████████░░░░░░] 70% (140/200)   [███████████████░░░░░] 75% (150/200)   [████████████████░░░░] 80% (160/200)   [█████████████████░░░] 85% (170/200)   [██████████████████░░] 90% (180/200)   [███████████████████░] 95% (190/200)✅ Communication seeded.
 🌱 Seeding Observability Logs...
 [INFO] System seeded successfully { tenantId: "default", action: "SEED" }
+   [████████████████████] 100% (200/200)
 [WARN] Disk usage warning (simulation) { tenantId: "default", metric: "disk_usage", value: "85%" }
 [ERROR] Failed login attempt (simulation) { tenantId: "default", user: "unknown@example.com" }
 [ACTIVITY] User navigated to dashboard { tenantId: "default", userId: "demo-user", path: "/dashboard" }
