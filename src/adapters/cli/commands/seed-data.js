@@ -72,8 +72,8 @@ const run = async () => {
         // 3. Run Seeders
         const users = await seedAccessControl(ctx, tenantId);
         const products = await seedCatalog(ctx, tenantId); // Includes Price Lists logic now
-        const warehouses = await seedInventory(ctx, tenantId, products);
-        await seedProcurement(ctx, tenantId, products, warehouses);
+        const locationIds = await seedInventory(ctx, tenantId, products);
+        await seedProcurement(ctx, tenantId, products, locationIds);
         await seedManufacturing(ctx, tenantId, products); // New seeder
         await seedOrders(ctx, tenantId, products, users);
         await seedNotifications(ctx, tenantId, users);

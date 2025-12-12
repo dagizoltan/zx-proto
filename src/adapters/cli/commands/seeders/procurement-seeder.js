@@ -1,11 +1,8 @@
 import { Random, Log, Time } from './utils.js';
-import { unwrap, isErr } from '@lib/trust/index.js'; // Fixed 5 levels
 
-export const seedProcurementAndManufacturing = async (ctx, tenantId, locationIds) => {
-    Log.step('Seeding Procurement & Manufacturing');
+export const seedProcurement = async (ctx, tenantId, products, locationIds) => {
+    Log.step('Seeding Procurement (Suppliers, Purchase Orders)');
     const procurement = ctx.get('domain.procurement');
-    const manufacturing = ctx.get('domain.manufacturing');
-    const catalog = ctx.get('domain.catalog');
 
     // 1. Procurement: Suppliers
     const suppliers = [];
@@ -22,25 +19,8 @@ export const seedProcurementAndManufacturing = async (ctx, tenantId, locationIds
         }
     }
 
-    // Raw Materials
-    const rawMats = [];
-    for (let i = 0; i < 5; i++) {
-        const res = await catalog.useCases.createProduct.execute(tenantId, {
-            sku: `RM-${i}`, name: `Raw Material ${i}`, price: 5, type: 'SIMPLE', categoryId: 'Materials' // Fixed category -> categoryId? Seeder used 'category' string but schema is categoryId (UUID).
-            // Schema validation might fail if 'Materials' is not UUID.
-            // But we proceed assuming flexible schema or skipping ID check.
-        });
-
-        if (res.ok) {
-            rawMats.push(res.value);
-        } else {
-             const allRes = await catalog.useCases.listProducts.execute(tenantId, { limit: 1000 });
-             if (allRes.ok) {
-                 const found = allRes.value.items.find(x => x.sku === `RM-${i}`);
-                 if (found) rawMats.push(found);
-             }
-        }
-    }
+    // Use existing products as materials
+    const rawMats = products.filter(p => p.type === 'SIMPLE').slice(0, 20);
 
     // 2. POs
     Log.info('Creating Historical POs...');
@@ -50,6 +30,7 @@ export const seedProcurementAndManufacturing = async (ctx, tenantId, locationIds
 
         const date = Time.monthsAgo(Random.int(1, 12));
 
+        // Create PO with random raw materials
         const poRes = await procurement.useCases.createPurchaseOrder.execute(tenantId, {
             supplierId: supplier.id,
             items: rawMats.map(rm => ({ productId: rm.id, quantity: Random.int(500, 2000), unitCost: 4 })),
@@ -60,6 +41,8 @@ export const seedProcurementAndManufacturing = async (ctx, tenantId, locationIds
         if (poRes.ok) {
             const po = poRes.value;
             const loc = Random.element(locationIds);
+
+            // Receive PO
             await procurement.useCases.receivePurchaseOrder.execute(tenantId, po.id, {
                 locationId: loc,
                 items: po.items.map(pi => ({ productId: pi.productId, quantity: pi.quantity }))
@@ -67,43 +50,5 @@ export const seedProcurementAndManufacturing = async (ctx, tenantId, locationIds
         }
     }
 
-    // 3. Manufacturing
-    let finishedGood;
-    const fgRes = await catalog.useCases.createProduct.execute(tenantId, {
-        sku: 'FG-WIDGET', name: 'Manufactured Widget', price: 100, type: 'SIMPLE'
-    });
-
-    if (fgRes.ok) {
-        finishedGood = fgRes.value;
-    } else {
-        const allRes = await catalog.useCases.listProducts.execute(tenantId, { limit: 1000 });
-        if (allRes.ok) finishedGood = allRes.value.items.find(x => x.sku === 'FG-WIDGET');
-    }
-
-    if (finishedGood && rawMats.length >= 2) {
-        const bomRes = await manufacturing.useCases.createBOM.execute(tenantId, {
-            name: 'Widget BOM', productId: finishedGood.id, laborCost: 10,
-            components: [ { productId: rawMats[0].id, quantity: 2 }, { productId: rawMats[1].id, quantity: 1 } ]
-        });
-
-        if (bomRes.ok) {
-            const bom = bomRes.value;
-            for (let i = 0; i < 10; i++) {
-                const date = Time.monthsAgo(Random.int(1, 6));
-                const woRes = await manufacturing.useCases.createWorkOrder.execute(tenantId, {
-                    bomId: bom.id, quantity: Random.int(10, 50), startDate: date.toISOString()
-                });
-
-                if (woRes.ok) {
-                    const wo = woRes.value;
-                    const loc = Random.element(locationIds);
-                    await manufacturing.useCases.completeWorkOrder.execute(tenantId, wo.id, {
-                        outputLocationId: loc, inputLocationId: loc, userId: 'system'
-                    });
-                }
-            }
-        }
-    }
-
-    Log.success('Procurement & Manufacturing history seeded');
+    Log.success('Procurement history seeded');
 };
