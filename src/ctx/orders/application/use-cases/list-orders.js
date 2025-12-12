@@ -1,36 +1,22 @@
 import { Ok, Err, isErr } from '../../../../../lib/trust/index.js';
 
-export const createListOrders = ({ orderRepository }) => {
-  const execute = async (tenantId, { limit = 10, cursor, status, search, minTotal, maxTotal } = {}) => {
-      // orderRepository.list
-      let where = {};
-      if (status) where.status = status;
+export const createListOrders = ({ orderRepository, accessControl }) => {
+  const execute = async (tenantId, { limit = 10, cursor, status, search, minTotal, maxTotal, customerId } = {}) => {
 
-      const res = await orderRepository.list(tenantId, { limit: 1000, cursor, where }); // Scan 1000
-      if (isErr(res)) return res;
+      const filter = {};
+      if (status) filter.status = status; // Indexed
+      if (customerId) filter.customer = customerId; // Indexed
 
-      let items = res.value.items;
+      // Additional Filters
+      if (search) filter.search = search; // Logic in repo.query (scan)
+      if (minTotal !== undefined) filter.totalAmount_min = minTotal;
+      if (maxTotal !== undefined) filter.totalAmount_max = maxTotal;
 
-      // Manual Filter
-      if (search || minTotal !== undefined || maxTotal !== undefined) {
-          const lowerQ = search ? search.toLowerCase() : null;
-          items = items.filter(o => {
-              if (minTotal !== undefined && o.totalAmount < minTotal) return false;
-              if (maxTotal !== undefined && o.totalAmount > maxTotal) return false;
-              if (lowerQ) {
-                  // Search by ID, Customer ID?
-                  return o.id.toLowerCase().includes(lowerQ) || (o.customerId && o.customerId.toLowerCase().includes(lowerQ));
-              }
-              return true;
-          });
-      }
+      // Orders don't have name/sku. They have ID and maybe customer name (if denormalized? usually not).
+      // Search by ID and Customer ID.
+      const searchFields = ['id', 'customerId'];
 
-      const finalItems = items.slice(0, limit);
-
-      return Ok({
-          items: finalItems,
-          nextCursor: finalItems.length < items.length ? null : res.value.nextCursor
-      });
+      return orderRepository.query(tenantId, { limit, cursor, filter, searchFields });
   };
 
   return { execute };

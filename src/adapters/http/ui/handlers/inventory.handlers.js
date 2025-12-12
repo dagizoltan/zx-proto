@@ -16,15 +16,21 @@ export const listInventoryHandler = async (c) => {
   const user = c.get('user');
   const tenantId = c.get('tenantId');
   const inventory = c.ctx.get('domain.inventory');
+
   const cursor = c.req.query('cursor');
+  const q = c.req.query('q');
+  const categoryId = c.req.query('categoryId');
+  const status = c.req.query('status');
+
   const limit = 10;
-  const res = await inventory.useCases.listAllProducts.execute(tenantId, { limit, cursor });
+  const res = await inventory.useCases.listAllProducts.execute(tenantId, { limit, cursor, search: q, categoryId, status });
   const { items: products, nextCursor } = unwrap(res);
 
   const html = await renderPage(InventoryPage, {
     user,
     products,
     nextCursor,
+    query: q,
     currentUrl: c.req.url,
     layout: AdminLayout,
     title: 'Inventory - IMS Admin'
@@ -44,12 +50,14 @@ export const transferStockPageHandler = async (c) => {
 
     const wRes = await inventory.repositories.warehouse.list(tenantId, { limit: 100 });
     const warehouses = unwrap(wRes).items;
-    let allLocations = [];
-    for (const w of warehouses) {
-        const lRes = await inventory.repositories.location.queryByIndex(tenantId, 'warehouse', w.id, { limit: 1000 });
-        const locs = unwrap(lRes).items;
-        allLocations = allLocations.concat(locs);
-    }
+
+    // Use repo.query for Locations to avoid manual loop
+    // But we need ALL locations for this dropdown?
+    // Limit 1000?
+    // Let's use repo.query(tenantId, { limit: 1000 }) which does a scan.
+
+    const lRes = await inventory.repositories.location.query(tenantId, { limit: 1000 });
+    const allLocations = unwrap(lRes).items;
 
     const html = await renderPage(TransferStockPage, {
         user,
@@ -89,14 +97,9 @@ export const receiveStockPageHandler = async (c) => {
     const pRes = await inventory.useCases.listAllProducts.execute(tenantId, { limit: 100 });
     const { items: products } = unwrap(pRes);
 
-    const wRes = await inventory.repositories.warehouse.list(tenantId, { limit: 100 });
-    const warehouses = unwrap(wRes).items;
-    let allLocations = [];
-    for (const w of warehouses) {
-        const lRes = await inventory.repositories.location.queryByIndex(tenantId, 'warehouse', w.id, { limit: 1000 });
-        const locs = unwrap(lRes).items;
-        allLocations = allLocations.concat(locs);
-    }
+    // Optimized location fetching
+    const lRes = await inventory.repositories.location.query(tenantId, { limit: 1000 });
+    const allLocations = unwrap(lRes).items;
 
     const html = await renderPage(ReceiveStockPage, {
         user,
@@ -204,20 +207,32 @@ export const listLocationsHandler = async (c) => {
     const user = c.get('user');
     const tenantId = c.get('tenantId');
     const inventory = c.ctx.get('domain.inventory');
+    const cursor = c.req.query('cursor');
 
+    // Fetch warehouses for display/filtering context if needed
     const wRes = await inventory.repositories.warehouse.list(tenantId, { limit: 100 });
     const warehouses = unwrap(wRes).items;
-    let allLocations = [];
-    for (const w of warehouses) {
-        const lRes = await inventory.repositories.location.queryByIndex(tenantId, 'warehouse', w.id, { limit: 1000 });
-        const locs = unwrap(lRes).items;
-        allLocations = allLocations.concat(locs);
-    }
+
+    // Use repo.query instead of manual loop
+    // Populate warehouse name
+    const resolvers = {
+        warehouse: (ids) => inventory.repositories.warehouse.findByIds(tenantId, ids)
+    };
+
+    // Note: locations page usually lists ALL.
+    const lRes = await inventory.repositories.location.query(tenantId, {
+        limit: 50, // Page size
+        cursor,
+        populate: ['warehouse']
+    }, { resolvers });
+
+    const { items: locations, nextCursor } = unwrap(lRes);
 
     const html = await renderPage(LocationsPage, {
         user,
-        locations: allLocations,
+        locations,
         warehouses,
+        nextCursor,
         activePage: 'locations',
         layout: AdminLayout,
         title: 'Locations - IMS Admin'
@@ -232,12 +247,10 @@ export const createLocationPageHandler = async (c) => {
 
     const wRes = await inventory.repositories.warehouse.list(tenantId, { limit: 100 });
     const warehouses = unwrap(wRes).items;
-    let allLocations = [];
-    for (const w of warehouses) {
-        const lRes = await inventory.repositories.location.queryByIndex(tenantId, 'warehouse', w.id, { limit: 1000 });
-        const locs = unwrap(lRes).items;
-        allLocations = allLocations.concat(locs);
-    }
+
+    // Optimized fetch
+    const lRes = await inventory.repositories.location.query(tenantId, { limit: 1000 });
+    const allLocations = unwrap(lRes).items;
 
     const html = await renderPage(CreateLocationPage, {
         user,

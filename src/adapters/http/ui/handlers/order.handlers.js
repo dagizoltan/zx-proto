@@ -6,17 +6,23 @@ import { OrderDetailPage } from '../pages/ims/order-detail-page.jsx';
 import { PickListPage } from '../pages/ims/pick-list-page.jsx';
 import { PackingSlipPage } from '../pages/ims/packing-slip-page.jsx';
 import { CreateShipmentPage } from '../pages/ims/shipments/create-shipment-page.jsx';
-import { unwrap, isErr } from '../../../../../lib/trust/index.js'; // 5 levels
+import { unwrap, isErr, Ok } from '../../../../../lib/trust/index.js'; // 5 levels
 
 // List Orders
 export const listOrdersHandler = async (c) => {
     const user = c.get('user');
     const tenantId = c.get('tenantId');
     const orders = c.ctx.get('domain.orders');
+
+    // Query Params
     const cursor = c.req.query('cursor');
+    const status = c.req.query('status');
+    const q = c.req.query('q');
+    const minTotal = c.req.query('minTotal') ? parseFloat(c.req.query('minTotal')) : undefined;
+    const maxTotal = c.req.query('maxTotal') ? parseFloat(c.req.query('maxTotal')) : undefined;
     const limit = 10;
 
-    const res = await orders.useCases.listOrders.execute(tenantId, { limit, cursor });
+    const res = await orders.useCases.listOrders.execute(tenantId, { limit, cursor, status, search: q, minTotal, maxTotal });
     const { items: orderList, nextCursor } = unwrap(res);
 
     const html = await renderPage(OrdersPage, {
@@ -24,6 +30,7 @@ export const listOrdersHandler = async (c) => {
       orders: orderList,
       nextCursor,
       currentUrl: c.req.url,
+      query: q,
       layout: AdminLayout,
       title: 'Orders - IMS Admin'
     });
@@ -207,49 +214,53 @@ export const pickListHandler = async (c) => {
     const orderId = c.req.param('id');
     const orders = c.ctx.get('domain.orders');
     const inventory = c.ctx.get('domain.inventory');
+    const catalog = c.ctx.get('domain.catalog'); // Need direct catalog access for resolvers if inventory doesn't expose it
 
     const orderRes = await orders.useCases.getOrder.execute(tenantId, orderId);
     if (isErr(orderRes)) return c.text('Order not found', 404);
     const order = orderRes.value;
 
-    // getByReference -> queryByIndex('reference')
-    const moveRes = await inventory.repositories.stockMovement.queryByIndex(tenantId, 'reference', orderId, { limit: 1000 });
+    // Use unified query to fetch movements for this order and populate Product, Location, Batch
+    // We can't access `stockMovementRepository` directly from here easily if it's not exposed in useCases?
+    // Handler imports `inventory.repositories.stockMovement` in previous code.
+    // Let's use `repo.query`.
+
+    const resolvers = {
+        product: (ids) => catalog.repositories.product.findByIds(tenantId, ids), // Assuming catalog repo exposed
+        fromLocation: (ids) => inventory.repositories.location.findByIds(tenantId, ids),
+        batch: (ids) => inventory.repositories.batch.findByIds(tenantId, ids)
+    };
+
+    // Note: 'product' field in StockMovement is 'productId'. The populator looks for 'productId' if 'product' is key.
+    // Note: 'fromLocation' field. StockMovement has 'fromLocationId' (for allocation).
+    // The previous code used `item.fromLocationId`.
+    // The populator expects `fromLocation` -> `fromLocationId`.
+
+    // Using direct repo call from handler is technically leaking "Infrastructure" details (repo.query) into "Interface Adapter" (Handler).
+    // Ideally should be a use case `inventory.useCases.getPickingList(orderId)`.
+    // But for this task, I will use `repo.query` directly as requested ("proper unified query layer which we can use on our list pages").
+
+    const moveRes = await inventory.repositories.stockMovement.query(tenantId, {
+        limit: 1000,
+        filter: { reference: orderId, type: 'ALLOCATION' }, // type matches index? No index on type+reference composite.
+        // Index on 'reference' exists. Index on 'type' exists.
+        // `repo.query` will pick 'reference' index (more selective than type 'ALLOCATION').
+        // Then filter by type in memory.
+        populate: ['product', 'fromLocation', 'batch']
+    }, { resolvers });
+
     const movements = unwrap(moveRes).items;
-    const allocated = movements.filter(m => m.type === 'ALLOCATION');
 
-    const pickItems = await Promise.all(allocated.map(async (item) => {
-        const [pRes, lRes, bRes] = await Promise.all([
-            inventory.useCases.getProduct.execute(tenantId, item.productId), // calls catalog? No inventory usecase getProduct exists.
-            // inventory.useCases.getProduct is createGetProduct({ productRepository }).
-            // productRepository is createKVProductRepository.
-            // But inventory context might not have getProduct if it was legacy?
-            // createInventoryContext had `getProduct`. I should check if it uses catalog or local logic.
-            // In step 4, createInventoryContext imported getProduct.
-            // Anyway, assuming it works and returns Result.
-            inventory.repositories.location.findById(tenantId, item.fromLocationId), // locationId in schema, fromLocationId in movement?
-            // movement schema: locationId.
-            // StockAllocationService allocates with locationId.
-            // But StockMovement type 'ALLOCATION' -> locationId is FROM location.
-            // So we use item.locationId.
-            item.batchId ? inventory.repositories.batch.findById(tenantId, item.batchId) : Promise.resolve(Ok(null))
-        ]);
-
-        const product = isErr(pRes) ? null : pRes.value;
-        // locationId is correct field in schema
-        const location = isErr(lRes) ? null : lRes.value;
-        const batch = isErr(bRes) ? null : bRes.value;
-
-        return {
-            ...item,
-            productName: product?.name || 'Unknown',
-            sku: product?.sku || 'UNKNOWN',
-            locationCode: location?.code || 'Unknown Loc',
-            batchNumber: batch?.batchNumber,
-            expiryDate: batch?.expiryDate
-        };
+    const pickItems = movements.map(item => ({
+        ...item,
+        productName: item.product?.name || 'Unknown',
+        sku: item.product?.sku || 'UNKNOWN',
+        locationCode: item.fromLocation?.code || 'Unknown Loc',
+        batchNumber: item.batch?.batchNumber,
+        expiryDate: item.batch?.expiryDate
     }));
 
-    pickItems.sort((a, b) => a.locationCode.localeCompare(b.locationCode));
+    pickItems.sort((a, b) => (a.locationCode || '').localeCompare(b.locationCode || ''));
 
     const html = await renderPage(PickListPage, {
         user,
