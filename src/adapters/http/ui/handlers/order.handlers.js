@@ -6,7 +6,7 @@ import { OrderDetailPage } from '../pages/ims/order-detail-page.jsx';
 import { PickListPage } from '../pages/ims/pick-list-page.jsx';
 import { PackingSlipPage } from '../pages/ims/packing-slip-page.jsx';
 import { CreateShipmentPage } from '../pages/ims/shipments/create-shipment-page.jsx';
-import { unwrap, isErr, Ok } from '../../../../../lib/trust/index.js'; // 5 levels
+import { unwrap, isErr, Ok } from '../../../../../lib/trust/index.js';
 
 // List Orders
 export const listOrdersHandler = async (c) => {
@@ -75,7 +75,6 @@ export const createOrderHandler = async (c) => {
     const body = await c.req.parseBody();
 
     const items = [];
-    // Assuming body structure is correct
     const indices = new Set(Object.keys(body).filter(k => k.startsWith('items[')).map(k => k.match(/items\[(\d+)\]/)[1]));
 
     for (const i of indices) {
@@ -128,14 +127,30 @@ export const createOrderShipmentPageHandler = async (c) => {
     if (isErr(orderRes)) return c.text('Order not found', 404);
     const order = orderRes.value;
 
+    const productIdsToFetch = new Set();
     for (const item of order.items) {
-        if (!item.productName) {
-            const pRes = await catalog.useCases.getProduct.execute(tenantId, item.productId);
-            const p = isErr(pRes) ? null : pRes.value;
-            item.productName = p ? p.name : 'Unknown Product';
-            item.sku = p ? p.sku : '';
+        if (!item.productName) productIdsToFetch.add(item.productId);
+    }
+
+    if (productIdsToFetch.size > 0) {
+        const productsRes = await catalog.useCases.getProductsBatch.execute(tenantId, Array.from(productIdsToFetch));
+        // Assuming getProductsBatch returns Result<Array>
+        if (!isErr(productsRes)) {
+            const productMap = new Map(productsRes.value.map(p => [p.id, p]));
+            for (const item of order.items) {
+                if (!item.productName && productMap.has(item.productId)) {
+                    const p = productMap.get(item.productId);
+                    item.productName = p.name;
+                    item.sku = p.sku;
+                }
+            }
         }
     }
+    // Fallback for missing names
+    for (const item of order.items) {
+         if (!item.productName) item.productName = 'Unknown Product';
+    }
+
 
     const html = await renderPage(CreateShipmentPage, {
         user,
@@ -182,15 +197,28 @@ export const createOrderShipmentHandler = async (c) => {
         const orderRes = await orders.useCases.getOrder.execute(tenantId, orderId);
         const order = isErr(orderRes) ? null : orderRes.value;
 
-        const catalog = c.ctx.get('domain.catalog');
+        // Re-enrichment Logic for Error Page
         if (order) {
-             for (const item of order.items) {
-                if (!item.productName) {
-                    const pRes = await catalog.useCases.getProduct.execute(tenantId, item.productId);
-                    const p = isErr(pRes) ? null : pRes.value;
-                    item.productName = p ? p.name : 'Unknown Product';
-                    item.sku = p ? p.sku : '';
+            const catalog = c.ctx.get('domain.catalog');
+            const productIdsToFetch = new Set();
+            for (const item of order.items) {
+                if (!item.productName) productIdsToFetch.add(item.productId);
+            }
+            if (productIdsToFetch.size > 0) {
+                const productsRes = await catalog.useCases.getProductsBatch.execute(tenantId, Array.from(productIdsToFetch));
+                if (!isErr(productsRes)) {
+                    const productMap = new Map(productsRes.value.map(p => [p.id, p]));
+                    for (const item of order.items) {
+                         if (!item.productName && productMap.has(item.productId)) {
+                            const p = productMap.get(item.productId);
+                            item.productName = p.name;
+                            item.sku = p.sku;
+                        }
+                    }
                 }
+            }
+             for (const item of order.items) {
+                 if (!item.productName) item.productName = 'Unknown Product';
             }
         }
 
@@ -214,53 +242,15 @@ export const pickListHandler = async (c) => {
     const orderId = c.req.param('id');
     const orders = c.ctx.get('domain.orders');
     const inventory = c.ctx.get('domain.inventory');
-    const catalog = c.ctx.get('domain.catalog'); // Need direct catalog access for resolvers if inventory doesn't expose it
 
     const orderRes = await orders.useCases.getOrder.execute(tenantId, orderId);
     if (isErr(orderRes)) return c.text('Order not found', 404);
     const order = orderRes.value;
 
-    // Use unified query to fetch movements for this order and populate Product, Location, Batch
-    // We can't access `stockMovementRepository` directly from here easily if it's not exposed in useCases?
-    // Handler imports `inventory.repositories.stockMovement` in previous code.
-    // Let's use `repo.query`.
+    const pickRes = await inventory.useCases.getPickingList.execute(tenantId, orderId);
+    if (isErr(pickRes)) return c.text('Error generating pick list: ' + pickRes.error.message, 500);
 
-    const resolvers = {
-        product: (ids) => catalog.repositories.product.findByIds(tenantId, ids), // Assuming catalog repo exposed
-        fromLocation: (ids) => inventory.repositories.location.findByIds(tenantId, ids),
-        batch: (ids) => inventory.repositories.batch.findByIds(tenantId, ids)
-    };
-
-    // Note: 'product' field in StockMovement is 'productId'. The populator looks for 'productId' if 'product' is key.
-    // Note: 'fromLocation' field. StockMovement has 'fromLocationId' (for allocation).
-    // The previous code used `item.fromLocationId`.
-    // The populator expects `fromLocation` -> `fromLocationId`.
-
-    // Using direct repo call from handler is technically leaking "Infrastructure" details (repo.query) into "Interface Adapter" (Handler).
-    // Ideally should be a use case `inventory.useCases.getPickingList(orderId)`.
-    // But for this task, I will use `repo.query` directly as requested ("proper unified query layer which we can use on our list pages").
-
-    const moveRes = await inventory.repositories.stockMovement.query(tenantId, {
-        limit: 1000,
-        filter: { reference: orderId, type: 'ALLOCATION' }, // type matches index? No index on type+reference composite.
-        // Index on 'reference' exists. Index on 'type' exists.
-        // `repo.query` will pick 'reference' index (more selective than type 'ALLOCATION').
-        // Then filter by type in memory.
-        populate: ['product', 'fromLocation', 'batch']
-    }, { resolvers });
-
-    const movements = unwrap(moveRes).items;
-
-    const pickItems = movements.map(item => ({
-        ...item,
-        productName: item.product?.name || 'Unknown',
-        sku: item.product?.sku || 'UNKNOWN',
-        locationCode: item.fromLocation?.code || 'Unknown Loc',
-        batchNumber: item.batch?.batchNumber,
-        expiryDate: item.batch?.expiryDate
-    }));
-
-    pickItems.sort((a, b) => (a.locationCode || '').localeCompare(b.locationCode || ''));
+    const pickItems = pickRes.value;
 
     const html = await renderPage(PickListPage, {
         user,
@@ -295,8 +285,10 @@ export const packingSlipHandler = async (c) => {
 // Update Status
 export const updateOrderStatusHandler = async (c) => {
   const tenantId = c.get('tenantId');
+  const user = c.get('user');
   const orderId = c.req.param('id');
   const orders = c.ctx.get('domain.orders');
+  const catalog = c.ctx.get('domain.catalog');
   const body = await c.req.parseBody();
   const status = body.status;
 
@@ -304,7 +296,43 @@ export const updateOrderStatusHandler = async (c) => {
     unwrap(await orders.useCases.updateOrderStatus.execute(tenantId, orderId, status));
     return c.redirect(`/ims/orders/${orderId}`);
   } catch (e) {
-    return c.text(`Error updating order: ${e.message}`, 400);
+    // Re-render OrderDetail with error
+    const res = await orders.useCases.getOrder.execute(tenantId, orderId);
+    if (isErr(res)) return c.text('Order not found', 404);
+    const order = res.value;
+
+     // Batch Enrich
+    const productIdsToFetch = new Set();
+    for (const item of order.items) {
+        if (!item.productName) productIdsToFetch.add(item.productId);
+    }
+    if (productIdsToFetch.size > 0) {
+        const productsRes = await catalog.useCases.getProductsBatch.execute(tenantId, Array.from(productIdsToFetch));
+        if (!isErr(productsRes)) {
+            const productMap = new Map(productsRes.value.map(p => [p.id, p]));
+            for (const item of order.items) {
+                if (!item.productName && productMap.has(item.productId)) {
+                    item.productName = productMap.get(item.productId).name;
+                }
+            }
+        }
+    }
+    for (const item of order.items) {
+         if (!item.productName) item.productName = 'Unknown Product';
+    }
+
+    const shipRes = await orders.useCases.listShipments.execute(tenantId, { orderId });
+    const { items: shipments } = unwrap(shipRes);
+
+    const html = await renderPage(OrderDetailPage, {
+        user,
+        order,
+        shipments,
+        layout: AdminLayout,
+        title: `Order #${order.id} - IMS Admin`,
+        error: e.message
+    });
+    return c.html(html, 400);
   }
 };
 
@@ -320,16 +348,27 @@ export const orderDetailHandler = async (c) => {
   if (isErr(res)) return c.text('Order not found', 404);
   const order = res.value;
 
-  // Enrich items with product details
+  // Batch Enrich
+  const productIdsToFetch = new Set();
   for (const item of order.items) {
-      if (!item.productName) {
-          const pRes = await catalog.useCases.getProduct.execute(tenantId, item.productId);
-          const product = isErr(pRes) ? null : pRes.value;
-          item.productName = product ? product.name : 'Unknown Product';
-      }
+      if (!item.productName) productIdsToFetch.add(item.productId);
   }
 
-  // Fetch Shipments
+  if (productIdsToFetch.size > 0) {
+      const productsRes = await catalog.useCases.getProductsBatch.execute(tenantId, Array.from(productIdsToFetch));
+      if (!isErr(productsRes)) {
+          const productMap = new Map(productsRes.value.map(p => [p.id, p]));
+          for (const item of order.items) {
+              if (!item.productName && productMap.has(item.productId)) {
+                  item.productName = productMap.get(item.productId).name;
+              }
+          }
+      }
+  }
+  for (const item of order.items) {
+      if (!item.productName) item.productName = 'Unknown Product';
+  }
+
   const shipRes = await orders.useCases.listShipments.execute(tenantId, { orderId });
   const { items: shipments } = unwrap(shipRes);
 

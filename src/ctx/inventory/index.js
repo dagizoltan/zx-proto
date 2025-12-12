@@ -23,6 +23,7 @@ import { createCreateWarehouse } from './application/use-cases/create-warehouse.
 import { createCreateLocation } from './application/use-cases/create-location.js';
 import { createConsumeStock } from './application/use-cases/consume-stock.js';
 import { createGetProductsBatch } from './application/use-cases/get-products-batch.js';
+import { createGetPickingList } from './application/use-cases/get-picking-list.js';
 
 export const createInventoryContext = async (deps) => {
   const { persistence, config, obs, messaging, registry } = deps;
@@ -43,11 +44,6 @@ export const createInventoryContext = async (deps) => {
   const inventoryAdjustmentService = createInventoryAdjustmentService(stockRepository, stockMovementRepository, batchRepository, productRepository, persistence.kvPool);
 
   // Use Cases
-  // Most need refactoring to handle Result types if they were custom.
-  // If they were generic wrappers, they might break if they expect thrown errors.
-  // I should eventually refactor all listed use cases.
-  // For now, I ensure wiring is correct.
-
   const createProduct = createCreateProduct({
     productRepository,
     obs,
@@ -118,6 +114,11 @@ export const createInventoryContext = async (deps) => {
       eventBus
   });
 
+  const getPickingList = createGetPickingList({
+      stockMovementRepository,
+      registry
+  });
+
   // WRAPPER USE CASES for Cross-Domain Service Calls
   const executeProduction = {
       execute: async (...args) => stockAllocationService.executeProduction(...args)
@@ -168,6 +169,7 @@ export const createInventoryContext = async (deps) => {
       listStockMovements,
       createWarehouse,
       createLocation,
+      getPickingList,
       executeProduction,
       receiveStockRobust,
       receiveStockBatch
