@@ -5,7 +5,7 @@ import { SchedulerDashboardPage } from '../../pages/ims/scheduler/scheduler-dash
 
 export const schedulerDashboardHandler = async (c) => {
     // FIX: Correct dependency resolution
-    const scheduler = c.ctx.get('domain.scheduler').service;
+    const scheduler = c.ctx.get('domain.scheduler').services.scheduler;
     const tenantId = c.get('tenantId') || 'default';
 
     // Fetch data
