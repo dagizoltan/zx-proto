@@ -1,5 +1,5 @@
 import { createKVOrderRepository } from '../../infra/persistence/kv/repositories/kv-order-repository.js';
-import { createKVShipmentRepository } from '../../infra/persistence/kv/repositories/kv-shipment-repository.js'; // NEW
+import { createKVShipmentRepository } from '../../infra/persistence/kv/repositories/kv-shipment-repository.js';
 
 import { createCreateOrder } from './application/use-cases/create-order.js';
 import { createListOrders } from './application/use-cases/list-orders.js';
