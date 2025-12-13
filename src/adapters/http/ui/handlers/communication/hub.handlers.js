@@ -3,7 +3,7 @@ import { CommunicationPage } from '../../pages/ims/communication/communication-p
 import { ConversationsPage } from '../../pages/ims/communication/conversations-page.jsx';
 import { ConversationDetailPage } from '../../pages/ims/communication/conversation-detail-page.jsx';
 import { AdminLayout } from '../../layouts/admin-layout.jsx';
-import { isErr, unwrap } from '../../../../../lib/trust/index.js';
+import { isErr, unwrap } from '../../../../../../lib/trust/index.js';
 
 // Handlers
 export const feedHandler = async (c) => {
