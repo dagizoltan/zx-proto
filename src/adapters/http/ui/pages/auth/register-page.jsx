@@ -3,10 +3,10 @@ import { h } from 'preact';
 export const RegisterPage = ({ error, email, name }) => {
   return (
     <div class="register-page">
-      <h2 style="text-align: center; margin-bottom: 1.5rem;">Create Account</h2>
+      <h2 class="text-center mb-6">Create Account</h2>
 
       {error && (
-        <div class="toast toast-error" style="margin-bottom: 1rem;">
+        <div class="toast toast-error mb-4">
           {error}
         </div>
       )}
@@ -47,10 +47,10 @@ export const RegisterPage = ({ error, email, name }) => {
           />
         </div>
 
-        <button type="submit" class="btn btn-primary" style="width: 100%;">Sign Up</button>
+        <button type="submit" class="btn btn-primary w-full">Sign Up</button>
       </form>
 
-      <div class="auth-footer">
+      <div class="text-center mt-6 text-sm">
         <p>Already have an account? <a href="/login">Sign in</a></p>
       </div>
     </div>
