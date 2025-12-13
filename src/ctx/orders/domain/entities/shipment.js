@@ -1,3 +1,5 @@
+import { DomainError } from '../errors/domain-errors.js';
+
 export const createShipment = ({
   id,
   tenantId,
@@ -10,9 +12,9 @@ export const createShipment = ({
   shippedAt,
   createdAt
 }) => {
-  if (!id) throw new Error("Shipment ID is required");
-  if (!orderId) throw new Error("Order ID is required");
-  if (!items || !items.length) throw new Error("Shipment must have items");
+  if (!id) throw new DomainError("Shipment ID is required", 'INVALID_SHIPMENT_ID');
+  if (!orderId) throw new DomainError("Order ID is required", 'INVALID_ORDER_ID');
+  if (!items || !items.length) throw new DomainError("Shipment must have items", 'INVALID_ITEMS');
 
   return Object.freeze({
     id,

@@ -1,6 +1,6 @@
 import { Ok, Err, isErr } from '../../../../../lib/trust/index.js';
 
-export const createListOrders = ({ orderRepository, accessControl }) => {
+export const createListOrders = ({ orderRepository }) => {
   const execute = async (tenantId, { limit = 10, cursor, status, search, minTotal, maxTotal, customerId } = {}) => {
 
       const filter = {};
