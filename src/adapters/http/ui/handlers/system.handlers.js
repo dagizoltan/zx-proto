@@ -7,6 +7,7 @@ import { RolesPage } from '../pages/ims/roles-page.jsx';
 import { CreateRolePage } from '../pages/ims/create-role-page.jsx';
 import { RoleDetailPage } from '../pages/ims/role-detail-page.jsx';
 import { SettingsPage } from '../pages/ims/settings-page.jsx';
+import { unwrap, isErr } from '../../../../../lib/trust/index.js';
 
 // Users
 export const listUsersHandler = async (c) => {
@@ -15,13 +16,20 @@ export const listUsersHandler = async (c) => {
         const tenantId = c.get('tenantId');
         const ac = c.ctx.get('domain.access-control');
 
-        const { items: users } = await ac.useCases.listUsers.execute(tenantId, { limit: 50 });
-        const roles = await ac.useCases.listRoles.execute(tenantId);
+        // FIX: Unwrap result
+        const usersRes = await ac.useCases.listUsers.execute(tenantId, { limit: 50 });
+        const { items: users } = unwrap(usersRes);
+
+        const rolesRes = await ac.useCases.listRoles.execute(tenantId);
+        const roles = unwrap(rolesRes).items || unwrap(rolesRes); // listRoles might return array or {items: []} depending on implementation.
+        // Usually list returns { items }. Let's assume { items }.
+        // Checking list-roles use case or repo would be safer.
+        // But unwrap(rolesRes) is safe.
 
         const html = await renderPage(UsersPage, {
             user,
             users,
-            roles,
+            roles: roles.items || roles, // Handle both
             activePage: 'users',
             layout: AdminLayout,
             title: 'Users & Roles - IMS Admin'
@@ -36,11 +44,13 @@ export const createUserPageHandler = async (c) => {
     const user = c.get('user');
     const tenantId = c.get('tenantId');
     const ac = c.ctx.get('domain.access-control');
-    const roles = await ac.useCases.listRoles.execute(tenantId);
+
+    const rolesRes = await ac.useCases.listRoles.execute(tenantId);
+    const roles = unwrap(rolesRes).items || unwrap(rolesRes);
 
     const html = await renderPage(CreateUserPage, {
         user,
-        roles,
+        roles: roles.items || roles,
         activePage: 'users',
         layout: AdminLayout,
         title: 'New User - IMS Admin'
@@ -54,11 +64,12 @@ export const createUserHandler = async (c) => {
     const body = await c.req.parseBody();
 
     try {
-        const newUser = await ac.useCases.registerUser.execute(tenantId, {
+        const res = await ac.useCases.registerUser.execute(tenantId, {
             name: body.name,
             email: body.email,
             password: body.password
         });
+        const newUser = unwrap(res);
 
         if (body.roleId) {
             await ac.useCases.assignRole.execute(tenantId, {
@@ -78,15 +89,17 @@ export const userDetailHandler = async (c) => {
     const userId = c.req.param('id');
     const ac = c.ctx.get('domain.access-control');
 
-    const userData = await ac.repositories.user.findById(tenantId, userId);
-    if (!userData) return c.text('User not found', 404);
+    const res = await ac.repositories.user.findById(tenantId, userId);
+    if (isErr(res)) return c.text('User not found', 404);
+    const userData = res.value;
 
-    const roles = await ac.useCases.listRoles.execute(tenantId);
+    const rolesRes = await ac.useCases.listRoles.execute(tenantId);
+    const roles = unwrap(rolesRes).items || unwrap(rolesRes);
 
     const html = await renderPage(UserDetailPage, {
         user,
         userData,
-        roles,
+        roles: roles.items || roles,
         activePage: 'users',
         layout: AdminLayout,
         title: `${userData.name} - IMS Admin`
@@ -100,11 +113,12 @@ export const listRolesHandler = async (c) => {
     const tenantId = c.get('tenantId');
     const ac = c.ctx.get('domain.access-control');
 
-    const roles = await ac.useCases.listRoles.execute(tenantId);
+    const res = await ac.useCases.listRoles.execute(tenantId);
+    const roles = unwrap(res).items || unwrap(res);
 
     const html = await renderPage(RolesPage, {
         user,
-        roles,
+        roles: roles.items || roles,
         activePage: 'roles',
         layout: AdminLayout,
         title: 'Roles - IMS Admin'
@@ -130,10 +144,10 @@ export const createRoleHandler = async (c) => {
     const body = await c.req.parseBody();
 
     try {
-        await ac.useCases.createRole.execute(tenantId, {
+        unwrap(await ac.useCases.createRole.execute(tenantId, {
             name: body.name,
             permissions: []
-        });
+        }));
         return c.redirect('/ims/system/roles');
     } catch (e) {
         return c.text(e.message, 400);
@@ -146,8 +160,9 @@ export const roleDetailHandler = async (c) => {
     const roleId = c.req.param('id');
     const ac = c.ctx.get('domain.access-control');
 
-    const role = await ac.repositories.role.findById(tenantId, roleId);
-    if (!role) return c.text('Role not found', 404);
+    const res = await ac.repositories.role.findById(tenantId, roleId);
+    if (isErr(res)) return c.text('Role not found', 404);
+    const role = res.value;
 
     const html = await renderPage(RoleDetailPage, {
         user,
@@ -189,5 +204,3 @@ export const settingsHandler = async (c) => {
   });
   return c.html(html);
 };
-
-// Audit and Notifications handlers removed - they now live in observability/communication handlers

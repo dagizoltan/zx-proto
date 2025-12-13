@@ -10,13 +10,13 @@ export const seedScheduler = async (ctx, tenantId) => {
     // 1. Get existing tasks (synced by main/service)
     const tRes = await taskRepo.list(tenantId, { limit: 100 });
     if (isErr(tRes)) {
-        Log.error('Failed to list tasks for seeding history');
+        console.warn('[WARN] Failed to list tasks for seeding history');
         return;
     }
     const tasks = tRes.value.items;
 
     if (tasks.length === 0) {
-        Log.warn('No tasks found. Skipping execution history.');
+        console.warn('[WARN] No tasks found. Skipping execution history.');
         return;
     }
 
