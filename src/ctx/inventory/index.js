@@ -24,6 +24,7 @@ import { createCreateLocation } from './application/use-cases/create-location.js
 import { createConsumeStock } from './application/use-cases/consume-stock.js';
 import { createGetProductsBatch } from './application/use-cases/get-products-batch.js';
 import { createGetPickingList } from './application/use-cases/get-picking-list.js';
+import { unwrap } from '../../../lib/trust/index.js';
 
 export const createInventoryContext = async (deps) => {
   const { persistence, config, obs, messaging, registry } = deps;
@@ -134,7 +135,9 @@ export const createInventoryContext = async (deps) => {
 
   const checkUserPermission = async (tenantId, userId, action) => {
     const accessControl = registry.get('domain.access-control');
-    return accessControl.useCases.checkPermission.execute(tenantId, userId, 'inventory', action);
+    // Unwrap the result to return boolean, maintaining interface.
+    // If it's an error (e.g. system failure), unwrap throws, which is safe/secure (fails closed).
+    return unwrap(await accessControl.useCases.checkPermission.execute(tenantId, userId, 'inventory', action));
   };
 
   return {

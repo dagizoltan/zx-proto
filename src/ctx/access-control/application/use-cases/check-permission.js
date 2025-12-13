@@ -1,18 +1,37 @@
+import { checkUserPermission } from '../../domain/services/rbac-service.js';
+import { DomainError } from '../../domain/errors/domain-errors.js';
 import { Ok, Err, isErr } from '../../../../../lib/trust/index.js';
 
-export const createCheckPermission = ({ rbacService }) => {
+export const createCheckPermission = ({ userRepository, roleRepository }) => {
   const execute = async (tenantId, userId, resource, action) => {
-    // rbacService might need refactoring too? Assuming it returns bool
-    // If rbacService throws, we should catch it or refactor it.
-    // Let's assume we will refactor rbacService next.
-    // For now, wrap in try/catch or assume it returns boolean.
-    // But this useCase should return Result.
-
     try {
-        const allowed = await rbacService.checkPermission(tenantId, userId, resource, action);
-        return Ok(allowed);
-    } catch (e) {
-        return Err({ code: 'RBAC_ERROR', message: e.message });
+      // 1. Fetch data (Application Layer responsibility)
+      const userRes = await userRepository.findById(tenantId, userId);
+      if (isErr(userRes)) return userRes;
+
+      const user = userRes.value;
+      if (!user) return Err({ code: 'USER_NOT_FOUND', message: 'User not found' });
+
+      // 2. Fetch roles
+      // Handle case where user has no roles
+      if (!user.roleIds || user.roleIds.length === 0) {
+          return Ok(false);
+      }
+
+      const rolesRes = await roleRepository.findByIds(tenantId, user.roleIds);
+      if (isErr(rolesRes)) return rolesRes;
+
+      const roles = rolesRes.value;
+
+      // 3. Call pure domain service
+      const hasPermission = checkUserPermission(user, roles, resource, action);
+
+      return Ok(hasPermission);
+    } catch (error) {
+      if (error instanceof DomainError) {
+        return Err({ code: error.code, message: error.message });
+      }
+      return Err({ code: 'PERMISSION_CHECK_ERROR', message: error.message });
     }
   };
 
