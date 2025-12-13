@@ -78,8 +78,8 @@ const run = async () => {
         await seedProcurement(ctx, tenantId, products, locationIds);
         await seedManufacturing(ctx, tenantId, products); // New seeder
 
-        // Pass specific user sets where appropriate
-        await seedOrders(ctx, tenantId, products, customers); // Orders usually come from customers
+        // Use allUsers for orders so Admin gets some orders too
+        await seedOrders(ctx, tenantId, products, allUsers);
 
         // Use allUsers for system-wide things
         await seedNotifications(ctx, tenantId, allUsers);

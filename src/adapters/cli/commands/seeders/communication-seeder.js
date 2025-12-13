@@ -35,15 +35,28 @@ export const seedCommunication = async (ctx, tenantId, users) => {
     }
 
     // --- Seed Conversations ---
+    // Identify Admin
+    const adminUser = users.find(u => u.email === 'admin@imsshop.com');
+
     const userIds = users && users.length > 0 ? users.map(u => u.id) : ['user-1'];
     const getRandomUser = () => Random.element(userIds);
 
     if (userIds.length > 1) {
         // Generate random conversations
         for (let i = 0; i < 20; i++) {
-            const user1 = getRandomUser();
+            let user1 = getRandomUser();
             let user2 = getRandomUser();
-            while (user2 === user1 && userIds.length > 1) user2 = getRandomUser();
+
+            // 30% chance to involve admin
+            if (adminUser && Math.random() < 0.3) {
+                user1 = adminUser.id;
+                // pick user2 distinct from admin
+                do {
+                    user2 = getRandomUser();
+                } while (user2 === user1);
+            } else {
+                 while (user2 === user1 && userIds.length > 1) user2 = getRandomUser();
+            }
 
             const res = await sendMessage(tenantId, {
                 from: user1,
@@ -67,25 +80,6 @@ export const seedCommunication = async (ctx, tenantId, users) => {
                 }
             }
         }
-    }
-
-    // --- Seed Notifications ---
-    // Moved main notifications to notification-seeder, but keeping some here if comms domain handles it differently
-    // In this codebase, it seems notification-seeder uses system.useCases.notifications
-    // and communication-seeder uses comms.useCases.notifications.
-    // They might point to the same thing or be duplicated.
-    // I will keep a few here just in case.
-
-    const notifs = Array.from({ length: 10 }).map(() => ({
-        level: faker.helpers.arrayElement(['info', 'success', 'warning']),
-        title: faker.lorem.words(3),
-        message: faker.lorem.sentence(),
-        link: null
-    }));
-
-    for (const n of notifs) {
-        const targetUser = getRandomUser();
-        await notifications.notify(tenantId, { ...n, userId: targetUser });
     }
 
     console.log('✅ Communication seeded.');

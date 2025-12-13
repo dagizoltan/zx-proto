@@ -9,12 +9,19 @@ export const seedNotifications = async (ctx, tenantId, users) => {
         return;
     }
 
+    // Identify Admin User
+    const adminUser = users.find(u => u.email === 'admin@imsshop.com');
+    if (adminUser) {
+        Log.info(`Targeting Admin User: ${adminUser.id} (${adminUser.email})`);
+    }
+
     const notifications = [
         {
             level: 'SUCCESS',
             title: 'Welcome to IMS',
             message: 'System initialization complete. Welcome to your new Inventory Management System.',
-            link: '/ims/system/settings'
+            link: '/ims/system/settings',
+            forceUser: adminUser // Ensure admin sees this
         },
         ...Array.from({ length: 30 }).map(() => ({
             level: faker.helpers.arrayElement(['INFO', 'WARN', 'ERROR', 'SUCCESS']),
@@ -27,12 +34,23 @@ export const seedNotifications = async (ctx, tenantId, users) => {
     let count = 0;
     for (const n of notifications) {
         try {
-            // Assign to a random user or null (system wide)
-            const user = Random.bool(0.7) ? Random.element(users) : null;
+            // Priority: Forced User -> Random User (70%) -> System Wide (30%)
+            let targetUserId = null;
+            if (n.forceUser) {
+                targetUserId = n.forceUser.id;
+            } else if (adminUser && Math.random() < 0.3) {
+                // 30% chance to assign to admin explicitly to populate their list
+                targetUserId = adminUser.id;
+            } else {
+                 const randomUser = Random.bool(0.7) ? Random.element(users) : null;
+                 targetUserId = randomUser ? randomUser.id : null;
+            }
+
+            const { forceUser, ...data } = n; // Remove helper prop
 
             const res = await system.useCases.notifications.notify(tenantId, {
-                userId: user ? user.id : null,
-                ...n
+                userId: targetUserId,
+                ...data
             });
              if (res && res.ok === false) {
                  console.error('Failed to seed notification:', res.error);

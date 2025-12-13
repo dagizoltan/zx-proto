@@ -5,21 +5,37 @@ export const seedOrders = async (ctx, tenantId, products, customers) => {
     Log.step('Seeding Sales History (Orders & Shipments)');
     const orders = ctx.get('domain.orders');
 
-    // Check if domain exists (it should)
     if (!orders) {
         Log.error('Orders domain not found in context');
         return;
     }
 
-    const totalOrders = 500; // Increased for realism
+    // Identify Admin User (assuming they are in the passed 'customers' list, which is actually 'allUsers' from seed-data.js now)
+    // Note: seed-data.js passes 'customers' to seedOrders currently.
+    // We need to check if 'admin' is in 'customers' or if we need to pass 'allUsers'.
+    // Let's assume we will update seed-data.js to pass allUsers or handle it there.
+    // Checking the variable passed: In previous step `seedOrders(ctx, tenantId, products, customers);`
+    // I need to ensure `customers` includes the admin if I want to seed orders for them.
+    // Wait, usually admins DON'T place orders. But for demo purposes, if the UI shows "My Orders", we need it.
+
+    // I'll filter for the admin user if present.
+    const adminUser = customers.find(u => u.email === 'admin@imsshop.com');
+
+    const totalOrders = 500;
     Log.info(`Simulating ${totalOrders} orders over 12 months...`);
 
     let ops = 0;
     for (let i = 0; i < totalOrders; i++) {
-        // Better time distribution (more recent)
         const date = faker.date.past({ years: 1 });
 
-        const customer = Random.element(customers);
+        // 5% chance it's the admin, otherwise random customer
+        let customer;
+        if (adminUser && Math.random() < 0.05) {
+            customer = adminUser;
+        } else {
+            customer = Random.element(customers);
+        }
+
         const numItems = Random.int(1, 5);
         const items = [];
         for (let j = 0; j < numItems; j++) {
@@ -29,17 +45,16 @@ export const seedOrders = async (ctx, tenantId, products, customers) => {
 
         try {
             const res = await orders.useCases.createOrder.execute(tenantId, customer.id, items);
-            if (isErr(res)) continue; // Skip on failure
+            if (isErr(res)) continue;
 
             const order = res.value;
 
             // Patch Date
             order.createdAt = date.toISOString();
-            // .save returns Result
             await orders.repositories.order.save(tenantId, order);
 
             const r = Math.random();
-            if (r > 0.05) { // 95% not cancelled immediately
+            if (r > 0.05) { // 95% not cancelled
                 await orders.useCases.updateOrderStatus.execute(tenantId, order.id, 'PAID');
 
                 if (r > 0.10) { // 90% shipped
@@ -52,10 +67,6 @@ export const seedOrders = async (ctx, tenantId, products, customers) => {
 
                     if (r > 0.15) { // 85% delivered
                          await orders.useCases.updateOrderStatus.execute(tenantId, order.id, 'DELIVERED');
-                    } else if (r < 0.18) {
-                        // 3% Returns
-                        // Implement return logic if use case exists, otherwise skip
-                        // await orders.useCases.returnOrder.execute(...)
                     }
                 }
             } else {
