@@ -13,7 +13,10 @@ export const createSendMessage = ({ conversationRepository, messageRepository, e
              }
              // Create Conversation
              conversationId = crypto.randomUUID();
-             const participantIds = [from, to]; // Assuming from/to are User IDs
+
+             // Handle 'to' as single ID or Array
+             const recipients = Array.isArray(to) ? to : [to];
+             const participantIds = [...new Set([from, ...recipients])];
 
              try {
                  const newConv = createConversation({

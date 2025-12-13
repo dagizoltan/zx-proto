@@ -2,6 +2,7 @@ import { renderPage } from '../../renderer.js';
 import { CommunicationPage } from '../../pages/ims/communication/communication-page.jsx';
 import { ConversationsPage } from '../../pages/ims/communication/conversations-page.jsx';
 import { ConversationDetailPage } from '../../pages/ims/communication/conversation-detail-page.jsx';
+import { CreateConversationPage } from '../../pages/ims/communication/create-conversation-page.jsx';
 import { AdminLayout } from '../../layouts/admin-layout.jsx';
 import { isErr, unwrap } from '../../../../../../lib/trust/index.js';
 
@@ -94,6 +95,59 @@ export const conversationDetailHandler = async (c) => {
         title: `${mutableConversation.subject || 'Conversation'} - Communication`,
         user: c.get('user')
     }));
+};
+
+export const createConversationPageHandler = async (c) => {
+    const tenantId = c.get('tenantId');
+    const ac = c.ctx.get('domain.access-control');
+
+    let users = [];
+    if (ac && ac.repositories.user.list) {
+         const usersRes = await ac.repositories.user.list(tenantId, { limit: 100 });
+         if (!isErr(usersRes)) {
+             users = usersRes.value.items;
+         }
+    }
+
+    // Filter out current user?
+    const currentUser = c.get('user');
+    users = users.filter(u => u.id !== currentUser.id);
+
+    return c.html(await renderPage(CreateConversationPage, {
+        layout: AdminLayout,
+        title: 'New Conversation - Communication',
+        user: currentUser,
+        users
+    }));
+};
+
+export const createConversationActionHandler = async (c) => {
+    const tenantId = c.get('tenantId');
+    const { sendMessage } = c.ctx.get('domain.communication').useCases;
+    const user = c.get('user');
+
+    const body = await c.req.parseBody();
+    const { to, content } = body; // 'to' will be string or array of strings
+
+    // If 'to' is missing
+    if (!to) {
+        return c.text('Recipients required', 400);
+    }
+
+    const recipients = Array.isArray(to) ? to : [to];
+
+    const result = await sendMessage(tenantId, {
+        from: user.id,
+        to: recipients,
+        content
+    });
+
+    if (isErr(result)) {
+        return c.text(result.error.message, 400);
+    }
+
+    const { conversationId } = result.value;
+    return c.redirect(`/ims/communication/conversations/${conversationId}`);
 };
 
 export const notificationsHandler = async (c) => {
