@@ -44,7 +44,10 @@ export const OrdersPage = ({ user, orders, nextCursor, currentUrl }) => {
                         <a href={`/ims/orders/${order.id}`}>{order.id.slice(0, 8)}...</a>
                     </td>
                     <td>{new Date(order.createdAt).toLocaleDateString()}</td>
-                    <td>{order.userId}</td>
+                    <td>
+                        <div>{order.customerName || order.customerId}</div>
+                        {order.customerEmail && <div class="text-xs text-muted">{order.customerEmail}</div>}
+                    </td>
                     <td>
                         <span class={`status-badge ${order.status}`}>{order.status}</span>
                     </td>

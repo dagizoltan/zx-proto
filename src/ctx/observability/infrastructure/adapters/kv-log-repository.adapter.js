@@ -27,8 +27,15 @@ export const createKVLogRepository = (kvPool) => {
       if (isErr(result)) return result;
       return Ok(logMapper.toDomain(result.value));
     },
-    list: async (tenantId, options) => {
-      const result = await baseRepo.list(tenantId, options);
+    list: async (tenantId, { limit, cursor, level } = {}) => {
+      // FIX: Map 'level' option to filter to use indexing and correct filtering logic
+      let result;
+      if (level) {
+          result = await baseRepo.query(tenantId, { limit, cursor, filter: { level: level.toLowerCase() } });
+      } else {
+          result = await baseRepo.list(tenantId, { limit, cursor });
+      }
+
       if (isErr(result)) return result;
       return Ok({ ...result.value, items: logMapper.toDomainList(result.value.items) });
     },

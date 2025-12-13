@@ -20,7 +20,8 @@ export const createLocalCatalogGatewayAdapter = (registry) => {
     list: async (tenantId, options) => {
         const cat = registry.get('domain.catalog');
         if (!cat) throw new Error('Catalog domain not available');
-        return cat.useCases.listProducts.execute(tenantId, options.limit, options.cursor);
+        // FIX: Pass options as an object, not positional arguments
+        return cat.useCases.listProducts.execute(tenantId, options);
     }
   };
 };

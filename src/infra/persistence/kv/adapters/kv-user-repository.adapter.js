@@ -33,6 +33,12 @@ export const createKVUserRepositoryAdapter = (kvPool) => {
       return Ok(userMapper.toDomain(result.value));
     },
 
+    findByIds: async (tenantId, ids) => {
+      const result = await baseRepo.findByIds(tenantId, ids);
+      if (isErr(result)) return result;
+      return Ok(userMapper.toDomainList(result.value));
+    },
+
     findByEmail: async (tenantId, email) => {
         // Using existing queryByIndex which returns { items: [], ... }
         const result = await baseRepo.queryByIndex(tenantId, 'email', email);
@@ -55,6 +61,12 @@ export const createKVUserRepositoryAdapter = (kvPool) => {
         const result = await baseRepo.queryByIndex(tenantId, indexName, value, options);
         if (isErr(result)) return result;
         return Ok({ ...result.value, items: userMapper.toDomainList(result.value.items) });
+    },
+
+    query: async (tenantId, options) => {
+      const result = await baseRepo.query(tenantId, options);
+      if (isErr(result)) return result;
+      return Ok({ ...result.value, items: userMapper.toDomainList(result.value.items) });
     }
   };
 };

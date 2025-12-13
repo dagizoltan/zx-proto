@@ -13,6 +13,7 @@ export const listOrdersHandler = async (c) => {
     const user = c.get('user');
     const tenantId = c.get('tenantId');
     const orders = c.ctx.get('domain.orders');
+    const accessControl = c.ctx.get('domain.access-control'); // Fix: Need access-control for enrichment
 
     // Query Params
     const cursor = c.req.query('cursor');
@@ -24,6 +25,34 @@ export const listOrdersHandler = async (c) => {
 
     const res = await orders.useCases.listOrders.execute(tenantId, { limit, cursor, status, search: q, minTotal, maxTotal });
     const { items: orderList, nextCursor } = unwrap(res);
+
+    // Enrich with Customer Names
+    if (orderList.length > 0) {
+        const customerIds = new Set(orderList.map(o => o.customerId).filter(Boolean));
+        if (customerIds.size > 0) {
+            // Using repo directly via exposed method on Context (if available)
+            // OR use existing use case if compatible. 'listUsers' is not 'batchGet'.
+            // I'll use repo directly for now as per "Refactoring Trash" findings -
+            // sometimes direct access is the only way if Use Case is missing.
+            // But I just added 'findByIds' to the repo adapter!
+            // Access via: accessControl.repositories.user.findByIds
+            const userRepo = accessControl.repositories.user;
+            if (userRepo && userRepo.findByIds) {
+                 const usersRes = await userRepo.findByIds(tenantId, Array.from(customerIds));
+                 if (!isErr(usersRes)) {
+                     const userMap = new Map(usersRes.value.map(u => [u.id, u]));
+                     for (const order of orderList) {
+                         if (order.customerId && userMap.has(order.customerId)) {
+                             order.customerName = userMap.get(order.customerId).name;
+                             order.customerEmail = userMap.get(order.customerId).email;
+                         } else {
+                             order.customerName = 'Unknown User';
+                         }
+                     }
+                 }
+            }
+        }
+    }
 
     const html = await renderPage(OrdersPage, {
       user,

@@ -79,7 +79,8 @@ export const createInventoryContext = async (deps) => {
   });
 
   const listAllProducts = createListAllProducts({
-      productRepository: productRepositoryCompatibility
+      productRepository: productRepositoryCompatibility,
+      stockRepository
   });
 
   const receiveStock = createReceiveStock({
