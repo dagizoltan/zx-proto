@@ -38,7 +38,7 @@ export const ConversationsPage = ({ conversations }) => {
             <div class="card p-0">
                 <div style="padding: var(--space-4); border-bottom: 1px solid var(--color-border); display: flex; justify-content: space-between; align-items: center;">
                     <h2 style="margin: 0; font-size: 1.1rem;">Inbox</h2>
-                    <button class="btn btn-sm btn-primary">New Message</button>
+                    <a href="/ims/communication/conversations/new" class="btn btn-sm btn-primary">New Message</a>
                 </div>
                 <div>
                     {(conversations || []).map(c => <ConversationItem conv={c} />)}
