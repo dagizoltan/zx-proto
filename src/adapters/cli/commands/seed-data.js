@@ -32,9 +32,13 @@ const run = async () => {
     console.log('🌱 Starting Database Seed...');
     const tenantId = 'default';
 
+    // 0. Load Config First
+    const config = await createConfigService('local'); // Force local for seed
+
     // 1. Clean Database
     Log.step('Cleaning Database...');
-    const kv = await Deno.openKv();
+    const dbPath = config.get('database.kv.path');
+    const kv = await Deno.openKv(dbPath);
     const iter = kv.list({ prefix: ['tenants', tenantId] });
     let deletedCount = 0;
     for await (const entry of iter) {
@@ -45,7 +49,6 @@ const run = async () => {
     Log.success(`Database cleaned (${deletedCount} entries removed).`);
 
     // 2. Initialize App Context (Partial)
-    const config = await createConfigService('local'); // Force local for seed
     const ctx = createContextRegistry();
 
     // Wiring (Matches main.js)

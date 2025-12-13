@@ -3,9 +3,9 @@ export const createKVPool = (size = 5) => {
   const available = [];
   const waiting = [];
 
-  const initialize = async () => {
+  const initialize = async (path) => {
     for (let i = 0; i < size; i++) {
-      const kv = await Deno.openKv();
+      const kv = await Deno.openKv(path);
       connections.push(kv);
       available.push(kv);
     }
