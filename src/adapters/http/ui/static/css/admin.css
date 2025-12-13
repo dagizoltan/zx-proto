@@ -212,20 +212,7 @@
 }
 
 /* Cards - GLASS ENTERPRISE */
-.card {
-  background: var(--glass-bg);
-  backdrop-filter: var(--glass-blur);
-  border-radius: var(--radius-lg);
-  border: var(--glass-border);
-  box-shadow: var(--glass-shadow);
-  padding: var(--space-6);
-  margin-bottom: var(--space-6);
-}
-
-.card.p-0 {
-  padding: 0;
-  overflow: hidden;
-}
+/* .card moved to styles.css for shared usage */
 
 .stat-grid {
   display: grid;

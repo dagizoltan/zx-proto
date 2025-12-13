@@ -316,3 +316,54 @@ tr:hover td {
 
 /* Utility Text Sizes */
 .text-2xl { font-size: 1.5rem; }
+
+/* Cards - GLASS ENTERPRISE */
+.card {
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  border-radius: var(--radius-lg);
+  border: var(--glass-border);
+  box-shadow: var(--glass-shadow);
+  padding: var(--space-6);
+  margin-bottom: var(--space-6);
+}
+
+.card.p-0 {
+  padding: 0;
+  overflow: hidden;
+}
+
+/* Auth Layout & Shared Form Styles */
+.auth-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  padding: var(--space-4);
+}
+
+.auth-logo {
+  text-align: center;
+  margin-bottom: var(--space-6);
+}
+
+.brand-text {
+  font-size: var(--font-size-2xl);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-weight: 800;
+  background: linear-gradient(90deg, #fff, #94a3b8);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: var(--color-text-main); /* Fallback */
+  text-decoration: none;
+}
+
+.form-group {
+  margin-bottom: var(--space-4);
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: var(--space-2);
+}
