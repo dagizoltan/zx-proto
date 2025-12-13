@@ -50,6 +50,12 @@ export const createKVStockRepositoryAdapter = (kvPool) => {
              const result = await baseRepo.queryByIndex(tenantId, indexName, value, options);
              if (isErr(result)) return result;
              return Ok({ ...result.value, items: stockEntryMapper.toDomainList(result.value.items) });
+        },
+
+        query: async (tenantId, options, context) => {
+             const result = await baseRepo.query(tenantId, options, context);
+             if (isErr(result)) return result;
+             return Ok({ ...result.value, items: stockEntryMapper.toDomainList(result.value.items) });
         }
     };
 };
