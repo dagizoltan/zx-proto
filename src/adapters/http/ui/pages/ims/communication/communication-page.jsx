@@ -4,12 +4,13 @@ const FeedItem = ({ item }) => (
     <div style="padding: var(--space-4); border-bottom: 1px solid var(--color-border); display: flex; gap: var(--space-3);">
         <div style="flex: 1;">
             <div style="display: flex; justify-content: space-between; margin-bottom: var(--space-1);">
-                <h6 style="margin: 0; font-size: 1rem;">{item.title}</h6>
+                {/* FIX: Use channelId as title, fallback to System. Use content as message. */}
+                <h6 style="margin: 0; font-size: 1rem; text-transform: capitalize;">{item.channelId || 'System'}</h6>
                 <small class="text-muted" style="white-space: nowrap; margin-left: var(--space-2);">
                     {new Date(item.createdAt).toLocaleString()}
                 </small>
             </div>
-            <p style="margin: 0; color: var(--color-text-muted);">{item.message}</p>
+            <p style="margin: 0; color: var(--color-text-muted);">{item.content}</p>
             {item.link && (
                 <a href={item.link} class="btn btn-sm btn-secondary" style="margin-top: var(--space-2);">
                     View Details
@@ -22,7 +23,7 @@ const FeedItem = ({ item }) => (
 const MessageItem = ({ msg }) => (
     <div style="padding: var(--space-4); border-bottom: 1px solid var(--color-border);">
         <div style="display: flex; justify-content: space-between; margin-bottom: var(--space-1);">
-            <h6 style="margin: 0;">From: {msg.from}</h6>
+            <h6 style="margin: 0;">From: {msg.senderId || msg.from}</h6>
             <small class="text-muted">{new Date(msg.createdAt).toLocaleString()}</small>
         </div>
         <p style="margin: 0;">{msg.content}</p>
@@ -30,9 +31,11 @@ const MessageItem = ({ msg }) => (
 );
 
 const NotificationItem = ({ n }) => {
-    const colorClass = n.level === 'ERROR' ? 'text-error' : (n.level === 'WARN' ? 'text-warning' : 'text-primary');
+    // FIX: Normalize level case
+    const level = n.level ? n.level.toUpperCase() : 'INFO';
+    const colorClass = level === 'ERROR' ? 'text-error' : (level === 'WARN' ? 'text-warning' : 'text-primary');
     // We don't have text-warning class in styles, using inline style fallback or var
-    const titleColor = `var(--color-${n.level === 'INFO' ? 'primary' : n.level.toLowerCase()})`;
+    const titleColor = `var(--color-${level === 'INFO' ? 'primary' : level.toLowerCase()})`;
 
     return (
         <div style="padding: var(--space-4); border-bottom: 1px solid var(--color-border);">
@@ -55,8 +58,6 @@ export const CommunicationPage = ({ activeTab, feed, messages, notifications, ti
                     <a href="/ims" style="color: var(--color-text-muted);">Home</a> / Communication / {title}
                 </div>
             </div>
-
-            {/* Removed SidebarNav. Rendering only the active content. */}
 
             <div style="flex: 1; min-width: 0;">
                 {activeTab === 'feed' && (
