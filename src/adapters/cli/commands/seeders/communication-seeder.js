@@ -8,53 +8,54 @@ export const seedCommunication = async (ctx, tenantId, users) => {
     // --- Seed Feed ---
     const feedItems = [
         {
-            title: 'Welcome to the New System',
-            message: 'We have updated the system with a new communication hub and observability tools.',
-            type: 'MANUAL',
-            author: 'Admin',
+            channelId: 'general',
+            content: 'We have updated the system with a new communication hub and observability tools.',
+            type: 'post',
+            authorId: 'admin', // Mock ID
             createdAt: new Date(Date.now() - 86400000 * 2).toISOString()
         },
         {
-            title: 'Maintenance Scheduled',
-            message: 'System maintenance scheduled for this weekend. Expect downtime from 2 AM to 4 AM UTC.',
-            type: 'MANUAL',
-            author: 'IT Dept',
+            channelId: 'announcements',
+            content: 'System maintenance scheduled for this weekend. Expect downtime from 2 AM to 4 AM UTC.',
+            type: 'post',
+            authorId: 'admin',
             createdAt: new Date(Date.now() - 3600000).toISOString()
         },
         ...Array.from({ length: 15 }).map((_, i) => ({
-            title: `System Event #${i + 1}`,
-            message: `Automated system check completed successfully. Module ${String.fromCharCode(65 + i)} is operational.`,
-            type: 'SYSTEM',
-            author: 'System',
+            channelId: 'system-events',
+            content: `Automated system check completed successfully. Module ${String.fromCharCode(65 + i)} is operational.`,
+            type: 'system',
+            authorId: 'system',
             createdAt: new Date(Date.now() - 3600000 * (i + 2)).toISOString()
         })),
         {
-            title: 'Quarterly Town Hall',
-            message: 'Join us for the quarterly town hall meeting next Friday.',
-            type: 'MANUAL',
-            author: 'HR',
+            channelId: 'hr',
+            content: 'Join us for the quarterly town hall meeting next Friday.',
+            type: 'post',
+            authorId: 'hr-dept',
             createdAt: new Date(Date.now() - 86400000 * 5).toISOString()
         }
     ];
 
     for (const item of feedItems) {
+        // postFeedItem returns Result, but we ignore here assuming valid data
         await postFeedItem(tenantId, item);
     }
 
     // --- Seed Conversations ---
     // Use real users if available, otherwise fallbacks
-    const userEmails = users && users.length > 0 ? users.map(u => u.email) : ['admin@test.com', 'manager@test.com', 'user@test.com'];
-    const getRandomUser = () => Random.element(userEmails);
+    const userIds = users && users.length > 0 ? users.map(u => u.id) : ['user-1', 'user-2', 'user-3'];
+    const getRandomUser = () => Random.element(userIds);
 
     const conversationsData = [
         {
             from: 'system',
-            to: 'all',
+            to: userIds[0] || 'all',
             content: 'Hello everyone! Please check the new feed.'
         },
         {
-            from: userEmails[0],
-            to: userEmails[1] || 'manager@test.com',
+            from: userIds[0],
+            to: userIds[1] || 'user-2',
             content: 'Can you review the latest Q3 report?'
         }
     ];
@@ -64,11 +65,15 @@ export const seedCommunication = async (ctx, tenantId, users) => {
         // Start conversation
         const res = await sendMessage(tenantId, conv);
         // Note: useCases return Results (ok/value)
-        if (!res || !res.ok) continue;
+        if (!res || !res.ok) {
+             // console.warn('Failed to seed conversation', res);
+             continue;
+        }
         const msg = res.value;
+        // msg contains conversationId now (from our fix)
 
         // Add a reply to the first one for demo
-        if (conv.from === userEmails[0]) {
+        if (conv.from === userIds[0]) {
             await sendMessage(tenantId, {
                 conversationId: msg.conversationId,
                 from: conv.to,
@@ -86,14 +91,14 @@ export const seedCommunication = async (ctx, tenantId, users) => {
     for (let i = 0; i < 8; i++) {
         const user1 = getRandomUser();
         let user2 = getRandomUser();
-        while (user2 === user1 && userEmails.length > 1) {
+        while (user2 === user1 && userIds.length > 1) {
             user2 = getRandomUser();
         }
 
         const res = await sendMessage(tenantId, {
             from: user1,
             to: user2,
-            content: `Hey ${user2}, update on project phase ${i}?`
+            content: `Hey, update on project phase ${i}?`
         });
 
         if (res && res.ok) {
@@ -103,27 +108,28 @@ export const seedCommunication = async (ctx, tenantId, users) => {
                  await sendMessage(tenantId, {
                     conversationId: msg.conversationId,
                     from: user2,
-                    content: `Working on it, ${user1}. Will accept PR shortly.`
+                    content: `Working on it. Will accept PR shortly.`
                 });
             }
         }
     }
 
     // --- Seed Notifications ---
-    // Note: notification-seeder.js also exists. This adds communication-specific notifications.
     const notifs = [
-        { level: 'INFO', title: 'System Update', message: 'Version 2.0 is live.' },
-        { level: 'WARN', title: 'Low Stock', message: 'Product X is running low.', link: '/ims/inventory' },
+        { level: 'info', title: 'System Update', message: 'Version 2.0 is live.' },
+        { level: 'warning', title: 'Low Stock', message: 'Product X is running low.', link: '/ims/inventory' },
         ...Array.from({ length: 5 }).map((_, i) => ({
-            level: ['INFO', 'SUCCESS', 'WARN'][i % 3],
+            level: ['info', 'success', 'warning'][i % 3],
             title: `Routine Check ${i}`,
             message: `Routine system check ${i} completed. Status: OK.`,
             link: i % 2 === 0 ? '/ims/system/settings' : null
         }))
     ];
 
+    // Assign notifications to random users
     for (const n of notifs) {
-        await notifications.notify(tenantId, n);
+        const targetUser = getRandomUser();
+        await notifications.notify(tenantId, { ...n, userId: targetUser });
     }
 
     console.log('✅ Communication seeded.');

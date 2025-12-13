@@ -45,7 +45,10 @@ export const conversationDetailHandler = async (c) => {
 
 export const notificationsHandler = async (c) => {
     const { notifications } = c.ctx.get('domain.communication').useCases;
-    const { items } = await notifications.list(c.get('tenantId'), { limit: 50 });
+    const user = c.get('user');
+    // FIX: Pass userId to list notifications for current user
+    const { items } = await notifications.list(c.get('tenantId'), { limit: 50, userId: user.id });
+
     return c.html(await renderPage(CommunicationPage, {
         activeTab: 'notifications',
         notifications: items,
