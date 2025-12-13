@@ -63,16 +63,35 @@ export const conversationsHandler = async (c) => {
 };
 
 export const conversationDetailHandler = async (c) => {
+    const tenantId = c.get('tenantId');
     const { getConversation } = c.ctx.get('domain.communication').useCases;
     const conversationId = c.req.param('id');
-    const conversation = await getConversation(c.get('tenantId'), conversationId);
+    const conversation = await getConversation(tenantId, conversationId);
 
     if (!conversation) return c.text('Conversation not found', 404);
 
+    // Clone to allow modification
+    const mutableConversation = { ...conversation };
+
+    // Enrich with Participant Names
+    const ac = c.ctx.get('domain.access-control');
+    if (mutableConversation.participantIds?.length > 0 && ac && ac.repositories.user.findByIds) {
+        const usersRes = await ac.repositories.user.findByIds(tenantId, mutableConversation.participantIds);
+        if (!isErr(usersRes)) {
+            const userMap = new Map(usersRes.value.map(u => [u.id, u.name]));
+            mutableConversation.participants = mutableConversation.participantIds.map(id => userMap.get(id) || id);
+        }
+    }
+
+    // Ensure participants array exists
+    if (!mutableConversation.participants) {
+        mutableConversation.participants = mutableConversation.participantIds || [];
+    }
+
     return c.html(await renderPage(ConversationDetailPage, {
-        conversation,
+        conversation: mutableConversation,
         layout: AdminLayout,
-        title: `${conversation.subject || 'Conversation'} - Communication`,
+        title: `${mutableConversation.subject || 'Conversation'} - Communication`,
         user: c.get('user')
     }));
 };
