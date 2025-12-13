@@ -71,11 +71,14 @@ export const createCompleteWorkOrder = ({ woRepository, bomRepository, inventory
     });
     if (isErr(prodRes)) return prodRes;
 
-    wo.status = 'COMPLETED';
-    wo.completionDate = new Date().toISOString();
-    wo.updatedAt = new Date().toISOString();
+    const updatedWO = createWorkOrder({
+        ...wo,
+        status: 'COMPLETED',
+        completionDate: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+    });
 
-    return await woRepository.save(tenantId, wo);
+    return await woRepository.save(tenantId, updatedWO);
   };
 
   return { execute };

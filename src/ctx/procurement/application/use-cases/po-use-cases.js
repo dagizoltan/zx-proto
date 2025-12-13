@@ -48,19 +48,23 @@ export const createReceivePurchaseOrder = ({ poRepository, inventoryService }) =
 
     const inventoryItems = [];
 
-    for (const receivedItem of receiveData.items) {
-      const poItem = po.items.find(i => i.productId === receivedItem.productId);
-      if (poItem) {
-        poItem.receivedQuantity = (poItem.receivedQuantity || 0) + receivedItem.quantity;
-      }
-
-      inventoryItems.push({
-        productId: receivedItem.productId,
-        locationId: receiveData.locationId,
-        quantity: receivedItem.quantity,
-        batchId: null,
-      });
-    }
+    // Create new items array with updated quantities
+    const newItems = po.items.map(item => {
+        const receivedItem = receiveData.items.find(ri => ri.productId === item.productId);
+        if (receivedItem) {
+            inventoryItems.push({
+                productId: receivedItem.productId,
+                locationId: receiveData.locationId,
+                quantity: receivedItem.quantity,
+                batchId: null,
+            });
+            return {
+                ...item,
+                receivedQuantity: (item.receivedQuantity || 0) + receivedItem.quantity
+            };
+        }
+        return item;
+    });
 
     if (inventoryItems.length > 0) {
       const invRes = await inventoryService.receiveStockBatch.execute(tenantId, {
@@ -70,11 +74,17 @@ export const createReceivePurchaseOrder = ({ poRepository, inventoryService }) =
       if (isErr(invRes)) return invRes;
     }
 
-    const allReceived = po.items.every(i => (i.receivedQuantity || 0) >= i.quantity);
-    po.status = allReceived ? 'RECEIVED' : 'ISSUED';
-    po.updatedAt = new Date().toISOString();
+    const allReceived = newItems.every(i => (i.receivedQuantity || 0) >= i.quantity);
+    const newStatus = allReceived ? 'RECEIVED' : 'ISSUED';
 
-    const saved = await poRepository.save(tenantId, po);
+    const updatedPO = createPurchaseOrder({
+        ...po,
+        items: newItems,
+        status: newStatus,
+        updatedAt: new Date().toISOString()
+    });
+
+    const saved = await poRepository.save(tenantId, updatedPO);
     return saved;
   };
 
