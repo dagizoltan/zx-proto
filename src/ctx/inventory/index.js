@@ -1,8 +1,8 @@
-import { createKVStockRepositoryAdapter } from '../../infra/persistence/kv/adapters/kv-stock-repository.adapter.js';
-import { createKVStockMovementRepository } from '../../infra/persistence/kv/repositories/kv-stock-movement-repository.js';
-import { createKVWarehouseRepository } from '../../infra/persistence/kv/repositories/kv-warehouse-repository.js';
-import { createKVLocationRepository } from '../../infra/persistence/kv/repositories/kv-location-repository.js';
-import { createKVBatchRepository } from '../../infra/persistence/kv/repositories/kv-batch-repository.js';
+import { createKVStockRepositoryAdapter } from './infrastructure/adapters/kv-stock-repository.adapter.js';
+import { createKVStockMovementRepository } from './infrastructure/adapters/kv-stock-movement-repository.adapter.js';
+import { createKVWarehouseRepository } from './infrastructure/adapters/kv-warehouse-repository.adapter.js';
+import { createKVLocationRepository } from './infrastructure/adapters/kv-location-repository.adapter.js';
+import { createKVBatchRepository } from './infrastructure/adapters/kv-batch-repository.adapter.js';
 
 import { createStockAllocationService } from './domain/services/stock-allocation-service.js';
 import { createInventoryAdjustmentService } from './domain/services/inventory-adjustment-service.js';

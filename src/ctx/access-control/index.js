@@ -1,5 +1,5 @@
-import { createKVUserRepositoryAdapter } from '../../infra/persistence/kv/adapters/kv-user-repository.adapter.js';
-import { createKVRoleRepositoryAdapter } from '../../infra/persistence/kv/adapters/kv-role-repository.adapter.js';
+import { createKVUserRepositoryAdapter } from './infrastructure/adapters/kv-user-repository.adapter.js';
+import { createKVRoleRepositoryAdapter } from './infrastructure/adapters/kv-role-repository.adapter.js';
 import { createAuthService } from './domain/services/auth-service.js';
 import { createLoginUser } from './application/use-cases/login-user.js';
 import { createRegisterUser } from './application/use-cases/register-user.js';

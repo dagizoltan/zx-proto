@@ -3,9 +3,9 @@ import { createGetProduct } from './application/use-cases/get-product.js';
 import { createListProducts, createSearchProducts, createFilterByCategory } from './application/use-cases/catalog-use-cases.js';
 import { createPricingService } from './domain/services/pricing-service.js';
 
-import { createKVCategoryRepositoryAdapter } from '../../infra/persistence/kv/adapters/kv-category-repository.adapter.js';
-import { createKVPriceListRepositoryAdapter } from '../../infra/persistence/kv/adapters/kv-price-list-repository.adapter.js';
-import { createKVProductRepositoryAdapter } from '../../infra/persistence/kv/adapters/kv-product-repository.adapter.js';
+import { createKVCategoryRepositoryAdapter } from './infrastructure/adapters/kv-category-repository.adapter.js';
+import { createKVPriceListRepositoryAdapter } from './infrastructure/adapters/kv-price-list-repository.adapter.js';
+import { createKVProductRepositoryAdapter } from './infrastructure/adapters/kv-product-repository.adapter.js';
 
 import { createCreateCategory } from './application/use-cases/create-category.js';
 import { createListCategories } from './application/use-cases/list-categories.js';
