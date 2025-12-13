@@ -23,18 +23,21 @@ export const conversationsHandler = async (c) => {
     const { listConversations } = c.ctx.get('domain.communication').useCases;
     const { items } = await listConversations(tenantId, { limit: 20 });
 
+    // Convert to mutable objects for UI enrichment
+    const mutableItems = items.map(item => ({ ...item }));
+
     // Enrich with Participant Names
     const ac = c.ctx.get('domain.access-control');
-    if (items.length > 0 && ac) {
+    if (mutableItems.length > 0 && ac) {
         const userIds = new Set();
-        items.forEach(c => c.participantIds?.forEach(id => userIds.add(id)));
+        mutableItems.forEach(c => c.participantIds?.forEach(id => userIds.add(id)));
         // Also senderId?
 
         if (userIds.size > 0 && ac.repositories.user.findByIds) {
              const usersRes = await ac.repositories.user.findByIds(tenantId, Array.from(userIds));
              if (!isErr(usersRes)) {
                  const userMap = new Map(usersRes.value.map(u => [u.id, u.name]));
-                 for (const conv of items) {
+                 for (const conv of mutableItems) {
                      conv.participants = (conv.participantIds || []).map(id => userMap.get(id) || id);
 
                      // Try to guess Last Sender Name
@@ -47,12 +50,12 @@ export const conversationsHandler = async (c) => {
     }
 
     // Ensure participants array exists even if enrichment failed
-    items.forEach(c => {
+    mutableItems.forEach(c => {
         if (!c.participants) c.participants = c.participantIds || [];
     });
 
     return c.html(await renderPage(ConversationsPage, {
-        conversations: items,
+        conversations: mutableItems,
         layout: AdminLayout,
         title: 'Conversations - Communication',
         user: c.get('user')
