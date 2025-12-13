@@ -1,21 +1,29 @@
-import { z } from 'zod';
+export const createShipment = ({
+  id,
+  tenantId,
+  orderId,
+  code,
+  carrier,
+  trackingNumber,
+  items,
+  status = 'SHIPPED',
+  shippedAt,
+  createdAt
+}) => {
+  if (!id) throw new Error("Shipment ID is required");
+  if (!orderId) throw new Error("Order ID is required");
+  if (!items || !items.length) throw new Error("Shipment must have items");
 
-export const ShipmentItemSchema = z.object({
-  productId: z.string().uuid(),
-  quantity: z.number().int().positive(),
-});
-
-export const ShipmentSchema = z.object({
-  id: z.string().uuid(),
-  tenantId: z.string(),
-  orderId: z.string().uuid(),
-  code: z.string().min(1), // e.g., SH-1001
-  carrier: z.string().optional(),
-  trackingNumber: z.string().optional(),
-  items: z.array(ShipmentItemSchema).min(1),
-  status: z.enum(['SHIPPED', 'DELIVERED']).default('SHIPPED'),
-  shippedAt: z.string().datetime(),
-  createdAt: z.string().datetime(),
-});
-
-export const createShipment = (data) => ShipmentSchema.parse(data);
+  return Object.freeze({
+    id,
+    tenantId,
+    orderId,
+    code,
+    carrier,
+    trackingNumber,
+    items,
+    status,
+    shippedAt,
+    createdAt: createdAt || new Date().toISOString(),
+  });
+};

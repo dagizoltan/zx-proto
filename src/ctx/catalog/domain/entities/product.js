@@ -1,42 +1,42 @@
-import { z } from 'zod';
+export const createProduct = ({
+  id,
+  sku,
+  name,
+  description,
+  categoryId,
+  price,
+  priceRules = [],
+  type = 'SIMPLE',
+  parentId,
+  variantAttributes,
+  configurableAttributes,
+  status = 'ACTIVE',
+  createdAt,
+  updatedAt
+}) => {
+  if (!id) throw new Error('Product ID is required');
+  if (!sku) throw new Error('Product SKU is required');
+  if (!name) throw new Error('Product Name is required');
+  if (price === undefined || price <= 0) throw new Error('Product Price must be positive');
 
-export const PriceRuleSchema = z.object({
-  id: z.string().uuid(),
-  name: z.string().min(1),
-  priority: z.number().int().default(0),
-  conditions: z.object({
-    minQuantity: z.number().int().optional(),
-    customerGroup: z.string().optional(), // e.g., 'WHOLESALE', 'VIP'
-    startDate: z.string().datetime().optional(),
-    endDate: z.string().datetime().optional(),
-  }).optional(),
-  actions: z.object({
-    type: z.enum(['PERCENTAGE_OFF', 'FIXED_AMOUNT_OFF', 'FIXED_PRICE']),
-    value: z.number().nonnegative(),
-  }),
-});
+  if (type === 'VARIANT' && !parentId) {
+    throw new Error('Variant products must have a parent');
+  }
 
-export const ProductSchema = z.object({
-  id: z.string().uuid(),
-  tenantId: z.string(),
-  sku: z.string().min(1),
-  name: z.string().min(1),
-  description: z.string().optional(),
-  categoryId: z.string().uuid().optional(),
-
-  // Enterprise Pricing
-  price: z.number().positive(), // Base price
-  priceRules: z.array(PriceRuleSchema).optional().default([]),
-
-  // Enterprise Variants
-  type: z.enum(['SIMPLE', 'CONFIGURABLE', 'VARIANT']).default('SIMPLE'),
-  parentId: z.string().uuid().optional(), // If VARIANT, points to CONFIGURABLE
-  variantAttributes: z.any().optional(), // e.g. { size: 'L', color: 'Red' } - z.record caused Zod v4 issue
-  configurableAttributes: z.array(z.string()).optional(), // e.g. ['size', 'color'] for CONFIGURABLE
-
-  status: z.enum(['ACTIVE', 'INACTIVE', 'DRAFT']).default('ACTIVE'),
-  createdAt: z.string().datetime(),
-  updatedAt: z.string().datetime(),
-});
-
-export const createProduct = (data) => ProductSchema.parse(data);
+  return Object.freeze({
+    id,
+    sku,
+    name,
+    description,
+    categoryId,
+    price,
+    priceRules,
+    type,
+    parentId,
+    variantAttributes,
+    configurableAttributes,
+    status,
+    createdAt: createdAt || new Date().toISOString(),
+    updatedAt: updatedAt || new Date().toISOString(),
+  });
+};

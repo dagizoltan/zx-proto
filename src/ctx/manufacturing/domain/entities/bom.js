@@ -1,44 +1,32 @@
-import { z } from 'zod';
+export const createBOM = ({
+  id,
+  tenantId,
+  productId,
+  name,
+  version = '1.0',
+  components = [],
+  laborCost = 0,
+  instructions,
+  status = 'DRAFT',
+  createdAt,
+  updatedAt
+}) => {
+  if (!id) throw new Error("BOM ID is required");
+  if (!productId) throw new Error("Product ID is required");
+  if (!name) throw new Error("BOM Name is required");
+  if (!components || components.length === 0) throw new Error("BOM must have at least one component");
 
-export const BOMComponentSchema = z.object({
-  productId: z.string().uuid(), // Raw Material
-  quantity: z.number().positive(),
-  notes: z.string().optional(),
-});
-
-export const BillOfMaterialsSchema = z.object({
-  id: z.string().uuid(),
-  tenantId: z.string(),
-  productId: z.string().uuid(), // Finished Good
-  name: z.string().min(1),
-  components: z.array(BOMComponentSchema),
-  laborCost: z.number().nonnegative().optional(),
-  createdAt: z.string().datetime(),
-  updatedAt: z.string().datetime(),
-});
-
-export const WorkOrderSchema = z.object({
-  id: z.string().uuid(),
-  tenantId: z.string(),
-  code: z.string().min(1),
-  bomId: z.string().uuid(),
-  quantity: z.number().positive(), // How many finished goods to make
-  status: z.enum(['PLANNED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED']).default('PLANNED'),
-  startDate: z.string().datetime().optional(),
-  completionDate: z.string().datetime().optional(),
-  assignedTo: z.string().optional(), // UserId
-  createdAt: z.string().datetime(),
-  updatedAt: z.string().datetime(),
-});
-
-export const createBOM = (data) => BillOfMaterialsSchema.parse({
-  ...data,
-  createdAt: new Date().toISOString(),
-  updatedAt: new Date().toISOString()
-});
-
-export const createWorkOrder = (data) => WorkOrderSchema.parse({
-  ...data,
-  createdAt: new Date().toISOString(),
-  updatedAt: new Date().toISOString()
-});
+  return Object.freeze({
+    id,
+    tenantId,
+    productId,
+    name,
+    version,
+    components, // [{ productId, quantity, notes, unit }]
+    laborCost,
+    instructions,
+    status,
+    createdAt: createdAt || new Date().toISOString(),
+    updatedAt: updatedAt || new Date().toISOString(),
+  });
+};

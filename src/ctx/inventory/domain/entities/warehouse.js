@@ -1,43 +1,47 @@
-import { z } from 'zod';
+export const createWarehouse = ({ id, tenantId, name, code, address, createdAt }) => {
+  if (!name) throw new Error("Warehouse name is required");
+  if (!code) throw new Error("Warehouse code is required");
 
-export const WarehouseSchema = z.object({
-  id: z.string().uuid(),
-  tenantId: z.string(),
-  name: z.string().min(1),
-  code: z.string().min(1),
-  address: z.object({
-    street: z.string().optional(),
-    city: z.string().optional(),
-    state: z.string().optional(),
-    zip: z.string().optional(),
-    country: z.string().optional(),
-  }).optional(),
-  createdAt: z.string().datetime(),
-});
+  return Object.freeze({
+    id,
+    tenantId,
+    name,
+    code,
+    address,
+    createdAt: createdAt || new Date().toISOString(),
+  });
+};
 
-export const LocationSchema = z.object({
-  id: z.string().uuid(),
-  tenantId: z.string(),
-  warehouseId: z.string().uuid(),
-  parentId: z.string().uuid().optional(), // For hierarchy (Zone -> Aisle -> Bin)
-  code: z.string().min(1), // e.g. "Z1", "A05", "B01"
-  type: z.enum(['ZONE', 'AISLE', 'RACK', 'SHELF', 'BIN', 'DOCK', 'STAGING']),
-  capacity: z.number().optional(), // Max items or volume
-  createdAt: z.string().datetime(),
-});
+export const createLocation = ({ id, tenantId, warehouseId, parentId, code, type, capacity, createdAt }) => {
+  if (!warehouseId) throw new Error("Location must belong to a warehouse");
+  if (!code) throw new Error("Location code is required");
+  if (!type) throw new Error("Location type is required");
 
-export const BatchSchema = z.object({
-  id: z.string().uuid(),
-  tenantId: z.string(),
-  sku: z.string().min(1),
-  batchNumber: z.string().min(1), // Manufacturer lot number
-  expiryDate: z.string().datetime().optional(),
-  manufacturingDate: z.string().datetime().optional(),
-  cost: z.number().nonnegative().optional(), // For FIFO valuation
-  supplierId: z.string().optional(),
-  receivedAt: z.string().datetime(),
-});
+  return Object.freeze({
+    id,
+    tenantId,
+    warehouseId,
+    parentId,
+    code,
+    type,
+    capacity,
+    createdAt: createdAt || new Date().toISOString(),
+  });
+};
 
-export const createWarehouse = (data) => WarehouseSchema.parse(data);
-export const createLocation = (data) => LocationSchema.parse(data);
-export const createBatch = (data) => BatchSchema.parse(data);
+export const createBatch = ({ id, tenantId, sku, batchNumber, expiryDate, manufacturingDate, cost, supplierId, receivedAt }) => {
+  if (!sku) throw new Error("Batch SKU is required");
+  if (!batchNumber) throw new Error("Batch number is required");
+
+  return Object.freeze({
+    id,
+    tenantId,
+    sku,
+    batchNumber,
+    expiryDate,
+    manufacturingDate,
+    cost,
+    supplierId,
+    receivedAt: receivedAt || new Date().toISOString(),
+  });
+};
