@@ -13,5 +13,6 @@ export const BOMSchema = z.object({
   laborCost: z.number().nonnegative().default(0),
   instructions: z.string().optional(),
   status: z.enum(['DRAFT', 'ACTIVE', 'ARCHIVED']).default('DRAFT'),
-  createdAt: z.string().datetime().optional()
+  createdAt: z.string().datetime().optional(),
+  updatedAt: z.string().datetime().optional()
 });

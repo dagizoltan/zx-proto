@@ -6,5 +6,10 @@ export const SupplierSchema = z.object({
   phone: z.string().optional(),
   address: z.string().optional(),
   status: z.enum(['ACTIVE', 'INACTIVE']).default('ACTIVE'),
-  createdAt: z.string().datetime().optional()
+  createdAt: z.string().datetime().optional(),
+  updatedAt: z.string().datetime().optional(),
+  code: z.string().min(1),
+  contactName: z.string().optional(),
+  currency: z.string().default('USD'),
+  paymentTerms: z.string().optional()
 });

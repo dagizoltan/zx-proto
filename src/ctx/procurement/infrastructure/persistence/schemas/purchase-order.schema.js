@@ -11,5 +11,9 @@ export const PurchaseOrderSchema = z.object({
   totalCost: z.number().nonnegative().optional(),
   issuedAt: z.string().datetime().optional(),
   receivedAt: z.string().datetime().optional(),
-  createdAt: z.string().datetime().optional()
+  createdAt: z.string().datetime().optional(),
+  updatedAt: z.string().datetime().optional(),
+  code: z.string().min(1),
+  expectedDate: z.string().datetime().optional(),
+  notes: z.string().optional()
 });

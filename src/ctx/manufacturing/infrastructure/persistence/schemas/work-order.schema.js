@@ -6,5 +6,7 @@ export const WorkOrderSchema = z.object({
     status: z.enum(['PLANNED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED']).default('PLANNED'),
     startDate: z.string().datetime().optional(),
     completionDate: z.string().datetime().optional(),
-    assignedTo: z.string().optional()
+    assignedTo: z.string().optional(),
+    createdAt: z.string().datetime().optional(),
+    updatedAt: z.string().datetime().optional()
 });
