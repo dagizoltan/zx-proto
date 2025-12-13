@@ -34,6 +34,12 @@ export const createKVStockRepositoryAdapter = (kvPool) => {
           return Ok(stockEntryMapper.toDomain(result.value));
         },
 
+        findByIds: async (tenantId, ids) => {
+          const result = await baseRepo.findByIds(tenantId, ids);
+          if (isErr(result)) return result;
+          return Ok(stockEntryMapper.toDomainList(result.value));
+        },
+
         findByProduct: async (tenantId, productId) => {
             const result = await baseRepo.queryByIndex(tenantId, 'product', productId);
             if (isErr(result)) return result;
