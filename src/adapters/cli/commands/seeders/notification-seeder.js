@@ -1,6 +1,6 @@
-import { Log, faker } from './utils.js';
+import { Log, faker, Random } from './utils.js';
 
-export const seedNotifications = async (ctx, tenantId) => {
+export const seedNotifications = async (ctx, tenantId, users) => {
     Log.step('🔔 Seeding Notifications...');
     const system = ctx.get('domain.system');
 
@@ -16,7 +16,7 @@ export const seedNotifications = async (ctx, tenantId) => {
             message: 'System initialization complete. Welcome to your new Inventory Management System.',
             link: '/ims/system/settings'
         },
-        ...Array.from({ length: 15 }).map(() => ({
+        ...Array.from({ length: 30 }).map(() => ({
             level: faker.helpers.arrayElement(['INFO', 'WARN', 'ERROR', 'SUCCESS']),
             title: faker.hacker.verb() + ' ' + faker.hacker.noun(),
             message: faker.hacker.phrase(),
@@ -27,8 +27,11 @@ export const seedNotifications = async (ctx, tenantId) => {
     let count = 0;
     for (const n of notifications) {
         try {
+            // Assign to a random user or null (system wide)
+            const user = Random.bool(0.7) ? Random.element(users) : null;
+
             const res = await system.useCases.notifications.notify(tenantId, {
-                userId: null,
+                userId: user ? user.id : null,
                 ...n
             });
              if (res && res.ok === false) {

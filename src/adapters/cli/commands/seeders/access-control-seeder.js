@@ -34,15 +34,18 @@ export const seedAccessControl = async (ctx, tenantId) => {
     }
 
     // 2. Users
-    const users = [
+    const usersData = [
         { email: 'admin@imsshop.com', name: 'Super Admin', role: 'admin' },
         { email: 'manager@imsshop.com', name: 'Store Manager', role: 'manager' },
         { email: 'staff@imsshop.com', name: 'Warehouse Guy', role: 'warehouse_staff' },
         { email: 'customer@imsshop.com', name: 'Regular Customer', role: 'customer' }
     ];
 
-    for (const u of users) {
+    const coreUsers = [];
+
+    for (const u of usersData) {
         let userId;
+        let userObj;
         const res = await ac.useCases.registerUser.execute(tenantId, {
             email: u.email,
             password: 'password123',
@@ -51,10 +54,12 @@ export const seedAccessControl = async (ctx, tenantId) => {
 
         if (res.ok) {
             userId = res.value.id;
+            userObj = res.value;
         } else if (res.error.code === 'CONFLICT' || res.error.message.includes('exists')) {
             const findRes = await ac.repositories.user.queryByIndex(tenantId, 'email', u.email);
             if (findRes.ok && findRes.value.items.length > 0) {
                 userId = findRes.value.items[0].id;
+                userObj = findRes.value.items[0];
             }
         } else {
             console.error(`Failed to create user ${u.email}:`, res.error);
@@ -66,6 +71,7 @@ export const seedAccessControl = async (ctx, tenantId) => {
             if (!assignRes.ok) {
                  console.error(`Failed to assign role to ${u.email}:`, assignRes.error);
             }
+            if (userObj) coreUsers.push(userObj);
         }
         await new Promise(r => setTimeout(r, 50)); // Throttle increased
     }
@@ -103,6 +109,10 @@ export const seedAccessControl = async (ctx, tenantId) => {
         await new Promise(r => setTimeout(r, 20));
     }
 
-    Log.success(`Created ${users.length} core users and ${customers.length} realistic customers`);
-    return { roleIds, customers };
+    Log.success(`Created ${coreUsers.length} core users and ${customers.length} realistic customers`);
+
+    // Return all users for other seeders
+    const allUsers = [...coreUsers, ...customers];
+
+    return { roleIds, customers, coreUsers, allUsers };
 };

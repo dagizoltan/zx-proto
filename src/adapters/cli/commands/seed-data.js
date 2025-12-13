@@ -71,15 +71,20 @@ const run = async () => {
 
     try {
         // 3. Run Seeders
-        const users = await seedAccessControl(ctx, tenantId);
+        const { customers, allUsers } = await seedAccessControl(ctx, tenantId);
+
         const products = await seedCatalog(ctx, tenantId); // Includes Price Lists logic now
         const locationIds = await seedInventory(ctx, tenantId, products);
         await seedProcurement(ctx, tenantId, products, locationIds);
         await seedManufacturing(ctx, tenantId, products); // New seeder
-        await seedOrders(ctx, tenantId, products, users);
-        await seedNotifications(ctx, tenantId, users);
-        await seedCommunication(ctx, tenantId, users);
-        await seedObservability(ctx, tenantId, users);
+
+        // Pass specific user sets where appropriate
+        await seedOrders(ctx, tenantId, products, customers); // Orders usually come from customers
+
+        // Use allUsers for system-wide things
+        await seedNotifications(ctx, tenantId, allUsers);
+        await seedCommunication(ctx, tenantId, allUsers);
+        await seedObservability(ctx, tenantId, allUsers);
         await seedScheduler(ctx, tenantId);
 
         Log.success('✅ All seeders completed successfully.');
