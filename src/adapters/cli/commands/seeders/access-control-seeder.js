@@ -1,4 +1,4 @@
-import { Random, Log } from './utils.js';
+import { Random, Log, faker } from './utils.js';
 import { unwrap, isErr } from '../../../../../lib/trust/index.js'; // Fixed 5 levels
 
 export const seedAccessControl = async (ctx, tenantId) => {
@@ -70,16 +70,20 @@ export const seedAccessControl = async (ctx, tenantId) => {
         await new Promise(r => setTimeout(r, 50)); // Throttle increased
     }
 
-    // 3. Batch Customers
+    // 3. Batch Customers (Realistic)
     const customers = [];
-    for (let i = 0; i < 50; i++) {
-        const email = `cust${i}@test.com`;
+    const customerCount = 50; // Keep 50 for now, but better quality
+    for (let i = 0; i < customerCount; i++) {
+        const firstName = faker.person.firstName();
+        const lastName = faker.person.lastName();
+        const email = faker.internet.email({ firstName, lastName }).toLowerCase();
+        const name = `${firstName} ${lastName}`;
 
         let userId;
         const res = await ac.useCases.registerUser.execute(tenantId, {
             email,
             password: 'password123',
-            name: `Customer ${i}`
+            name
         });
 
         if (res.ok) {
@@ -99,6 +103,6 @@ export const seedAccessControl = async (ctx, tenantId) => {
         await new Promise(r => setTimeout(r, 20));
     }
 
-    Log.success(`Created ${users.length} core users and ${customers.length} random customers`);
+    Log.success(`Created ${users.length} core users and ${customers.length} realistic customers`);
     return { roleIds, customers };
 };

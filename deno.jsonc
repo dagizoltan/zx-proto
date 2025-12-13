@@ -13,6 +13,7 @@
     "hono/": "https://deno.land/x/hono@v3.11.7/",
     "std/": "https://deno.land/std@0.208.0/",
     "zod": "npm:zod@^3.22.4",
+    "faker": "npm:@faker-js/faker@^8.4.1",
     "cron-parser": "https://esm.sh/cron-parser@4.9.0",
     "@lib/": "./lib/",
     "@src/": "./src/"

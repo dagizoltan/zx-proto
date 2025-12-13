@@ -1,4 +1,4 @@
-import { Random, Log, Time } from './utils.js';
+import { Random, Log, Time, faker } from './utils.js';
 import { isErr } from '../../../../../lib/trust/index.js';
 
 export const seedOrders = async (ctx, tenantId, products, customers) => {
@@ -11,13 +11,13 @@ export const seedOrders = async (ctx, tenantId, products, customers) => {
         return;
     }
 
-    const totalOrders = 200; // Reduced for dev cycle speed (was 1000)
+    const totalOrders = 500; // Increased for realism
     Log.info(`Simulating ${totalOrders} orders over 12 months...`);
 
     let ops = 0;
     for (let i = 0; i < totalOrders; i++) {
-        const monthsBack = Math.floor(Math.pow(Math.random(), 3) * 12);
-        const date = Time.monthsAgo(monthsBack);
+        // Better time distribution (more recent)
+        const date = faker.date.past({ years: 1 });
 
         const customer = Random.element(customers);
         const numItems = Random.int(1, 5);
@@ -39,22 +39,23 @@ export const seedOrders = async (ctx, tenantId, products, customers) => {
             await orders.repositories.order.save(tenantId, order);
 
             const r = Math.random();
-            if (r > 0.1) {
+            if (r > 0.05) { // 95% not cancelled immediately
                 await orders.useCases.updateOrderStatus.execute(tenantId, order.id, 'PAID');
-                // updateOrderStatus assumed to handle Result or void?
-                // I haven't refactored updateOrderStatus to return Result explicitly yet,
-                // but if it uses repo.findById/save it needs to handle results internally.
-                // Assuming it's broken unless I fix it.
-                // But for seeding, we might skip detailed lifecycle if updateOrderStatus is broken.
-                // Let's assume best effort.
 
-                if (r > 0.2) {
+                if (r > 0.10) { // 90% shipped
+                    const carrier = faker.helpers.arrayElement(['UPS', 'FedEx', 'USPS', 'DHL']);
+                    const tracking = faker.string.alphanumeric(12).toUpperCase();
+
                     await orders.useCases.createShipment.execute(tenantId, {
-                        orderId: order.id, items: order.items, carrier: 'UPS', trackingNumber: `1Z${Random.int(100000,999999)}`
+                        orderId: order.id, items: order.items, carrier: carrier, trackingNumber: tracking
                     });
 
-                    if (r > 0.3) {
+                    if (r > 0.15) { // 85% delivered
                          await orders.useCases.updateOrderStatus.execute(tenantId, order.id, 'DELIVERED');
+                    } else if (r < 0.18) {
+                        // 3% Returns
+                        // Implement return logic if use case exists, otherwise skip
+                        // await orders.useCases.returnOrder.execute(...)
                     }
                 }
             } else {

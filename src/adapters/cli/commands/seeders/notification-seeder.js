@@ -1,5 +1,4 @@
-
-import { Log } from './utils.js';
+import { Log, faker } from './utils.js';
 
 export const seedNotifications = async (ctx, tenantId) => {
     Log.step('🔔 Seeding Notifications...');
@@ -17,43 +16,22 @@ export const seedNotifications = async (ctx, tenantId) => {
             message: 'System initialization complete. Welcome to your new Inventory Management System.',
             link: '/ims/system/settings'
         },
-        {
-            level: 'INFO',
-            title: 'Stock Update',
-            message: 'Weekly stock reconciliation completed automatically.',
-            link: '/ims/inventory/stock'
-        },
-        {
-            level: 'WARN',
-            title: 'Low Stock Alert',
-            message: 'Product "Smartphone X" is running low on stock (Quantity: 5).',
-            link: '/ims/inventory/stock'
-        },
-        {
-            level: 'ERROR',
-            title: 'Integration Error',
-            message: 'Failed to sync with external accounting provider "QuickBooks". Connection timeout.',
-            link: '/ims/system/settings'
-        },
-        {
-            level: 'SUCCESS',
-            title: 'Order Shipped',
-            message: 'Order #ORD-2023-001 has been fully shipped.',
-            link: '/ims/orders'
-        }
+        ...Array.from({ length: 15 }).map(() => ({
+            level: faker.helpers.arrayElement(['INFO', 'WARN', 'ERROR', 'SUCCESS']),
+            title: faker.hacker.verb() + ' ' + faker.hacker.noun(),
+            message: faker.hacker.phrase(),
+            link: '/ims/dashboard'
+        }))
     ];
 
     let count = 0;
     for (const n of notifications) {
-        // notify use case returns Result? Or void?
-        // Let's assume best effort.
         try {
             const res = await system.useCases.notifications.notify(tenantId, {
                 userId: null,
                 ...n
             });
-            // If result pattern is used in system domain:
-            if (res && res.ok === false) {
+             if (res && res.ok === false) {
                  console.error('Failed to seed notification:', res.error);
             }
         } catch (e) {

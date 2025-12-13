@@ -1,4 +1,4 @@
-import { Random, Log } from './utils.js';
+import { Random, Log, faker } from './utils.js';
 import { unwrap, isErr } from '@lib/trust/index.js';
 
 export const seedManufacturing = async (ctx, tenantId, products) => {
@@ -6,8 +6,8 @@ export const seedManufacturing = async (ctx, tenantId, products) => {
     const manufacturing = ctx.get('domain.manufacturing');
 
     // 1. Create BOMs
-    const manufacturedProducts = products.filter(p => p.type === 'SIMPLE').slice(0, 10);
-    const rawMaterials = products.filter(p => p.type === 'SIMPLE').slice(10, 30);
+    const manufacturedProducts = products.filter(p => p.type === 'SIMPLE').slice(0, 20);
+    const rawMaterials = products.filter(p => p.type === 'SIMPLE').slice(20, 100);
 
     const boms = [];
 
@@ -24,9 +24,9 @@ export const seedManufacturing = async (ctx, tenantId, products) => {
         }
 
         const res = await manufacturing.useCases.createBOM.execute(tenantId, {
-            name: `BOM for ${product.name}`,
+            name: `Assembly: ${product.name}`,
             productId: product.id,
-            laborCost: Random.float(5, 50),
+            laborCost: parseFloat(faker.commerce.price({ min: 10, max: 100 })),
             components
         });
 
@@ -39,14 +39,14 @@ export const seedManufacturing = async (ctx, tenantId, products) => {
 
     // 2. Create Work Orders
     const workOrders = [];
-    for (let i = 0; i < 20; i++) {
+    for (let i = 0; i < 40; i++) {
         const bom = Random.element(boms);
 
         const res = await manufacturing.useCases.createWorkOrder.execute(tenantId, {
             bomId: bom.id,
             quantity: Random.int(10, 100),
-            startDate: new Date().toISOString(),
-            code: `WO-${1000 + i}`
+            startDate: faker.date.recent({ days: 30 }).toISOString(),
+            code: `WO-${faker.string.numeric(6)}`
         });
 
         if (res.ok) {

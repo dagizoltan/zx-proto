@@ -1,4 +1,4 @@
-import { Random, Log } from './utils.js';
+import { Random, Log, faker } from './utils.js';
 import { unwrap, isErr } from '@lib/trust/index.js';
 
 export const seedCatalog = async (ctx, tenantId) => {
@@ -7,21 +7,44 @@ export const seedCatalog = async (ctx, tenantId) => {
     const inventory = ctx.get('domain.inventory');
 
     // 1. Categories
-    const categories = ['Electronics', 'Computers', 'Smartphones', 'Accessories', 'Furniture', 'Chairs', 'Tables', 'Clothing', 'Men', 'Women', 'Kids'];
+    const categoriesStructure = [
+        { name: 'Electronics', subs: ['Computers', 'Smartphones', 'Audio', 'Cameras'] },
+        { name: 'Home & Garden', subs: ['Furniture', 'Kitchen', 'Bedding', 'Decor'] },
+        { name: 'Fashion', subs: ['Men', 'Women', 'Kids', 'Accessories'] },
+        { name: 'Sports', subs: ['Fitness', 'Outdoor', 'Cycling'] }
+    ];
+
     const catMap = {}; // name -> id
+    const subCatMap = {}; // subname -> { id, parentName }
 
-    for (const name of categories) {
-        // Use 'unwrap' to throw on error, preserving old flow or handle Result explicitly.
-        // For seeding, if it fails, we assume it exists or retry.
-        const res = await catalog.useCases.createCategory.execute(tenantId, { name, description: `Seeded ${name}` });
-
+    for (const group of categoriesStructure) {
+        // Create Parent
+        let parentId;
+        const res = await catalog.useCases.createCategory.execute(tenantId, { name: group.name, description: `Department: ${group.name}` });
         if (res.ok) {
-            catMap[name] = res.value.id;
+            parentId = res.value.id;
+            catMap[group.name] = parentId;
         } else {
-            // Assume exists, try fetch
-            const allRes = await catalog.useCases.listCategories.execute(tenantId, { limit: 100 });
-            if (allRes.ok) {
-                catMap[name] = allRes.value.items.find(c => c.name === name)?.id;
+             const allRes = await catalog.useCases.listCategories.execute(tenantId, { limit: 100 });
+             if (allRes.ok) {
+                 parentId = allRes.value.items.find(c => c.name === group.name)?.id;
+                 catMap[group.name] = parentId;
+             }
+        }
+
+        // Create Subs
+        if (parentId) {
+            for (const sub of group.subs) {
+                 const subRes = await catalog.useCases.createCategory.execute(tenantId, { name: sub, parentId, description: `${sub} Products` });
+                 if (subRes.ok) {
+                     subCatMap[sub] = { id: subRes.value.id, parentName: group.name };
+                 } else {
+                     const allRes = await catalog.useCases.listCategories.execute(tenantId, { limit: 100 });
+                     if (allRes.ok) {
+                         const found = allRes.value.items.find(c => c.name === sub);
+                         if (found) subCatMap[sub] = { id: found.id, parentName: group.name };
+                     }
+                 }
             }
         }
     }
@@ -46,7 +69,7 @@ export const seedCatalog = async (ctx, tenantId) => {
     const products = [];
     Log.info('Generating 500 Products...');
 
-    // Configurable T-Shirt
+    // Configurable T-Shirt (Keep this for testing variants)
     let shirtId;
     const shirtRes = await catalog.useCases.createProduct.execute(tenantId, {
         sku: 'TSHIRT-BASE',
@@ -54,7 +77,7 @@ export const seedCatalog = async (ctx, tenantId) => {
         price: 20,
         type: 'CONFIGURABLE',
         configurableAttributes: ['color', 'size'],
-        categoryId: catMap['Clothing']
+        categoryId: subCatMap['Men']?.id || catMap['Fashion']
     });
 
     if (shirtRes.ok) {
@@ -70,23 +93,42 @@ export const seedCatalog = async (ctx, tenantId) => {
                     type: 'VARIANT',
                     parentId: shirtId,
                     variantAttributes: { color: c, size: s },
-                    categoryId: catMap['Clothing']
+                    categoryId: subCatMap['Men']?.id || catMap['Fashion']
                 });
                 if (vRes.ok) products.push(vRes.value);
             }
         }
     }
 
-    // Simple Products
+    // Simple Products (Realistic)
+    const subCategories = Object.keys(subCatMap);
+
     for (let i = 0; i < 500; i++) {
-        const catName = Random.element(categories);
-        const catId = catMap[catName];
+        const subName = Random.element(subCategories);
+        const { id: catId, parentName } = subCatMap[subName];
+
+        let name, price, description, material;
+
+        // Contextual generation
+        if (parentName === 'Electronics') {
+            name = faker.commerce.productName(); // Generic, but fits
+            price = parseFloat(faker.commerce.price({ min: 100, max: 2000 }));
+            description = faker.commerce.productDescription();
+        } else if (parentName === 'Fashion') {
+            name = `${faker.commerce.productAdjective()} ${subName.slice(0, -1)}`; // "Sleek Shirt"
+            price = parseFloat(faker.commerce.price({ min: 20, max: 200 }));
+            description = `A stylish ${name} made from ${faker.commerce.productMaterial()}.`;
+        } else {
+            name = faker.commerce.productName();
+            price = parseFloat(faker.commerce.price({ min: 10, max: 500 }));
+            description = faker.commerce.productDescription();
+        }
 
         const pRes = await catalog.useCases.createProduct.execute(tenantId, {
             sku: `SKU-${10000 + i}`,
-            name: `${catName} Item ${i}`,
-            description: `A fantastic ${catName.toLowerCase()} product.`,
-            price: Random.float(10, 500),
+            name: name,
+            description: description,
+            price: price,
             categoryId: catId,
             type: 'SIMPLE',
             status: 'ACTIVE'
