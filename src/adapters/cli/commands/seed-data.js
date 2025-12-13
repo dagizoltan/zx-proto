@@ -25,6 +25,7 @@ import { seedOrders } from './seeders/order-seeder.js';
 import { seedNotifications } from './seeders/notification-seeder.js';
 import { seedCommunication } from './seeders/communication-seeder.js';
 import { seedObservability } from './seeders/observability-seeder.js';
+import { seedScheduler } from './seeders/scheduler-seeder.js';
 import { Log } from './seeders/utils.js';
 
 const run = async () => {
@@ -79,6 +80,7 @@ const run = async () => {
         await seedNotifications(ctx, tenantId, users);
         await seedCommunication(ctx, tenantId, users);
         await seedObservability(ctx, tenantId, users);
+        await seedScheduler(ctx, tenantId);
 
         Log.success('✅ All seeders completed successfully.');
     } catch (e) {
