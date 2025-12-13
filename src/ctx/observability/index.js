@@ -1,6 +1,6 @@
-import { createKVLogRepository } from '../../infra/persistence/kv/repositories/kv-log-repository.js';
-import { createKVActivityRepository } from '../../infra/persistence/kv/repositories/kv-activity-repository.js';
-import { createKVAuditRepository } from '../../infra/persistence/kv/repositories/kv-audit-repository.js';
+import { createKVLogRepository } from './infrastructure/adapters/kv-log-repository.adapter.js';
+import { createKVActivityRepository } from './infrastructure/adapters/kv-activity-repository.adapter.js';
+import { createKVAuditRepository } from './infrastructure/adapters/kv-audit-repository.adapter.js';
 import { createListLogs } from './application/use-cases/list-logs.js';
 import { createListActivityLogs } from './application/use-cases/list-activity-logs.js';
 import { createListAuditLogs } from './application/use-cases/list-audit-logs.js';

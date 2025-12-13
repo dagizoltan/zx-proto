@@ -1,5 +1,5 @@
 import { createObs } from './obs.js';
-import { createKVLogRepository } from '../persistence/kv/repositories/kv-log-repository.js';
+import { createKVLogRepository } from '../../ctx/observability/infrastructure/adapters/kv-log-repository.adapter.js';
 import { createKVTraceRepository } from '../persistence/kv/repositories/kv-trace-repository.js';
 import { createKVMetricRepository } from '../persistence/kv/repositories/kv-metric-repository.js';
 

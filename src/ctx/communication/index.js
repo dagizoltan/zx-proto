@@ -1,7 +1,7 @@
-import { createKVFeedRepository } from '../../infra/persistence/kv/repositories/kv-feed-repository.js';
-import { createKVNotificationRepository } from '../../infra/persistence/kv/repositories/kv-notification-repository.js';
-import { createKVConversationRepository } from '../../infra/persistence/kv/repositories/kv-conversation-repository.js';
-import { createKVMessageRepository } from '../../infra/persistence/kv/repositories/kv-message-repository.js';
+import { createKVFeedRepository } from './infrastructure/adapters/kv-feed-repository.adapter.js';
+import { createKVNotificationRepository } from './infrastructure/adapters/kv-notification-repository.adapter.js';
+import { createKVConversationRepository } from './infrastructure/adapters/kv-conversation-repository.adapter.js';
+import { createKVMessageRepository } from './infrastructure/adapters/kv-message-repository.adapter.js';
 
 import { createNotificationService } from './domain/services/notification-service.js';
 

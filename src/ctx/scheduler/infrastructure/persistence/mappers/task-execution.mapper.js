@@ -1,28 +1,35 @@
-import { TaskExecutionSchema } from '../schemas/task-execution.schema.js';
 import { createTaskExecution } from '../../../domain/entities/task-execution.js';
+
 export const taskExecutionMapper = {
-  toDomain: (dbModel) => {
-    if (!dbModel) return null;
+  toPersistence: (domainEntity) => {
+    const json = domainEntity.toJSON ? domainEntity.toJSON() : domainEntity;
+    return {
+      id: json.id,
+      tenantId: json.tenantId || 'default',
+      taskId: json.taskId,
+      handlerKey: json.handlerKey,
+      startedAt: json.startTime,
+      completedAt: json.endTime,
+      status: json.status,
+      result: json.logs, // mapping logs to result
+      error: json.error,
+      durationMs: json.endTime && json.startTime ? new Date(json.endTime).getTime() - new Date(json.startTime).getTime() : null
+    };
+  },
+  toDomain: (persistenceEntity) => {
     return createTaskExecution({
-        ...dbModel,
-        startTime: dbModel.startedAt,
-        endTime: dbModel.completedAt
+      id: persistenceEntity.id,
+      tenantId: persistenceEntity.tenantId,
+      taskId: persistenceEntity.taskId,
+      handlerKey: persistenceEntity.handlerKey,
+      startTime: persistenceEntity.startedAt,
+      endTime: persistenceEntity.completedAt,
+      status: persistenceEntity.status,
+      logs: persistenceEntity.result,
+      error: persistenceEntity.error
     });
   },
-  toPersistence: (domainEntity, tenantId) => {
-    const json = domainEntity.toJSON();
-    return TaskExecutionSchema.parse({
-        id: json.id,
-        tenantId: json.tenantId || tenantId,
-        taskId: json.taskId,
-        handlerKey: json.handlerKey,
-        status: json.status,
-        startedAt: json.startTime,
-        completedAt: json.endTime,
-        durationMs: undefined,
-        error: typeof json.error === 'string' ? json.error : JSON.stringify(json.error)
-    });
-  },
-  toDomainList: (dbModels) => dbModels.map(taskExecutionMapper.toDomain).filter(Boolean),
-  toPersistenceList: (domainEntities) => domainEntities.map(e => taskExecutionMapper.toPersistence(e))
+  toDomainList: (persistenceEntities) => {
+    return persistenceEntities.map(e => taskExecutionMapper.toDomain(e));
+  }
 };

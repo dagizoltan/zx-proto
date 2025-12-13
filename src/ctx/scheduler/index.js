@@ -1,7 +1,7 @@
 
 import { createSchedulerService } from './domain/services/scheduler-service.js';
-import { createKVScheduledTaskRepository } from '../../infra/persistence/kv/repositories/kv-scheduled-task-repository.js';
-import { createKVTaskExecutionRepository } from '../../infra/persistence/kv/repositories/kv-task-execution-repository.js';
+import { createKVScheduledTaskRepository } from './infrastructure/adapters/kv-scheduled-task-repository.adapter.js';
+import { createKVTaskExecutionRepository } from './infrastructure/adapters/kv-task-execution-repository.adapter.js';
 import { schedulerTaskHandlers } from '../../adapters/scheduler/task-handlers.js';
 
 export const createSchedulerContext = async (deps) => {

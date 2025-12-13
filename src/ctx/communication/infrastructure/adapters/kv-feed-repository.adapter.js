@@ -1,6 +1,6 @@
 import { createRepository, useSchema, useIndexing, Ok, Err, isErr } from '../../../../../lib/trust/index.js';
-import { FeedItemSchema } from '../../../../ctx/communication/infrastructure/persistence/schemas/feed-item.schema.js';
-import { feedItemMapper } from '../../../../ctx/communication/infrastructure/persistence/mappers/feed-item.mapper.js';
+import { FeedItemSchema } from '../persistence/schemas/feed-item.schema.js';
+import { feedItemMapper } from '../persistence/mappers/feed-item.mapper.js';
 
 export const createKVFeedRepository = (kvPool) => {
   const baseRepo = createRepository(kvPool, 'feed', [

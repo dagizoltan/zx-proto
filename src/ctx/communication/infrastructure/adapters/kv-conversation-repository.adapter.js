@@ -1,6 +1,6 @@
 import { createRepository, useSchema, useIndexing, Ok, Err, isErr } from '../../../../../lib/trust/index.js';
-import { ConversationSchema } from '../../../../ctx/communication/infrastructure/persistence/schemas/conversation.schema.js';
-import { conversationMapper } from '../../../../ctx/communication/infrastructure/persistence/mappers/conversation.mapper.js';
+import { ConversationSchema } from '../persistence/schemas/conversation.schema.js';
+import { conversationMapper } from '../persistence/mappers/conversation.mapper.js';
 
 export const createKVConversationRepository = (kvPool) => {
   const baseRepo = createRepository(kvPool, 'conversations', [
