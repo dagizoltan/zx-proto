@@ -1,4 +1,4 @@
-import { createWorkOrder } from '../../domain/entities/bom.js';
+import { createWorkOrder } from '../../domain/entities/work-order.js';
 import { Ok, Err, isErr, unwrap } from '../../../../../lib/trust/index.js';
 
 export const createCreateWorkOrder = ({ woRepository, bomRepository }) => {
