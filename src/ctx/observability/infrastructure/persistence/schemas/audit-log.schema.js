@@ -1,5 +1,4 @@
 import { z } from 'zod';
-
 export const AuditLogSchema = z.object({
   id: z.string().uuid(),
   tenantId: z.string(),

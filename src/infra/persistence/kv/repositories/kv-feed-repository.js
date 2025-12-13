@@ -1,24 +1,52 @@
-import { createRepository } from '../../../../../lib/trust/repo.js';
-import { useSchema } from '../../../../../lib/trust/middleware/schema.js';
-import { useIndexing } from '../../../../../lib/trust/middleware/indexing.js';
-import { FeedItemSchema } from '../../../../ctx/communication/domain/schemas/communication.schema.js';
+import { createRepository, useSchema, useIndexing, Ok, Err, isErr } from '../../../../../lib/trust/index.js';
+import { FeedItemSchema } from '../../../../ctx/communication/infrastructure/persistence/schemas/feed-item.schema.js';
+import { feedItemMapper } from '../../../../ctx/communication/infrastructure/persistence/mappers/feed-item.mapper.js';
 
-export const createKVFeedRepository = (kv) => {
-    return createRepository(
-        kv,
-        'feed',
-        [
-            useSchema(FeedItemSchema),
-            useIndexing((item) => {
-                const indexes = [];
-                if (item.createdAt) {
-                    indexes.push({ key: ['feed_by_date', item.createdAt], value: item.id });
-                }
-                if (item.channelId) {
-                    indexes.push({ key: ['feed_by_channel', item.channelId], value: item.id });
-                }
-                return indexes;
-            })
-        ]
-    );
+export const createKVFeedRepository = (kvPool) => {
+  const baseRepo = createRepository(kvPool, 'feed', [
+    useSchema(FeedItemSchema),
+    useIndexing({
+        'date': (item) => item.createdAt,
+        'channel': (item) => item.channelId
+    })
+  ]);
+
+  return {
+    save: async (tenantId, domainEntity) => {
+      try {
+        const persistenceModel = feedItemMapper.toPersistence(domainEntity);
+        const result = await baseRepo.save(tenantId, persistenceModel);
+        if (isErr(result)) return result;
+        return Ok(feedItemMapper.toDomain(result.value));
+      } catch (e) {
+        return Err({ code: 'VALIDATION_ERROR', message: e.message, issues: e.issues });
+      }
+    },
+    findById: async (tenantId, id) => {
+      const result = await baseRepo.findById(tenantId, id);
+      if (isErr(result)) return result;
+      return Ok(feedItemMapper.toDomain(result.value));
+    },
+    findByIds: async (tenantId, ids) => {
+      const result = await baseRepo.findByIds(tenantId, ids);
+      if (isErr(result)) return result;
+      return Ok(feedItemMapper.toDomainList(result.value));
+    },
+    delete: (tenantId, id) => baseRepo.delete(tenantId, id),
+    list: async (tenantId, options) => {
+      const result = await baseRepo.list(tenantId, options);
+      if (isErr(result)) return result;
+      return Ok({ ...result.value, items: feedItemMapper.toDomainList(result.value.items) });
+    },
+    queryByIndex: async (tenantId, indexName, value, options) => {
+      const result = await baseRepo.queryByIndex(tenantId, indexName, value, options);
+      if (isErr(result)) return result;
+      return Ok({ ...result.value, items: feedItemMapper.toDomainList(result.value.items) });
+    },
+    query: async (tenantId, options, context) => {
+      const result = await baseRepo.query(tenantId, options, context);
+      if (isErr(result)) return result;
+      return Ok({ ...result.value, items: feedItemMapper.toDomainList(result.value.items) });
+    }
+  };
 };

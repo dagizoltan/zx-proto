@@ -1,8 +1,9 @@
-import { createRepository, useSchema, useIndexing } from '../../../../../lib/trust/index.js';
-import { TaskExecutionSchema } from '../../../../ctx/scheduler/domain/schemas/scheduler.schema.js';
+import { createRepository, useSchema, useIndexing, Ok, Err, isErr } from '../../../../../lib/trust/index.js';
+import { TaskExecutionSchema } from '../../../../ctx/scheduler/infrastructure/persistence/schemas/task-execution.schema.js';
+import { taskExecutionMapper } from '../../../../ctx/scheduler/infrastructure/persistence/mappers/task-execution.mapper.js';
 
 export const createKVTaskExecutionRepository = (kvPool) => {
-    return createRepository(kvPool, 'task_executions', [
+    const baseRepo = createRepository(kvPool, 'task_executions', [
         useSchema(TaskExecutionSchema),
         useIndexing({
             'task': (e) => e.taskId,
@@ -10,4 +11,43 @@ export const createKVTaskExecutionRepository = (kvPool) => {
             'timestamp_desc': (e) => e.startedAt
         })
     ]);
+
+    return {
+        save: async (tenantId, domainEntity) => {
+            try {
+                const persistenceModel = taskExecutionMapper.toPersistence(domainEntity, tenantId);
+                const result = await baseRepo.save(tenantId, persistenceModel);
+                if (isErr(result)) return result;
+                return Ok(taskExecutionMapper.toDomain(result.value));
+            } catch (e) {
+                return Err({ code: 'VALIDATION_ERROR', message: e.message, issues: e.issues });
+            }
+        },
+        findById: async (tenantId, id) => {
+            const result = await baseRepo.findById(tenantId, id);
+            if (isErr(result)) return result;
+            return Ok(taskExecutionMapper.toDomain(result.value));
+        },
+        findByIds: async (tenantId, ids) => {
+            const result = await baseRepo.findByIds(tenantId, ids);
+            if (isErr(result)) return result;
+            return Ok(taskExecutionMapper.toDomainList(result.value));
+        },
+        delete: (tenantId, id) => baseRepo.delete(tenantId, id),
+        list: async (tenantId, options) => {
+            const result = await baseRepo.list(tenantId, options);
+            if (isErr(result)) return result;
+            return Ok({ ...result.value, items: taskExecutionMapper.toDomainList(result.value.items) });
+        },
+        queryByIndex: async (tenantId, indexName, value, options) => {
+            const result = await baseRepo.queryByIndex(tenantId, indexName, value, options);
+            if (isErr(result)) return result;
+            return Ok({ ...result.value, items: taskExecutionMapper.toDomainList(result.value.items) });
+        },
+        query: async (tenantId, options, context) => {
+            const result = await baseRepo.query(tenantId, options, context);
+            if (isErr(result)) return result;
+            return Ok({ ...result.value, items: taskExecutionMapper.toDomainList(result.value.items) });
+        }
+    };
 };
