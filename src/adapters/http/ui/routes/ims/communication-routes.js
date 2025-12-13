@@ -1,9 +1,12 @@
 import { Hono } from 'hono';
 import * as handlers from '../../handlers/communication/hub.handlers.js';
+import * as postFeedHandlers from '../../handlers/communication/post-feed.handler.js';
 
 export const communicationRoutes = new Hono();
 
 communicationRoutes.get('/feed', handlers.feedHandler);
+communicationRoutes.get('/feed/new', postFeedHandlers.getCreateFeedPostPage);
+communicationRoutes.post('/feed/new', postFeedHandlers.handleCreateFeedPost);
 communicationRoutes.get('/conversations', handlers.conversationsHandler);
 communicationRoutes.get('/conversations/:id', handlers.conversationDetailHandler);
 // Keep legacy /messages redirect or drop it? Let's redirect for safety or just drop.

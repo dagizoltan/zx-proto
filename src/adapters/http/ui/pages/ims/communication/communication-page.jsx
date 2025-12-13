@@ -64,7 +64,7 @@ export const CommunicationPage = ({ activeTab, feed, messages, notifications, ti
                     <div class="card p-0">
                         <div style="padding: var(--space-4); border-bottom: 1px solid var(--color-border); display: flex; justify-content: space-between; align-items: center;">
                             <h2 style="margin: 0; font-size: 1.1rem;">Activity Feed</h2>
-                            <button class="btn btn-sm btn-primary" disabled>New Post</button>
+                            <a href="/ims/communication/feed/new" class="btn btn-sm btn-primary">New Post</a>
                         </div>
                         <div>
                             {(feed || []).map(item => <FeedItem item={item} />)}
