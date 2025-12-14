@@ -1,5 +1,5 @@
 import { Hono } from 'hono';
-import * as handlers from '../../handlers/communication/hub.handlers.js';
+import * as handlers from '../../handlers/communication/communication.handlers.js';
 import * as postFeedHandlers from '../../handlers/communication/post-feed.handler.js';
 
 export const communicationRoutes = new Hono();
