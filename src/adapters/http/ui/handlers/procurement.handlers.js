@@ -197,14 +197,21 @@ export const purchaseOrderDetailHandler = async (c) => {
     if (isErr(poRes)) return c.text('PO not found', 404);
     const po = poRes.value;
 
+    // Create a view model to avoid mutating the frozen domain object
+    const viewPo = { ...po };
+
     // Populate Products manually (or via query if we fetched items via query, but items are embedded)
     // Items are in PO.items array.
     // We can use findByIds for products!
     const productIds = po.items.map(i => i.productId);
     const pRes = await catalog.repositories.product.findByIds(tenantId, productIds);
+
+    // Map items to new objects to avoid mutating original items
+    viewPo.items = po.items.map(item => ({ ...item }));
+
     if (!isErr(pRes)) {
         const pMap = new Map(pRes.value.map(p => [p.id, p]));
-        for (const item of po.items) {
+        for (const item of viewPo.items) {
             const product = pMap.get(item.productId);
             item.productName = product ? product.name : 'Unknown';
             item.sku = product ? product.sku : '';
@@ -213,11 +220,11 @@ export const purchaseOrderDetailHandler = async (c) => {
 
     const sRes = await procurement.repositories.supplier.findById(tenantId, po.supplierId);
     const supplier = isErr(sRes) ? null : sRes.value;
-    po.supplierName = supplier ? supplier.name : 'Unknown';
+    viewPo.supplierName = supplier ? supplier.name : 'Unknown';
 
     const html = await renderPage(PurchaseOrderDetailPage, {
         user,
-        po,
+        po: viewPo,
         activePage: 'purchase-orders',
         layout: AdminLayout,
         title: `PO ${po.code} - IMS Admin`
@@ -237,11 +244,15 @@ export const receivePurchaseOrderPageHandler = async (c) => {
     if (isErr(poRes)) return c.text('PO not found', 404);
     const po = poRes.value;
 
+    // Create a view model to avoid mutating the frozen domain object
+    const viewPo = { ...po };
+    viewPo.items = po.items.map(item => ({ ...item }));
+
     const productIds = po.items.map(i => i.productId);
     const pRes = await catalog.repositories.product.findByIds(tenantId, productIds);
     if (!isErr(pRes)) {
         const pMap = new Map(pRes.value.map(p => [p.id, p]));
-        for (const item of po.items) {
+        for (const item of viewPo.items) {
              const product = pMap.get(item.productId);
              if (product) {
                  item.productName = product.name;
@@ -255,7 +266,7 @@ export const receivePurchaseOrderPageHandler = async (c) => {
 
     const html = await renderPage(ReceivePurchaseOrderPage, {
         user,
-        po,
+        po: viewPo,
         locations: allLocations,
         activePage: 'purchase-orders',
         layout: AdminLayout,
