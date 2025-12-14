@@ -8,6 +8,7 @@ import { CreatePurchaseOrderPage } from '../pages/ims/procurement/create-po-page
 import { PurchaseOrderDetailPage } from '../pages/ims/procurement/po-detail-page.jsx';
 import { ReceivePurchaseOrderPage } from '../pages/ims/procurement/receive-po-page.jsx';
 import { unwrap, isErr } from '../../../../../lib/trust/index.js';
+import { QUERY_LIMITS } from '../../../../../src/constants.js';
 
 // Suppliers
 export const listSuppliersHandler = async (c) => {
@@ -140,8 +141,8 @@ export const createPurchaseOrderPageHandler = async (c) => {
     // Use list instead of useCases? Or existing useCases are fine if they are simple wrappers.
     // existing useCases.listSuppliers calls repo.list.
     // But handler previously used useCases.
-    const sRes = await procurement.repositories.supplier.query(tenantId, { limit: 1000 });
-    const pRes = await catalog.repositories.product.query(tenantId, { limit: 1000 });
+    const sRes = await procurement.repositories.supplier.query(tenantId, { limit: QUERY_LIMITS.INTERNAL });
+    const pRes = await catalog.repositories.product.query(tenantId, { limit: QUERY_LIMITS.INTERNAL });
     const { items: suppliers } = unwrap(sRes);
     const { items: products } = unwrap(pRes);
 
@@ -250,7 +251,7 @@ export const receivePurchaseOrderPageHandler = async (c) => {
         }
     }
 
-    const lRes = await inventory.repositories.location.query(tenantId, { limit: 1000 });
+    const lRes = await inventory.repositories.location.query(tenantId, { limit: QUERY_LIMITS.INTERNAL });
     const allLocations = unwrap(lRes).items;
 
     const html = await renderPage(ReceivePurchaseOrderPage, {
