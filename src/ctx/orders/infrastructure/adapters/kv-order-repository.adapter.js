@@ -29,6 +29,12 @@ export const createKVOrderRepositoryAdapter = (kvPool) => {
       return Ok(orderMapper.toDomain(result.value));
     },
 
+    list: async (tenantId, options) => {
+      const result = await baseRepo.list(tenantId, options);
+      if (isErr(result)) return result;
+      return Ok({ ...result.value, items: orderMapper.toDomainList(result.value.items) });
+    },
+
     query: async (tenantId, options) => {
       const result = await baseRepo.query(tenantId, options);
       if (isErr(result)) return result;
