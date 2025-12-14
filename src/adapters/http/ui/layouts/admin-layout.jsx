@@ -58,6 +58,7 @@ export const AdminLayout = ({ children, user, currentPath }) => {
               ))}
             </nav>
             <div class="sidebar-footer">
+              <div id="toast-container"></div>
               <div class="user-info">
                 <a href="/ims/me" class="user-link">
                   <span class="user-name" title={user.name}>{user.name || 'User'}</span>
@@ -81,7 +82,6 @@ export const AdminLayout = ({ children, user, currentPath }) => {
             </main>
           </div>
 
-          <div id="toast-container"></div>
         </div>
         <script dangerouslySetInnerHTML={{ __html: `
           (function() {

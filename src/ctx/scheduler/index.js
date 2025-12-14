@@ -4,11 +4,15 @@ import { createKVTaskExecutionRepository } from './infrastructure/adapters/kv-ta
 import { resolveDependencies } from '../../utils/registry/dependency-resolver.js';
 import { createContextBuilder } from '../../utils/registry/context-builder.js';
 
+import { autoGateway } from '../../utils/registry/gateway-factory.js';
+
 export const createSchedulerContext = async (deps) => {
   const { kvPool, eventBus } = resolveDependencies(deps, {
     kvPool: ['persistence.kvPool', 'kvPool'],
     eventBus: ['messaging.eventBus', 'eventBus']
   });
+
+  const crmGateway = autoGateway(deps, 'communication');
 
   const taskRepo = createKVScheduledTaskRepository(kvPool);
   const executionRepo = createKVTaskExecutionRepository(kvPool);
@@ -16,7 +20,8 @@ export const createSchedulerContext = async (deps) => {
   const service = createSchedulerService({
       taskRepo,
       executionRepo,
-      eventBus
+      eventBus,
+      crm: crmGateway
   });
 
   // Note: Handlers and Definitions are now loaded in bootstrap phase to keep context pure
@@ -41,7 +46,8 @@ export const SchedulerContext = {
     dependencies: [
         'infra.persistence',
         'infra.messaging',
-        'domain.system'
+        'domain.system',
+        'domain.communication'
     ],
     factory: createSchedulerContext
 };

@@ -4,7 +4,7 @@ import { createTaskExecution } from '../entities/task-execution.js';
 import parser from 'cron-parser';
 import { isErr, unwrap } from '../../../../../lib/trust/index.js';
 
-export const createSchedulerService = ({ taskRepo, executionRepo, eventBus }) => {
+export const createSchedulerService = ({ taskRepo, executionRepo, eventBus, crm }) => {
   const logger = console;
 
   const handlers = new Map();
@@ -81,6 +81,17 @@ export const createSchedulerService = ({ taskRepo, executionRepo, eventBus }) =>
     const logBuffer = [`Starting task ${task.name}`];
     const logFn = (msg) => logBuffer.push(`[${new Date().toISOString()}] ${msg}`);
 
+    // Notify Start (Fire and Forget)
+    if (crm && crm.notifications) {
+        crm.notifications.notify(tenantId, {
+            userId: 'admin', // Hardcoded per plan
+            title: 'Task Started',
+            message: `Scheduled task '${task.name}' has started.`,
+            level: 'INFO',
+            link: '/admin/scheduler'
+        }).catch(e => logger.error(`Failed to send start notification: ${e}`));
+    }
+
     try {
         await handler({
             log: logFn,
@@ -94,6 +105,17 @@ export const createSchedulerService = ({ taskRepo, executionRepo, eventBus }) =>
             logs: logBuffer
         });
 
+        // Notify Success
+        if (crm && crm.notifications) {
+            crm.notifications.notify(tenantId, {
+                userId: 'admin',
+                title: 'Task Completed',
+                message: `Task '${task.name}' completed successfully.`,
+                level: 'SUCCESS',
+                link: `/admin/scheduler/executions/${execution.id}`
+            }).catch(e => logger.error(`Failed to send success notification: ${e}`));
+        }
+
     } catch (error) {
         await executionRepo.save(tenantId, {
             ...execution,
@@ -102,6 +124,17 @@ export const createSchedulerService = ({ taskRepo, executionRepo, eventBus }) =>
             error: error.message,
             logs: [...logBuffer, `Error: ${error.message}`]
         });
+
+        // Notify Failure
+        if (crm && crm.notifications) {
+            crm.notifications.notify(tenantId, {
+                userId: 'admin',
+                title: 'Task Failed',
+                message: `Task '${task.name}' failed: ${error.message}`,
+                level: 'ERROR',
+                link: `/admin/scheduler/executions/${execution.id}`
+            }).catch(e => logger.error(`Failed to send failure notification: ${e}`));
+        }
     }
   };
 
