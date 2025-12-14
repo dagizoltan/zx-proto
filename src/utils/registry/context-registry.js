@@ -10,18 +10,37 @@ export const createContextRegistry = () => {
   const initOrder = [];
   let isInitialized = false;
 
-  // Register infra component
-  const registerInfra = (name, factory, deps = []) => {
-    factories.set(`infra.${name}`, factory);
-    dependencies.set(`infra.${name}`, deps);
-    return registry;
+  // New Generic Register Method
+  const register = (contextDefinition) => {
+      const { name, factory, dependencies: deps = [] } = contextDefinition;
+
+      // Determine type based on name prefix or definition property
+      // Convention: 'infra.xxx' or 'xxx' (defaults to domain if not specified?)
+      // Current system distinguishes infra vs domain in structure object.
+
+      let type = 'domain';
+      let cleanName = name;
+
+      if (name.startsWith('infra.')) {
+          type = 'infra';
+          cleanName = name.replace('infra.', '');
+      }
+
+      const fullName = `${type}.${cleanName}`;
+
+      factories.set(fullName, factory);
+      dependencies.set(fullName, deps);
+
+      return registry;
   };
 
-  // Register domain context
+  // Legacy Support
+  const registerInfra = (name, factory, deps = []) => {
+    return register({ name: `infra.${name}`, factory, dependencies: deps });
+  };
+
   const registerDomain = (name, factory, deps = []) => {
-    factories.set(`domain.${name}`, factory);
-    dependencies.set(`domain.${name}`, deps);
-    return registry;
+    return register({ name, factory, dependencies: deps });
   };
 
   // Get from structure
@@ -33,7 +52,8 @@ export const createContextRegistry = () => {
       if (value && typeof value === 'object' && key in value) {
         value = value[key];
       } else {
-        throw new Error(`Context path not found: ${path}`);
+        // Return undefined instead of throwing to allow safer checks
+        return undefined;
       }
     }
 
@@ -42,12 +62,8 @@ export const createContextRegistry = () => {
 
   // Check if path exists
   const has = (path) => {
-    try {
-      get(path);
-      return true;
-    } catch {
-      return false;
-    }
+      const val = get(path);
+      return val !== undefined;
   };
 
   // Set value in structure
@@ -103,25 +119,51 @@ export const createContextRegistry = () => {
     const deps = dependencies.get(fullName) || [];
 
     // Resolve dependencies first
-    const resolvedDeps = {};
+    // We pass the ENTIRE registry structure to the factory via `deps` + `registry`
+    // But traditionally we resolved specific dependencies.
+    // The new factories expect `deps` to contain the resolved dependency objects.
+
+    // We will provide a flattened map of requested dependencies AND the whole structure for advanced usage
+    const resolvedDeps = {
+        // Provide direct access to the full structure for cross-context lookups (like autoGateway)
+        infra: structure.infra,
+        domain: structure.domain,
+        ...structure // Spread full structure (config, infra, domain)
+    };
+
+    // We also verify that declared dependencies are initialized
     for (const depName of deps) {
       if (!has(depName)) {
         await initializeContext(depName);
       }
-      resolvedDeps[depName.split('.').pop()] = get(depName);
+      // We don't need to manually map them to keys anymore if the factory uses the new structure
+      // But for backward compat, we can still map.
+      // actually, the resolver utils use `deps.infra.persistence` etc.
     }
 
-    // Create context instance with resolved dependencies and registry
-    const contextInstance = await factory({
-      ...resolvedDeps,
-      config: structure.config,
-      registry, // Pass registry for cross-context access
-    });
+    // Create context instance
+    try {
+        const contextInstance = await factory({
+            ...resolvedDeps,
+            config: structure.config,
+            registry,
+        });
 
-    set(fullName, contextInstance);
-    initOrder.push(fullName);
+        // Validate context
+        if (!contextInstance) {
+            throw new Error(`Factory for ${fullName} returned null or undefined`);
+        }
 
-    return contextInstance;
+        set(fullName, contextInstance);
+        initOrder.push(fullName);
+
+        return contextInstance;
+    } catch (error) {
+        console.error(`❌ Failed to initialize ${fullName}`);
+        console.error(`   Dependencies: ${deps.join(', ')}`);
+        console.error(`   Error: ${error.message}`);
+        throw error;
+    }
   };
 
   // Build dependency graph
@@ -194,6 +236,7 @@ export const createContextRegistry = () => {
   };
 
   const registry = {
+    register,
     registerInfra,
     registerDomain,
     get,

@@ -24,170 +24,179 @@ import { createGetProductsBatch } from './application/use-cases/get-products-bat
 import { createGetPickingList } from './application/use-cases/get-picking-list.js';
 import { unwrap } from '../../../lib/trust/index.js';
 
-/**
- * Inventory Context Factory
- *
- * @param {Object} deps - Explicit Dependency Injection Container
- * @param {Object} deps.kvPool - KV Connection Pool (infra.persistence)
- * @param {Object} deps.eventBus - Event Bus (infra.messaging)
- * @param {Object} deps.cache - Cache Service (infra.persistence)
- * @param {Object} deps.obs - Observability Service
- * @param {Object} deps.catalogGateway - Injected Catalog Gateway
- * @param {Object} deps.accessControlGateway - Injected Access Control Gateway
- */
-export const createInventoryContext = async ({
-    kvPool,
-    eventBus,
-    cache,
-    obs,
-    catalogGateway,
-    accessControlGateway
-}) => {
+import { resolveDependencies } from '../../utils/registry/dependency-resolver.js';
+import { createContextBuilder } from '../../utils/registry/context-builder.js';
+import { autoGateway } from '../../utils/registry/gateway-factory.js';
 
-  // Product Compat Repo
-  const productRepositoryCompatibility = {
-      findById: (tenantId, id) => catalogGateway.getProduct(tenantId, id),
-      query: (tenantId, options) => catalogGateway.list(tenantId, options),
-      save: () => { throw new Error('Inventory cannot save products anymore'); },
-  };
+export const createInventoryContext = async (deps) => {
+    const { kvPool, eventBus, cache, obs } = resolveDependencies(deps, {
+        kvPool: ['persistence.kvPool', 'kvPool'],
+        eventBus: ['messaging.eventBus', 'eventBus'],
+        cache: ['persistence.cache', 'cache'],
+        obs: ['infra.obs', 'obs']
+    });
 
-  const stockRepository = createKVStockRepositoryAdapter(kvPool);
+    const catalogGateway = autoGateway(deps, 'catalog');
+    const accessControlGateway = autoGateway(deps, 'access-control');
 
-  // Legacy Repos
-  const stockMovementRepository = createKVStockMovementRepository(kvPool);
-  const warehouseRepository = createKVWarehouseRepository(kvPool);
-  const locationRepository = createKVLocationRepository(kvPool);
-  const batchRepository = createKVBatchRepository(kvPool);
+    // Product Compat Repo
+    const productRepositoryCompatibility = {
+        findById: (tenantId, id) => catalogGateway.getProduct(tenantId, id),
+        query: (tenantId, options) => catalogGateway.listProducts(tenantId, options), // Mapped list -> listProducts
+        save: () => { throw new Error('Inventory cannot save products anymore'); },
+    };
 
-  // Services
-  const stockAllocationService = createStockAllocationService(stockRepository, stockMovementRepository, batchRepository, productRepositoryCompatibility, kvPool);
-  const inventoryAdjustmentService = createInventoryAdjustmentService(stockRepository, stockMovementRepository, batchRepository, productRepositoryCompatibility, kvPool);
+    const stockRepository = createKVStockRepositoryAdapter(kvPool);
 
-  // Use Cases
-  const updateStock = createUpdateStock({
-    stockRepository,
-    catalogGateway,
-    obs,
-    eventBus,
-  });
+    // Legacy Repos
+    const stockMovementRepository = createKVStockMovementRepository(kvPool);
+    const warehouseRepository = createKVWarehouseRepository(kvPool);
+    const locationRepository = createKVLocationRepository(kvPool);
+    const batchRepository = createKVBatchRepository(kvPool);
 
-  const checkAvailability = createCheckAvailability({
-    stockRepository,
-    cache,
-  });
+    // Services
+    const stockAllocationService = createStockAllocationService(stockRepository, stockMovementRepository, batchRepository, productRepositoryCompatibility, kvPool);
+    const inventoryAdjustmentService = createInventoryAdjustmentService(stockRepository, stockMovementRepository, batchRepository, productRepositoryCompatibility, kvPool);
 
-  const getProduct = createGetProduct({
-    productRepository: productRepositoryCompatibility,
-  });
+    // Use Cases
+    const updateStock = createUpdateStock({
+        stockRepository,
+        catalogGateway,
+        obs,
+        eventBus,
+    });
 
-  const getProductsBatch = createGetProductsBatch({
-      productRepository: productRepositoryCompatibility
-  });
+    const checkAvailability = createCheckAvailability({
+        stockRepository,
+        cache,
+    });
 
-  const reserveStock = createReserveStock({
-    stockAllocationService
-  });
+    const getProduct = createGetProduct({
+        productRepository: productRepositoryCompatibility,
+    });
 
-  const listAllProducts = createListAllProducts({
-      productRepository: productRepositoryCompatibility,
-      stockRepository
-  });
+    const getProductsBatch = createGetProductsBatch({
+        productRepository: productRepositoryCompatibility
+    });
 
-  const receiveStock = createReceiveStock({
-      inventoryAdjustmentService
-  });
+    const reserveStock = createReserveStock({
+        stockAllocationService
+    });
 
-  const consumeStock = createConsumeStock({
-      inventoryAdjustmentService
-  });
+    const listAllProducts = createListAllProducts({
+        productRepository: productRepositoryCompatibility,
+        stockRepository
+    });
 
-  const moveStock = createMoveStock({
-      stockRepository,
-      stockMovementRepository
-  });
+    const receiveStock = createReceiveStock({
+        inventoryAdjustmentService
+    });
 
-  const confirmStockShipment = createConfirmStockShipment({
-      stockAllocationService
-  });
+    const consumeStock = createConsumeStock({
+        inventoryAdjustmentService
+    });
 
-  const cancelStockReservation = createCancelStockReservation({
-      stockAllocationService
-  });
+    const moveStock = createMoveStock({
+        stockRepository,
+        stockMovementRepository
+    });
 
-  const listStockMovements = createListStockMovements({
-      stockMovementRepository
-  });
+    const confirmStockShipment = createConfirmStockShipment({
+        stockAllocationService
+    });
 
-  const createWarehouse = createCreateWarehouse({
-      warehouseRepository,
-      eventBus
-  });
+    const cancelStockReservation = createCancelStockReservation({
+        stockAllocationService
+    });
 
-  const createLocation = createCreateLocation({
-      locationRepository,
-      warehouseRepository,
-      eventBus
-  });
+    const listStockMovements = createListStockMovements({
+        stockMovementRepository
+    });
 
-  const getPickingList = createGetPickingList({
-      stockMovementRepository,
-      catalogGateway,
-      locationRepository,
-      batchRepository
-  });
+    const createWarehouse = createCreateWarehouse({
+        warehouseRepository,
+        eventBus
+    });
 
-  const executeProduction = {
-      execute: async (...args) => stockAllocationService.executeProduction(...args)
-  };
+    const createLocation = createCreateLocation({
+        locationRepository,
+        warehouseRepository,
+        eventBus
+    });
 
-  const receiveStockRobust = {
-      execute: async (...args) => stockAllocationService.receiveStockRobust(...args)
-  };
+    const getPickingList = createGetPickingList({
+        stockMovementRepository,
+        catalogGateway,
+        locationRepository,
+        batchRepository
+    });
 
-  const receiveStockBatch = {
-      execute: async (...args) => stockAllocationService.receiveStockBatch(...args)
-  };
+    const executeProduction = {
+        execute: async (...args) => stockAllocationService.executeProduction(...args)
+    };
 
-  const checkUserPermission = async (tenantId, userId, action) => {
-    return unwrap(await accessControlGateway.checkPermission(tenantId, userId, 'inventory', action));
-  };
+    const receiveStockRobust = {
+        execute: async (...args) => stockAllocationService.receiveStockRobust(...args)
+    };
 
-  return {
+    const receiveStockBatch = {
+        execute: async (...args) => stockAllocationService.receiveStockBatch(...args)
+    };
+
+    // Helper for permission checks
+    const checkUserPermission = async (tenantId, userId, action) => {
+        // accessControlGateway is now a proxy to useCases
+        // createCheckPermission.execute(tenantId, userId, resource, action) ??
+        // Actually, checkPermission use case signature in access-control is: execute(tenantId, userId, resource, action)
+        // Let's verify access-control signature.
+        return unwrap(await accessControlGateway.checkPermission(tenantId, userId, 'inventory', action));
+    };
+
+    return createContextBuilder('inventory')
+        .withRepositories({
+            stock: stockRepository,
+            warehouse: warehouseRepository,
+            location: locationRepository,
+            batch: batchRepository,
+            stockMovement: stockMovementRepository,
+        })
+        .withServices({
+            stockAllocation: stockAllocationService,
+        })
+        .withUseCases({
+            updateStock,
+            checkAvailability,
+            getProduct,
+            getProductsBatch,
+            reserveStock,
+            listAllProducts,
+            receiveStock,
+            consumeStock,
+            moveStock,
+            confirmStockShipment,
+            cancelStockReservation,
+            listStockMovements,
+            createWarehouse,
+            createLocation,
+            getPickingList,
+            executeProduction,
+            receiveStockRobust,
+            receiveStockBatch
+        })
+        .withProps({
+            checkUserPermission
+        })
+        .build();
+};
+
+export const InventoryContext = {
     name: 'inventory',
-
-    repositories: {
-      stock: stockRepository,
-      warehouse: warehouseRepository,
-      location: locationRepository,
-      batch: batchRepository,
-      stockMovement: stockMovementRepository,
-    },
-
-    services: {
-      stockAllocation: stockAllocationService,
-    },
-
-    useCases: {
-      updateStock,
-      checkAvailability,
-      getProduct,
-      getProductsBatch,
-      reserveStock,
-      listAllProducts,
-      receiveStock,
-      consumeStock,
-      moveStock,
-      confirmStockShipment,
-      cancelStockReservation,
-      listStockMovements,
-      createWarehouse,
-      createLocation,
-      getPickingList,
-      executeProduction,
-      receiveStockRobust,
-      receiveStockBatch
-    },
-
-    checkUserPermission,
-  };
+    dependencies: [
+        'infra.persistence',
+        'infra.obs',
+        'infra.messaging',
+        'domain.access-control',
+        'domain.catalog'
+    ],
+    factory: createInventoryContext
 };

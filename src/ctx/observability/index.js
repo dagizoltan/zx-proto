@@ -4,29 +4,34 @@ import { createKVAuditRepository } from './infrastructure/adapters/kv-audit-repo
 import { createListLogs } from './application/use-cases/list-logs.js';
 import { createListActivityLogs } from './application/use-cases/list-activity-logs.js';
 import { createListAuditLogs } from './application/use-cases/list-audit-logs.js';
+import { resolveDependencies } from '../../utils/registry/dependency-resolver.js';
+import { createContextBuilder } from '../../utils/registry/context-builder.js';
 
-/**
- * Observability Context Factory
- *
- * @param {Object} deps - Explicit DI
- * @param {Object} deps.kvPool
- */
-export const createObservabilityContext = ({ kvPool }) => {
+export const createObservabilityContext = async (deps) => {
+    const { kvPool } = resolveDependencies(deps, {
+        kvPool: ['persistence.kvPool', 'kvPool']
+    });
 
     const logRepo = createKVLogRepository(kvPool);
     const activityRepo = createKVActivityRepository(kvPool);
     const auditRepo = createKVAuditRepository(kvPool);
 
-    return {
-        repositories: {
+    return createContextBuilder('observability')
+        .withRepositories({
+            audit: auditRepo,
             logs: logRepo,
             activity: activityRepo,
-            audit: auditRepo
-        },
-        useCases: {
+        })
+        .withUseCases({
             listLogs: createListLogs({ logRepository: logRepo }),
             listActivityLogs: createListActivityLogs({ activityRepository: activityRepo }),
             listAuditLogs: createListAuditLogs({ auditRepository: auditRepo })
-        }
-    };
+        })
+        .build();
+};
+
+export const ObservabilityContext = {
+    name: 'observability',
+    dependencies: ['infra.persistence'],
+    factory: createObservabilityContext
 };

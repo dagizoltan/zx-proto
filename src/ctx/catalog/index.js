@@ -12,15 +12,16 @@ import { createListCategories } from './application/use-cases/list-categories.js
 import { createCreatePriceList } from './application/use-cases/create-price-list.js';
 import { createListPriceLists } from './application/use-cases/list-price-lists.js';
 
-/**
- * Catalog Context Factory
- *
- * @param {Object} deps - Explicit Dependency Injection
- * @param {Object} deps.kvPool - KV Connection Pool
- * @param {Object} deps.eventBus - Event Bus
- * @param {Object} deps.obs - Observability Service
- */
-export const createCatalogContext = async ({ kvPool, eventBus, obs }) => {
+import { resolveDependencies } from '../../utils/registry/dependency-resolver.js';
+import { createContextBuilder } from '../../utils/registry/context-builder.js';
+import { Ok, Err, isErr } from '../../../lib/trust/index.js';
+
+export const createCatalogContext = async (deps) => {
+    const { kvPool, eventBus, obs } = resolveDependencies(deps, {
+        kvPool: ['persistence.kvPool', 'kvPool'],
+        eventBus: ['messaging.eventBus', 'eventBus'],
+        obs: ['infra.obs', 'obs']
+    });
 
     // Adapters (Catalog owns its data now)
     const productRepository = createKVProductRepositoryAdapter(kvPool);
@@ -52,6 +53,28 @@ export const createCatalogContext = async ({ kvPool, eventBus, obs }) => {
         pricingService
     });
 
+    // New Use Case for batch retrieval to support auto-gateways
+    const getProducts = {
+        execute: async (tenantId, productIds) => {
+            try {
+                const products = [];
+                for (const productId of productIds) {
+                    const result = await getProduct.execute(tenantId, productId);
+                    if (isErr(result)) {
+                         return Err({
+                            code: 'PRODUCT_NOT_FOUND',
+                            message: `Product ${productId} not found`
+                         });
+                    }
+                    products.push(result.value);
+                }
+                return Ok(products);
+            } catch (error) {
+                return Err({ code: 'CATALOG_ERROR', message: error.message });
+            }
+        }
+    };
+
     const createCategory = createCreateCategory({ categoryRepository });
     const listCategories = createListCategories({ categoryRepository });
     const createPriceList = createCreatePriceList({ priceListRepository });
@@ -61,27 +84,37 @@ export const createCatalogContext = async ({ kvPool, eventBus, obs }) => {
         execute: async (tenantId) => listProducts.execute(tenantId, 1, 5)
     };
 
-    return {
-        name: 'catalog',
-        services: {
-            pricingService
-        },
-        repositories: {
+    return createContextBuilder('catalog')
+        .withRepositories({
             category: categoryRepository,
             priceList: priceListRepository,
             product: productRepository
-        },
-        useCases: {
+        })
+        .withServices({
+            pricingService
+        })
+        .withUseCases({
             listProducts,
             searchProducts,
             filterByCategory,
             getFeaturedProducts,
             createProduct,
             getProduct,
+            getProducts, // Added for batch support
             createCategory,
             listCategories,
             createPriceList,
             listPriceLists
-        }
-    };
+        })
+        .build();
+};
+
+export const CatalogContext = {
+    name: 'catalog',
+    dependencies: [
+        'infra.persistence',
+        'infra.obs',
+        'infra.messaging'
+    ],
+    factory: createCatalogContext
 };

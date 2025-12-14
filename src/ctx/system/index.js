@@ -2,23 +2,27 @@
 // Notifications moved to Communication
 // Audit moved to Observability
 import { createCleanupAuditLogsUseCase } from './application/use-cases/cleanup-audit-logs.js';
+import { resolveDependencies } from '../../utils/registry/dependency-resolver.js';
+import { createContextBuilder } from '../../utils/registry/context-builder.js';
 
-/**
- * System Context Factory
- *
- * @param {Object} deps - Explicit DI
- * @param {Object} deps.kvPool
- * @param {Object} deps.messaging
- */
-export const createSystemContext = ({ kvPool, messaging }) => {
+export const createSystemContext = async (deps) => {
+  const { kvPool, messaging } = resolveDependencies(deps, {
+    kvPool: ['persistence.kvPool', 'kvPool'],
+    messaging: ['infra.messaging', 'messaging']
+  });
 
   // We mock repository for now as Audit Logs are in Observability
   const cleanupAuditLogs = createCleanupAuditLogsUseCase({});
 
-  return {
-    repositories: {},
-    useCases: {
+  return createContextBuilder('system')
+    .withUseCases({
       cleanupAuditLogs
-    }
-  };
+    })
+    .build();
+};
+
+export const SystemContext = {
+    name: 'system',
+    dependencies: ['infra.persistence', 'infra.messaging'],
+    factory: createSystemContext
 };
