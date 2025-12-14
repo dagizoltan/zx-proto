@@ -16,8 +16,15 @@ export const listMessagesHandler = async (c) => {
 
 export const listNotificationsHandler = async (c) => {
     const { notifications } = c.ctx.get('domain.communication').useCases;
+    const user = c.get('user');
     const { cursor, limit } = c.req.query();
-    const result = await notifications.list(c.get('tenantId'), { cursor, limit: limit ? parseInt(limit) : 50 });
+
+    // Pass userId to filter notifications for the current user
+    const result = await notifications.list(c.get('tenantId'), {
+        userId: user ? user.id : null,
+        cursor,
+        limit: limit ? parseInt(limit) : 50
+    });
     return c.json(result);
 };
 

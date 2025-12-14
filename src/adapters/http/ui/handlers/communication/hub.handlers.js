@@ -57,7 +57,8 @@ export const createConversationPageHandler = async (c) => {
     // For now, listing users is a generic AC function.
     let users = [];
     if (ac && ac.useCases.listUsers) { // Changed from repositories.user.list to useCases.listUsers for better practice
-         const usersRes = await ac.useCases.listUsers(tenantId, { limit: 100 });
+         // listUsers is an object with execute method
+         const usersRes = await ac.useCases.listUsers.execute(tenantId, { limit: 100 });
          if (!isErr(usersRes)) {
              users = usersRes.value.items;
          }
