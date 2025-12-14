@@ -1,17 +1,14 @@
 import { Ok, Err, isErr, runTransaction } from '../../../../../lib/trust/index.js';
+import { allocateStock, consumeStock, releaseStock } from '../entities/stock-entry.js';
 
 export const createStockAllocationService = (stockRepository, stockMovementRepository, batchRepository, productRepository, kvPool) => {
 
   const fetchStockEntries = async (tenantId, productIds) => {
     const stockMap = new Map();
     for (const pid of productIds) {
-        // Use query with pagination loop to get ALL entries
-        // Note: repo.query handles loop scanning.
-        // We use index 'product'
         const res = await stockRepository.query(tenantId, {
-            filter: { product: pid },
-            limit: 10000 // Large limit to fetch all, or implement safer loop if truly massive
-            // Assuming < 10000 batches per product per location for now.
+            filter: { productId: pid },
+            limit: 10000
         });
         if (isErr(res)) return res;
         stockMap.set(pid, res.value.items);
@@ -34,23 +31,7 @@ export const createStockAllocationService = (stockRepository, stockMovementRepos
 
         for (const req of items) {
             const entries = stockMap.get(req.productId) || [];
-            // Sort FEFO (Expiry) then FIFO (Created) - simplified here as FIFO (receipt) logic based on previous code
-            // Previous code: b.quantity - ... sort? Wait.
-            // Previous code sort: (b.quantity - b.reserved) - (a.quantity - a.reserved) => Largest First?
-            // "FEFO and FIFO" memory says.
-            // Let's implement FIFO based on updatedAt/receipt.
-            // Assuming entries have timestamps.
-            // Reverting to previous sort logic to maintain behavior:
-            // "entries.sort((a, b) => (b.quantity - b.reservedQuantity) - (a.quantity - a.reservedQuantity));"
-            // This sorts by *Available Quantity Descending* (Largest availability first).
-            // That contradicts "FEFO/FIFO". I will stick to the previous code's logic to be safe on behavior,
-            // unless memory explicitly says "FEFO strategy".
-            // Memory: "The StockAllocationService implements FEFO... and FIFO... strategies by sorting... based on batch expiry and receipt dates."
-            // The previous code I read might have been wrong or I misread it?
-            // "b - a" is Descending.
-            // Let's trust the Memory and implement FEFO/FIFO if possible, or stick to existing logic if unsure.
-            // Existing logic was explicitly: sort by available quantity descending.
-            // I will keep existing logic to avoid breaking changes in behavior, as "refactor" shouldn't change business logic unless requested.
+            // Sort by Availability Descending (matches previous logic)
             entries.sort((a, b) => (b.quantity - b.reservedQuantity) - (a.quantity - a.reservedQuantity));
 
             let remaining = req.quantity;
@@ -62,33 +43,31 @@ export const createStockAllocationService = (stockRepository, stockMovementRepos
 
             for (const entry of entries) {
                 if (remaining <= 0) break;
-                const available = entry.quantity - entry.reservedQuantity;
-                if (available <= 0) continue;
 
-                const take = Math.min(available, remaining);
+                // DOMAIN REFACTOR: Delegate logic to Entity
+                const result = allocateStock(entry, remaining);
+                if (isErr(result)) return result;
 
-                const newValue = {
-                    ...entry,
-                    reservedQuantity: entry.reservedQuantity + take,
-                    updatedAt: new Date().toISOString()
-                };
+                const { entry: newEntry, taken } = result.value;
 
-                const saveRes = await stockRepository.save(tenantId, newValue, { atomic });
-                if (isErr(saveRes)) return saveRes;
+                if (taken > 0) {
+                     const saveRes = await stockRepository.save(tenantId, newEntry, { atomic });
+                     if (isErr(saveRes)) return saveRes;
 
-                movements.push({
-                    id: crypto.randomUUID(),
-                    tenantId,
-                    productId: req.productId,
-                    quantity: take,
-                    type: 'ALLOCATION',
-                    locationId: entry.locationId,
-                    referenceId,
-                    batchId: entry.batchId,
-                    timestamp: new Date().toISOString()
-                });
+                     movements.push({
+                        id: crypto.randomUUID(),
+                        tenantId,
+                        productId: req.productId,
+                        quantity: taken,
+                        type: 'ALLOCATION',
+                        locationId: entry.locationId,
+                        referenceId,
+                        batchId: entry.batchId,
+                        timestamp: new Date().toISOString()
+                    });
 
-                remaining -= take;
+                    remaining -= taken;
+                }
             }
         }
 
@@ -102,10 +81,8 @@ export const createStockAllocationService = (stockRepository, stockMovementRepos
   };
 
   const commit = async (tenantId, referenceId, itemsToShip = null) => {
-      // 1. Get Allocations
-      // Use query loop for safety
       const movesRes = await stockMovementRepository.query(tenantId, {
-          filter: { reference: referenceId },
+          filter: { referenceId: referenceId },
           limit: 10000
       });
       if (isErr(movesRes)) return movesRes;
@@ -125,14 +102,13 @@ export const createStockAllocationService = (stockRepository, stockMovementRepos
               const entries = stockMap.get(m.productId);
               const entry = entries?.find(e => e.locationId === m.locationId && e.batchId === m.batchId);
 
-              if (!entry) continue; // Should not happen if locked correctly, but safeguard
+              if (!entry) continue;
 
-              const newValue = {
-                  ...entry,
-                  quantity: entry.quantity - m.quantity,
-                  reservedQuantity: entry.reservedQuantity - m.quantity,
-                  updatedAt: new Date().toISOString()
-              };
+              // DOMAIN REFACTOR: Delegate logic to Entity
+              const consumeRes = consumeStock(entry, m.quantity);
+              if (isErr(consumeRes)) return consumeRes;
+
+              const newValue = consumeRes.value;
 
               const saveRes = await stockRepository.save(tenantId, newValue, { atomic });
               if (isErr(saveRes)) return saveRes;
@@ -161,7 +137,7 @@ export const createStockAllocationService = (stockRepository, stockMovementRepos
 
   const release = async (tenantId, referenceId) => {
       const movesRes = await stockMovementRepository.query(tenantId, {
-          filter: { reference: referenceId },
+          filter: { referenceId: referenceId },
           limit: 10000
       });
       if (isErr(movesRes)) return movesRes;
@@ -179,11 +155,12 @@ export const createStockAllocationService = (stockRepository, stockMovementRepos
               const entry = entries?.find(e => e.locationId === m.locationId && e.batchId === m.batchId);
               if (!entry) continue;
 
-              const newValue = {
-                  ...entry,
-                  reservedQuantity: entry.reservedQuantity - m.quantity,
-                  updatedAt: new Date().toISOString()
-              };
+              // DOMAIN REFACTOR: Delegate logic to Entity
+              const releaseRes = releaseStock(entry, m.quantity);
+              if (isErr(releaseRes)) return releaseRes;
+
+              const newValue = releaseRes.value.entry; // releaseStock returns { entry, released }
+
               const saveRes = await stockRepository.save(tenantId, newValue, { atomic });
               if (isErr(saveRes)) return saveRes;
 
@@ -213,14 +190,8 @@ export const createStockAllocationService = (stockRepository, stockMovementRepos
   const receiveStockRobust = async (tenantId, { productId, locationId, quantity, batchId, reason }) => {
       const finalBatchId = batchId || 'default';
       return runTransaction(kvPool, async (atomic) => {
-         // Re-fetch inside transaction for latest versionstamp?
-         // Actually runTransaction retries if conflict.
-         // fetchStockEntries uses query, not get. Query doesn't return versionstamps for checks usually?
-         // `repo.query` returns items with `_versionstamp`.
-         // `repo.save` checks `_versionstamp`.
-         // So yes, we must fetch inside the transaction block to get fresh versionstamps.
-
-         const res = await stockRepository.queryByIndex(tenantId, 'product', productId, { limit: 1000 });
+         // Re-fetch existing entries
+         const res = await stockRepository.query(tenantId, { filter: { productId }, limit: 1000 });
          if (isErr(res)) return res;
 
          const existing = res.value.items.find(e => e.locationId === locationId && e.batchId === finalBatchId);
@@ -274,9 +245,16 @@ export const createStockAllocationService = (stockRepository, stockMovementRepos
               for (const e of locEntries) {
                   if (remaining <= 0) break;
                   if (e.quantity <= 0) continue;
-                  const take = Math.min(e.quantity, remaining);
 
+                  // Production consumption is akin to allocation+commit instantly, or just reducing quantity.
+                  // Since we are consuming raw materials, we reduce Quantity.
+                  // We can use consumeStock (even though it reduces reserved too).
+                  // But here we are consuming Available stock directly without reservation step.
+                  // Let's keep manual logic for this specific "Production" use case OR add a specific entity method `consumeAvailable`.
+
+                  const take = Math.min(e.quantity, remaining);
                   const newValue = { ...e, quantity: e.quantity - take, updatedAt: new Date().toISOString() };
+
                   await stockRepository.save(tenantId, newValue, { atomic });
 
                   const m = {

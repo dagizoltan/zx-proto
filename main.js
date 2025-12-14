@@ -56,7 +56,17 @@ async function bootstrap() {
       'infra.security',
       'infra.messaging',
     ])
-    .registerDomain('inventory', createInventoryContext, [
+    .registerDomain('inventory', async (deps) => {
+        // Explicitly map the generic dependencies to the specific ones the context needs
+        // This acts as the Composition Root for this context
+        return createInventoryContext({
+            kvPool: deps.persistence.kvPool,
+            cache: deps.persistence.cache,
+            eventBus: deps.messaging.eventBus,
+            obs: deps.obs,
+            registry: deps.registry // Legacy support
+        });
+    }, [
       'infra.persistence',
       'infra.obs',
       'infra.messaging',

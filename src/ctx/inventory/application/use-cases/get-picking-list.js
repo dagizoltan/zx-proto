@@ -13,7 +13,7 @@ export const createGetPickingList = ({ stockMovementRepository, registry }) => {
         };
 
         const moveRes = await stockMovementRepository.query(tenantId, {
-            filter: { reference: orderId, type: 'ALLOCATION' }, // repo.query uses 'reference' index
+            filter: { referenceId: orderId, type: 'ALLOCATION' }, // repo.query uses 'referenceId' index
             limit: 1000,
             populate: ['product', 'fromLocation', 'batch']
         }, { resolvers });

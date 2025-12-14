@@ -26,10 +26,23 @@ import { unwrap } from '../../../lib/trust/index.js';
 
 import { createLocalCatalogGatewayAdapter } from './infrastructure/adapters/local-catalog-gateway.adapter.js';
 
-export const createInventoryContext = async (deps) => {
-  const { persistence, config, obs, messaging, registry } = deps;
-  const { eventBus } = messaging;
-  const { cache } = persistence;
+/**
+ * Inventory Context Factory
+ *
+ * @param {Object} deps - Explicit Dependency Injection Container
+ * @param {Object} deps.kvPool - KV Connection Pool (infra.persistence)
+ * @param {Object} deps.eventBus - Event Bus (infra.messaging)
+ * @param {Object} deps.cache - Cache Service (infra.persistence)
+ * @param {Object} deps.obs - Observability Service
+ * @param {Object} deps.registry - Global Registry (Temporarily kept for lazy loading other contexts)
+ */
+export const createInventoryContext = async ({
+    kvPool,
+    eventBus,
+    cache,
+    obs,
+    registry
+}) => {
 
   // Catalog Gateway
   const catalogGateway = createLocalCatalogGatewayAdapter(registry);
@@ -41,17 +54,17 @@ export const createInventoryContext = async (deps) => {
       save: () => { throw new Error('Inventory cannot save products anymore'); },
   };
 
-  const stockRepository = createKVStockRepositoryAdapter(persistence.kvPool);
+  const stockRepository = createKVStockRepositoryAdapter(kvPool);
 
   // Legacy Repos
-  const stockMovementRepository = createKVStockMovementRepository(persistence.kvPool);
-  const warehouseRepository = createKVWarehouseRepository(persistence.kvPool);
-  const locationRepository = createKVLocationRepository(persistence.kvPool);
-  const batchRepository = createKVBatchRepository(persistence.kvPool);
+  const stockMovementRepository = createKVStockMovementRepository(kvPool);
+  const warehouseRepository = createKVWarehouseRepository(kvPool);
+  const locationRepository = createKVLocationRepository(kvPool);
+  const batchRepository = createKVBatchRepository(kvPool);
 
   // Services
-  const stockAllocationService = createStockAllocationService(stockRepository, stockMovementRepository, batchRepository, productRepositoryCompatibility, persistence.kvPool);
-  const inventoryAdjustmentService = createInventoryAdjustmentService(stockRepository, stockMovementRepository, batchRepository, productRepositoryCompatibility, persistence.kvPool);
+  const stockAllocationService = createStockAllocationService(stockRepository, stockMovementRepository, batchRepository, productRepositoryCompatibility, kvPool);
+  const inventoryAdjustmentService = createInventoryAdjustmentService(stockRepository, stockMovementRepository, batchRepository, productRepositoryCompatibility, kvPool);
 
   // Use Cases
   const updateStock = createUpdateStock({

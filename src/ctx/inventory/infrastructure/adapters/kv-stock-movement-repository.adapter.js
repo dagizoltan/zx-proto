@@ -6,8 +6,8 @@ export const createKVStockMovementRepository = (kvPool) => {
   const baseRepo = createRepository(kvPool, 'stock_movements', [
     useSchema(StockMovementSchema),
     useIndexing({
-        'product': (m) => m.productId,
-        'reference': (m) => m.referenceId,
+        'productId': (m) => m.productId,
+        'referenceId': (m) => m.referenceId,
         'type': (m) => m.type
     })
   ]);

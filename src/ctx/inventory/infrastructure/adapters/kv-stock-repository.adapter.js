@@ -10,9 +10,9 @@ export const createKVStockRepositoryAdapter = (kvPool) => {
     const baseRepo = createRepository(kvPool, 'stock', [
         useSchema(StockEntrySchema),
         useIndexing({
-            'product': (s) => s.productId,
-            'location': (s) => s.locationId,
-            'batch': (s) => s.batchId
+            'productId': (s) => s.productId,
+            'locationId': (s) => s.locationId,
+            'batchId': (s) => s.batchId
         })
     ]);
 
@@ -41,23 +41,33 @@ export const createKVStockRepositoryAdapter = (kvPool) => {
         },
 
         findByProduct: async (tenantId, productId) => {
-            const result = await baseRepo.queryByIndex(tenantId, 'product', productId);
-            if (isErr(result)) return result;
-            return Ok(stockEntryMapper.toDomainList(result.value.items));
+             // Upgraded to use the query engine
+             // This ensures we can easily add extra filters later if needed
+             const result = await baseRepo.query(tenantId, {
+                 filter: { productId },
+                 limit: 1000 // Reasonable default
+             });
+             if (isErr(result)) return result;
+             return Ok(stockEntryMapper.toDomainList(result.value.items));
         },
 
         findByLocation: async (tenantId, locationId) => {
-            const result = await baseRepo.queryByIndex(tenantId, 'location', locationId);
+            const result = await baseRepo.query(tenantId, {
+                 filter: { locationId },
+                 limit: 1000
+            });
             if (isErr(result)) return result;
             return Ok(stockEntryMapper.toDomainList(result.value.items));
         },
 
         queryByIndex: async (tenantId, indexName, value, options) => {
+             // Deprecated in favor of generic query, but kept for interface compatibility
              const result = await baseRepo.queryByIndex(tenantId, indexName, value, options);
              if (isErr(result)) return result;
              return Ok({ ...result.value, items: stockEntryMapper.toDomainList(result.value.items) });
         },
 
+        // This is the clean, powerful method we want to expose
         query: async (tenantId, options, context) => {
              const result = await baseRepo.query(tenantId, options, context);
              if (isErr(result)) return result;
