@@ -2,7 +2,7 @@ import { createKVFeedRepository } from './infrastructure/adapters/kv-feed-reposi
 import { createKVNotificationRepository } from './infrastructure/adapters/kv-notification-repository.adapter.js';
 import { createKVConversationRepository } from './infrastructure/adapters/kv-conversation-repository.adapter.js';
 import { createKVMessageRepository } from './infrastructure/adapters/kv-message-repository.adapter.js';
-import { createIdentityAdapter } from './infrastructure/adapters/identity.adapter.js';
+// Removed: createIdentityAdapter import - injected instead
 
 import { createNotificationService } from './domain/services/notification-service.js';
 
@@ -20,17 +20,14 @@ import { createSubscribeNotifications } from './application/use-cases/subscribe-
  * @param {Object} deps - Explicit DI
  * @param {Object} deps.kvPool
  * @param {Object} deps.eventBus
- * @param {Object} deps.accessControl - Domain Context (Access Control)
+ * @param {Object} deps.identityGateway - Injected Gateway (formerly identityAdapter)
  */
-export const createCommunicationContext = ({ kvPool, eventBus, accessControl }) => {
+export const createCommunicationContext = ({ kvPool, eventBus, identityGateway }) => {
 
     const feedRepo = createKVFeedRepository(kvPool);
     const notificationRepo = createKVNotificationRepository(kvPool);
     const conversationRepo = createKVConversationRepository(kvPool);
     const messageRepo = createKVMessageRepository(kvPool);
-
-    // Identity Adapter
-    const identityAdapter = accessControl ? createIdentityAdapter(accessControl) : null;
 
     const notificationService = createNotificationService({ notificationRepo, eventBus });
 
@@ -46,11 +43,11 @@ export const createCommunicationContext = ({ kvPool, eventBus, accessControl }) 
         },
         useCases: {
             getFeed: createGetFeed({ feedRepository: feedRepo }),
-            listConversations: createListConversations({ conversationRepository: conversationRepo, identityAdapter }),
-            getConversation: createGetConversation({ conversationRepository: conversationRepo, messageRepository: messageRepo, identityAdapter }),
+            listConversations: createListConversations({ conversationRepository: conversationRepo, identityAdapter: identityGateway }),
+            getConversation: createGetConversation({ conversationRepository: conversationRepo, messageRepository: messageRepo, identityAdapter: identityGateway }),
             notifications: {
                 list: notificationService.list,
-                notify: notificationService.notify, // Expose service method as use case
+                notify: notificationService.notify,
                 subscribe: createSubscribeNotifications({ eventBus })
             },
             postFeedItem: createPostFeedItem({ feedRepository: feedRepo, eventBus }),

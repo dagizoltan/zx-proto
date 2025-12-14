@@ -8,9 +8,9 @@ import { createCreatePurchaseOrder, createListPurchaseOrders, createGetPurchaseO
  *
  * @param {Object} deps - Explicit DI
  * @param {Object} deps.kvPool
- * @param {Object} deps.inventory - Domain Context
+ * @param {Object} deps.inventoryGateway - Injected Gateway
  */
-export const createProcurementContext = ({ kvPool, inventory }) => {
+export const createProcurementContext = ({ kvPool, inventoryGateway }) => {
 
   const supplierRepo = createKVSupplierRepositoryAdapter(kvPool);
   const poRepo = createKVPurchaseOrderRepositoryAdapter(kvPool);
@@ -26,7 +26,7 @@ export const createProcurementContext = ({ kvPool, inventory }) => {
       createPurchaseOrder: createCreatePurchaseOrder({ poRepository: poRepo }),
       listPurchaseOrders: createListPurchaseOrders({ poRepository: poRepo }),
       getPurchaseOrder: createGetPurchaseOrder({ poRepository: poRepo }),
-      receivePurchaseOrder: createReceivePurchaseOrder({ poRepository: poRepo, inventoryService: inventory.useCases }),
+      receivePurchaseOrder: createReceivePurchaseOrder({ poRepository: poRepo, inventoryService: inventoryGateway }), // Use gateway as service
     },
   };
 };

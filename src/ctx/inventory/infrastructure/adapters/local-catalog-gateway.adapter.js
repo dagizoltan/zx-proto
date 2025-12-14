@@ -17,8 +17,8 @@ export const createLocalCatalogGatewayAdapter = (catalogContext) => {
         // Optimization: Use repository direct access for batch retrieval if available
         // to avoid N+1 N-Use-Case calls.
         if (catalogContext.repositories && catalogContext.repositories.product) {
-             const products = await catalogContext.repositories.product.findByIds(tenantId, productIds);
-             return Ok(products);
+             // Repository methods return Result, so we return it directly.
+             return await catalogContext.repositories.product.findByIds(tenantId, productIds);
         }
 
         // Fallback to loop if repo not exposed

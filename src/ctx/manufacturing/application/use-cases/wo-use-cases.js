@@ -63,12 +63,14 @@ export const createCompleteWorkOrder = ({ woRepository, bomRepository, inventory
     };
 
     // Execute Atomic Production
-    const prodRes = await inventoryService.executeProduction.execute(tenantId, {
-        consume: consumeList,
-        produce: produceItem,
-        reason: `WO ${wo.code}`,
-        userId: completionData.userId || null
-    });
+    // inventoryService is now IInventoryGateway
+    const prodRes = await inventoryService.executeProduction(
+        tenantId,
+        produceItem,
+        consumeList,
+        `WO ${wo.code}`,
+        completionData.userId || null
+    );
     if (isErr(prodRes)) return prodRes;
 
     const updatedWO = createWorkOrder({

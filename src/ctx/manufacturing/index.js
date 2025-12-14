@@ -8,9 +8,9 @@ import { createCreateWorkOrder, createListWorkOrders, createCompleteWorkOrder } 
  *
  * @param {Object} deps - Explicit DI
  * @param {Object} deps.kvPool
- * @param {Object} deps.inventory - Domain Context
+ * @param {Object} deps.inventoryGateway - Injected Gateway
  */
-export const createManufacturingContext = ({ kvPool, inventory }) => {
+export const createManufacturingContext = ({ kvPool, inventoryGateway }) => {
 
   const bomRepo = createKVBOMRepositoryAdapter(kvPool);
   const woRepo = createKVWorkOrderRepositoryAdapter(kvPool);
@@ -25,7 +25,7 @@ export const createManufacturingContext = ({ kvPool, inventory }) => {
       listBOMs: createListBOMs({ bomRepository: bomRepo }),
       createWorkOrder: createCreateWorkOrder({ woRepository: woRepo, bomRepository: bomRepo }),
       listWorkOrders: createListWorkOrders({ woRepository: woRepo }),
-      completeWorkOrder: createCompleteWorkOrder({ woRepository: woRepo, bomRepository: bomRepo, inventoryService: inventory.services.stockAllocation }),
+      completeWorkOrder: createCompleteWorkOrder({ woRepository: woRepo, bomRepository: bomRepo, inventoryService: inventoryGateway }),
     },
   };
 };

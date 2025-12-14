@@ -67,10 +67,8 @@ export const createReceivePurchaseOrder = ({ poRepository, inventoryService }) =
     });
 
     if (inventoryItems.length > 0) {
-      const invRes = await inventoryService.receiveStockBatch.execute(tenantId, {
-        items: inventoryItems,
-        reason: `Received PO ${po.code}`
-      });
+      // Changed: inventoryService is now IInventoryGateway
+      const invRes = await inventoryService.receiveStock(tenantId, inventoryItems, poId);
       if (isErr(invRes)) return invRes;
     }
 

@@ -32,6 +32,9 @@ import { createLocalAccessControlGatewayAdapter } from './src/ctx/inventory/infr
 import { createLocalCatalogGatewayAdapter as createOrdersCatalogGateway } from './src/ctx/orders/infrastructure/adapters/local-catalog-gateway.adapter.js';
 import { createLocalInventoryGatewayAdapter } from './src/ctx/orders/infrastructure/adapters/local-inventory-gateway.adapter.js';
 import { createLocalCustomerGatewayAdapter } from './src/ctx/orders/infrastructure/adapters/local-customer-gateway.adapter.js';
+import { createLocalInventoryGatewayAdapter as createProcurementInventoryGateway } from './src/ctx/procurement/infrastructure/adapters/local-inventory-gateway.adapter.js';
+import { createLocalInventoryGatewayAdapter as createManufacturingInventoryGateway } from './src/ctx/manufacturing/infrastructure/adapters/local-inventory-gateway.adapter.js';
+import { createIdentityAdapter } from './src/ctx/communication/infrastructure/adapters/identity.adapter.js';
 
 async function bootstrap() {
   console.log('🚀 IMS Shopfront - Starting...\n');
@@ -99,7 +102,7 @@ async function bootstrap() {
       'infra.obs',
       'infra.messaging',
       'domain.access-control',
-      'domain.catalog' // Add explicit dependency
+      'domain.catalog'
     ])
     .registerDomain('orders', async (deps) => {
         // Resolve Gateways
@@ -121,21 +124,27 @@ async function bootstrap() {
       'infra.messaging',
       'domain.inventory',
       'domain.access-control',
-      'domain.catalog' // Add explicit dependency
+      'domain.catalog'
     ])
     .registerDomain('procurement', async (deps) => {
+        // Resolve Gateways
+        const inventoryGateway = createProcurementInventoryGateway(deps.inventory);
+
         return createProcurementContext({
             kvPool: deps.persistence.kvPool,
-            inventory: deps.inventory
+            inventoryGateway
         });
     }, [
         'infra.persistence',
         'domain.inventory'
     ])
     .registerDomain('manufacturing', async (deps) => {
+        // Resolve Gateways
+        const inventoryGateway = createManufacturingInventoryGateway(deps.inventory);
+
         return createManufacturingContext({
             kvPool: deps.persistence.kvPool,
-            inventory: deps.inventory
+            inventoryGateway
         });
     }, [
         'infra.persistence',
@@ -158,10 +167,14 @@ async function bootstrap() {
         'infra.persistence'
     ])
     .registerDomain('communication', async (deps) => {
+        // Resolve Gateways
+        // We reuse the existing adapter logic, but create it here
+        const identityGateway = createIdentityAdapter(deps['access-control']);
+
         return createCommunicationContext({
             kvPool: deps.persistence.kvPool,
             eventBus: deps.messaging.eventBus,
-            accessControl: deps['access-control']
+            identityGateway
         });
     }, [
         'infra.persistence',
