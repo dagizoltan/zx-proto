@@ -6,7 +6,7 @@ import { RunDetailPage } from '../../pages/ims/scheduler/run-detail-page.jsx';
 // GET /ims/scheduler/history/:id
 export const runDetailHandler = async (c) => {
     // FIX: Correct dependency resolution
-    const scheduler = c.ctx.get('domain.scheduler').service;
+    const scheduler = c.ctx.get('domain.scheduler').services.scheduler;
     const tenantId = c.get('tenantId') || 'default';
     const runId = c.req.param('id');
     const success = c.req.query('success');
@@ -33,7 +33,7 @@ export const runDetailHandler = async (c) => {
 // POST /ims/scheduler/history/:id/retry
 export const retryTaskHandler = async (c) => {
     // FIX: Correct dependency resolution
-    const scheduler = c.ctx.get('domain.scheduler').service;
+    const scheduler = c.ctx.get('domain.scheduler').services.scheduler;
     const tenantId = c.get('tenantId') || 'default';
     const runId = c.req.param('id');
 

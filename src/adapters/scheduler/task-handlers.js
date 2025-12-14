@@ -55,7 +55,7 @@ export const createTaskHandlers = ({
             logger.info('Taking daily inventory snapshot...');
 
             // Fetch all products (batching handled inside or we just take first 100 for 'snapshot')
-            const { items: products } = await inventory.useCases.listAllProducts.execute({ tenantId, limit: 1000 });
+            const { items: products } = await inventory.useCases.listAllProducts.execute({ tenantId, limit: 500 }); // INTERNAL limit
 
             let totalItems = 0;
             let totalValue = 0;
@@ -76,7 +76,7 @@ export const createTaskHandlers = ({
             const logger = createLogger(log, 'CheckLowStock');
             logger.info('Checking for low stock items...');
 
-            const { items: products } = await inventory.useCases.listAllProducts.execute({ tenantId, limit: 1000 });
+            const { items: products } = await inventory.useCases.listAllProducts.execute({ tenantId, limit: 500 }); // INTERNAL limit
 
             let lowStockCount = 0;
             const threshold = 10; // Global threshold for simplicity

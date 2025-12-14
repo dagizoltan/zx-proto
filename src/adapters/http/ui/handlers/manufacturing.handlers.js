@@ -8,6 +8,7 @@ import { WorkOrderDetailPage } from '../pages/ims/manufacturing/wo-detail-page.j
 import { CreateWorkOrderPage } from '../pages/ims/manufacturing/create-wo-page.jsx';
 import { CompleteWorkOrderPage } from '../pages/ims/manufacturing/complete-wo-page.jsx';
 import { unwrap, isErr } from '../../../../../lib/trust/index.js';
+import { QUERY_LIMITS } from '../../../../../src/constants.js';
 
 // BOMs
 export const listBOMsHandler = async (c) => {
@@ -287,7 +288,7 @@ export const completeWorkOrderHandler = async (c) => {
         const wRes = await inventory.repositories.warehouse.list(tenantId, { limit: 100 });
         const warehouses = unwrap(wRes).items;
 
-        const lRes = await inventory.repositories.location.query(tenantId, { limit: 1000 });
+        const lRes = await inventory.repositories.location.query(tenantId, { limit: QUERY_LIMITS.INTERNAL });
         const allLocations = unwrap(lRes).items;
 
         const html = await renderPage(CompleteWorkOrderPage, {

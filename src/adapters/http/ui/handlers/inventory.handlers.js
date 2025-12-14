@@ -11,6 +11,7 @@ import { TransferStockPage } from '../pages/ims/inventory/transfer-stock-page.js
 import { ReceiveStockPage } from '../pages/ims/inventory/receive-stock-page.jsx';
 import { StockMovementsPage } from '../pages/ims/inventory/stock-movements-page.jsx';
 import { unwrap, isErr } from '../../../../../lib/trust/index.js';
+import { QUERY_LIMITS } from '../../../../../src/constants.js';
 
 // Dashboard / All Products Stock
 export const listInventoryHandler = async (c) => {
@@ -53,7 +54,7 @@ export const transferStockPageHandler = async (c) => {
     const warehouses = unwrap(wRes).items;
 
     // Optimized fetch
-    const lRes = await inventory.repositories.location.query(tenantId, { limit: 1000 });
+    const lRes = await inventory.repositories.location.query(tenantId, { limit: QUERY_LIMITS.INTERNAL });
     const allLocations = unwrap(lRes).items;
 
     const html = await renderPage(TransferStockPage, {
@@ -97,7 +98,7 @@ export const receiveStockPageHandler = async (c) => {
     const wRes = await inventory.repositories.warehouse.list(tenantId, { limit: 100 });
     const warehouses = unwrap(wRes).items;
 
-    const lRes = await inventory.repositories.location.query(tenantId, { limit: 1000 });
+    const lRes = await inventory.repositories.location.query(tenantId, { limit: QUERY_LIMITS.INTERNAL });
     const allLocations = unwrap(lRes).items;
 
     const html = await renderPage(ReceiveStockPage, {
@@ -187,7 +188,7 @@ export const warehouseDetailHandler = async (c) => {
     if (isErr(wRes)) return c.text('Warehouse not found', 404);
     const warehouse = wRes.value;
 
-    const lRes = await inventory.repositories.location.queryByIndex(tenantId, 'warehouse', wId, { limit: 1000 });
+    const lRes = await inventory.repositories.location.queryByIndex(tenantId, 'warehouse', wId, { limit: QUERY_LIMITS.INTERNAL });
     const locations = unwrap(lRes).items;
 
     const html = await renderPage(WarehouseDetailPage, {
@@ -243,7 +244,7 @@ export const createLocationPageHandler = async (c) => {
     const wRes = await inventory.repositories.warehouse.list(tenantId, { limit: 100 });
     const warehouses = unwrap(wRes).items;
 
-    const lRes = await inventory.repositories.location.query(tenantId, { limit: 1000 });
+    const lRes = await inventory.repositories.location.query(tenantId, { limit: QUERY_LIMITS.INTERNAL });
     const allLocations = unwrap(lRes).items;
 
     const html = await renderPage(CreateLocationPage, {

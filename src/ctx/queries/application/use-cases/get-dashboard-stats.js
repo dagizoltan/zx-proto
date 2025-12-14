@@ -1,4 +1,5 @@
 import { unwrap, isErr } from '../../../../../lib/trust/index.js';
+import { QUERY_LIMITS } from '../../../../../src/constants.js';
 
 export const createGetDashboardStats = ({ registry }) => {
   const execute = async (tenantId) => {
@@ -16,7 +17,7 @@ export const createGetDashboardStats = ({ registry }) => {
         try {
             // Try 'list' (New & Trust Standard)
             if (repo.list) {
-                const res = await repo.list(tenantId, { limit: 1000, ...options });
+                const res = await repo.list(tenantId, { limit: QUERY_LIMITS.INTERNAL, ...options });
                 if (res && typeof res.ok === 'boolean') {
                      if (isErr(res)) return [];
                      return res.value.items || res.value;
@@ -34,7 +35,7 @@ export const createGetDashboardStats = ({ registry }) => {
             }
             // Try 'query' (Some repos use query for list)
             if (repo.query) {
-                const res = await repo.query(tenantId, { limit: 1000, ...options });
+                const res = await repo.query(tenantId, { limit: QUERY_LIMITS.INTERNAL, ...options });
                 if (res && typeof res.ok === 'boolean') {
                      if (isErr(res)) return [];
                      return res.value.items || res.value;

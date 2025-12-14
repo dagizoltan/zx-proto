@@ -10,6 +10,7 @@ import { CreatePriceListPage } from '../pages/ims/catalog/create-price-list-page
 import { PriceListDetailPage } from '../pages/ims/catalog/price-list-detail-page.jsx';
 import { ProductDetailPage } from '../pages/ims/product-detail-page.jsx';
 import { unwrap, isErr } from '../../../../../lib/trust/index.js'; // 5 levels
+import { QUERY_LIMITS } from '../../../../../src/constants.js';
 
 // Products
 export const listProductsHandler = async (c) => {
@@ -68,8 +69,8 @@ export const createProductPageHandler = async (c) => {
     const tenantId = c.get('tenantId');
     const catalog = c.ctx.get('domain.catalog');
 
-    const catRes = await catalog.useCases.listCategories.execute(tenantId, { limit: 1000 });
-    const plRes = await catalog.useCases.listPriceLists.execute(tenantId, { limit: 1000 });
+    const catRes = await catalog.useCases.listCategories.execute(tenantId, { limit: QUERY_LIMITS.INTERNAL });
+    const plRes = await catalog.useCases.listPriceLists.execute(tenantId, { limit: QUERY_LIMITS.INTERNAL });
 
     const categories = unwrap(catRes).items;
     const priceLists = unwrap(plRes).items;
@@ -104,8 +105,8 @@ export const createProductHandler = async (c) => {
         return c.redirect('/ims/catalog/products');
     } catch (e) {
         // Fetch cats/pls again for render
-        const catRes = await catalog.useCases.listCategories.execute(tenantId, { limit: 1000 });
-        const plRes = await catalog.useCases.listPriceLists.execute(tenantId, { limit: 1000 });
+        const catRes = await catalog.useCases.listCategories.execute(tenantId, { limit: QUERY_LIMITS.INTERNAL });
+        const plRes = await catalog.useCases.listPriceLists.execute(tenantId, { limit: QUERY_LIMITS.INTERNAL });
         const categories = unwrap(catRes).items;
         const priceLists = unwrap(plRes).items;
 
@@ -137,7 +138,7 @@ export const productDetailHandler = async (c) => {
 
   const [moveRes, stockRes] = await Promise.all([
     inventory.useCases.listStockMovements.execute(tenantId, productId, { limit: 20, cursor }),
-    inventory.repositories.stock.queryByIndex(tenantId, 'product', productId, { limit: 1000 })
+    inventory.repositories.stock.queryByIndex(tenantId, 'product', productId, { limit: QUERY_LIMITS.INTERNAL })
   ]);
 
   const moveData = unwrap(moveRes); // { items, nextCursor }
@@ -185,7 +186,7 @@ export const createCategoryPageHandler = async (c) => {
     const tenantId = c.get('tenantId');
     const catalog = c.ctx.get('domain.catalog');
 
-    const res = await catalog.useCases.listCategories.execute(tenantId, { limit: 1000 });
+    const res = await catalog.useCases.listCategories.execute(tenantId, { limit: QUERY_LIMITS.INTERNAL });
     const { items: categories } = unwrap(res);
 
     const html = await renderPage(CreateCategoryPage, {
@@ -225,7 +226,7 @@ export const categoryDetailHandler = async (c) => {
     if (isErr(catRes)) return c.text('Category not found', 404);
     const category = catRes.value;
 
-    const res = await catalog.useCases.listCategories.execute(tenantId, { limit: 1000 });
+    const res = await catalog.useCases.listCategories.execute(tenantId, { limit: QUERY_LIMITS.INTERNAL });
     const { items: allCats } = unwrap(res);
     const subCategories = allCats.filter(cat => cat.parentId === categoryId);
 

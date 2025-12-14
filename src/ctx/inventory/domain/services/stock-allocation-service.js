@@ -1,4 +1,5 @@
 import { Ok, Err, isErr, runTransaction } from '../../../../../lib/trust/index.js';
+import { QUERY_LIMITS } from '../../../../../src/constants.js';
 
 export const createStockAllocationService = (stockRepository, stockMovementRepository, batchRepository, productRepository, kvPool) => {
 
@@ -10,8 +11,7 @@ export const createStockAllocationService = (stockRepository, stockMovementRepos
         // We use index 'product'
         const res = await stockRepository.query(tenantId, {
             filter: { product: pid },
-            limit: 10000 // Large limit to fetch all, or implement safer loop if truly massive
-            // Assuming < 10000 batches per product per location for now.
+            limit: QUERY_LIMITS.INTERNAL
         });
         if (isErr(res)) return res;
         stockMap.set(pid, res.value.items);
@@ -34,23 +34,7 @@ export const createStockAllocationService = (stockRepository, stockMovementRepos
 
         for (const req of items) {
             const entries = stockMap.get(req.productId) || [];
-            // Sort FEFO (Expiry) then FIFO (Created) - simplified here as FIFO (receipt) logic based on previous code
-            // Previous code: b.quantity - ... sort? Wait.
-            // Previous code sort: (b.quantity - b.reserved) - (a.quantity - a.reserved) => Largest First?
-            // "FEFO and FIFO" memory says.
-            // Let's implement FIFO based on updatedAt/receipt.
-            // Assuming entries have timestamps.
-            // Reverting to previous sort logic to maintain behavior:
-            // "entries.sort((a, b) => (b.quantity - b.reservedQuantity) - (a.quantity - a.reservedQuantity));"
-            // This sorts by *Available Quantity Descending* (Largest availability first).
-            // That contradicts "FEFO/FIFO". I will stick to the previous code's logic to be safe on behavior,
-            // unless memory explicitly says "FEFO strategy".
-            // Memory: "The StockAllocationService implements FEFO... and FIFO... strategies by sorting... based on batch expiry and receipt dates."
-            // The previous code I read might have been wrong or I misread it?
-            // "b - a" is Descending.
-            // Let's trust the Memory and implement FEFO/FIFO if possible, or stick to existing logic if unsure.
-            // Existing logic was explicitly: sort by available quantity descending.
-            // I will keep existing logic to avoid breaking changes in behavior, as "refactor" shouldn't change business logic unless requested.
+
             entries.sort((a, b) => (b.quantity - b.reservedQuantity) - (a.quantity - a.reservedQuantity));
 
             let remaining = req.quantity;
@@ -102,18 +86,18 @@ export const createStockAllocationService = (stockRepository, stockMovementRepos
   };
 
   const commit = async (tenantId, referenceId, itemsToShip = null) => {
-      // 1. Get Allocations
-      // Use query loop for safety
-      const movesRes = await stockMovementRepository.query(tenantId, {
-          filter: { reference: referenceId },
-          limit: 10000
-      });
-      if (isErr(movesRes)) return movesRes;
-
-      const movements = movesRes.value.items.filter(m => m.type === 'ALLOCATION');
-      if (movements.length === 0) return Ok(true);
-
       return runTransaction(kvPool, async (atomic) => {
+          // 1. Get Allocations
+          // Use query loop for safety
+          const movesRes = await stockMovementRepository.query(tenantId, {
+              filter: { reference: referenceId },
+              limit: QUERY_LIMITS.INTERNAL
+          });
+          if (isErr(movesRes)) return movesRes;
+
+          const movements = movesRes.value.items.filter(m => m.type === 'ALLOCATION');
+          if (movements.length === 0) return Ok(true);
+
           const productIds = [...new Set(movements.map(m => m.productId))];
           const stockRes = await fetchStockEntries(tenantId, productIds);
           if (isErr(stockRes)) return stockRes;
@@ -160,14 +144,14 @@ export const createStockAllocationService = (stockRepository, stockMovementRepos
   };
 
   const release = async (tenantId, referenceId) => {
-      const movesRes = await stockMovementRepository.query(tenantId, {
-          filter: { reference: referenceId },
-          limit: 10000
-      });
-      if (isErr(movesRes)) return movesRes;
-      const movements = movesRes.value.items.filter(m => m.type === 'ALLOCATION');
-
       return runTransaction(kvPool, async (atomic) => {
+          const movesRes = await stockMovementRepository.query(tenantId, {
+              filter: { reference: referenceId },
+              limit: QUERY_LIMITS.INTERNAL
+          });
+          if (isErr(movesRes)) return movesRes;
+          const movements = movesRes.value.items.filter(m => m.type === 'ALLOCATION');
+
           const productIds = [...new Set(movements.map(m => m.productId))];
           const stockRes = await fetchStockEntries(tenantId, productIds);
           if (isErr(stockRes)) return stockRes;
@@ -213,14 +197,7 @@ export const createStockAllocationService = (stockRepository, stockMovementRepos
   const receiveStockRobust = async (tenantId, { productId, locationId, quantity, batchId, reason }) => {
       const finalBatchId = batchId || 'default';
       return runTransaction(kvPool, async (atomic) => {
-         // Re-fetch inside transaction for latest versionstamp?
-         // Actually runTransaction retries if conflict.
-         // fetchStockEntries uses query, not get. Query doesn't return versionstamps for checks usually?
-         // `repo.query` returns items with `_versionstamp`.
-         // `repo.save` checks `_versionstamp`.
-         // So yes, we must fetch inside the transaction block to get fresh versionstamps.
-
-         const res = await stockRepository.queryByIndex(tenantId, 'product', productId, { limit: 1000 });
+         const res = await stockRepository.queryByIndex(tenantId, 'product', productId, { limit: QUERY_LIMITS.MAX });
          if (isErr(res)) return res;
 
          const existing = res.value.items.find(e => e.locationId === locationId && e.batchId === finalBatchId);
