@@ -159,9 +159,13 @@ export const roleDetailHandler = async (c) => {
     if (isErr(res)) return c.text('Role not found', 404);
     const role = res.value;
 
+    const usersRes = await ac.useCases.findUsersByRole.execute(tenantId, roleId);
+    const users = unwrap(usersRes).items || [];
+
     const html = await renderPage(RoleDetailPage, {
         user,
         role,
+        users,
         currentPath: '/ims/access-control/roles',
         layout: AdminLayout,
         title: `${role.name} - IMS Admin`
