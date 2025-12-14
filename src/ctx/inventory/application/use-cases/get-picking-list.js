@@ -1,7 +1,8 @@
 import { Ok, Err, isErr, unwrap } from '../../../../../lib/trust/index.js';
-import { QUERY_LIMITS } from '../../../../../src/constants.js';
 
-export const createGetPickingList = ({ stockMovementRepository, registry }) => {
+export const createGetPickingList = ({ stockMovementRepository, registry, config }) => {
+    const limits = config ? config.get('query.limits') : { default: 20, max: 100, internal: 500 };
+
     const execute = async (tenantId, orderId) => {
         const catalog = registry.get('domain.catalog');
         const inventory = registry.get('domain.inventory');
@@ -15,7 +16,7 @@ export const createGetPickingList = ({ stockMovementRepository, registry }) => {
 
         const moveRes = await stockMovementRepository.query(tenantId, {
             filter: { reference: orderId, type: 'ALLOCATION' }, // repo.query uses 'reference' index
-            limit: QUERY_LIMITS.INTERNAL,
+            limit: limits.internal,
             populate: ['product', 'fromLocation', 'batch']
         }, { resolvers });
 

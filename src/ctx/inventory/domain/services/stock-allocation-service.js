@@ -1,7 +1,8 @@
 import { Ok, Err, isErr, runTransaction } from '../../../../../lib/trust/index.js';
-import { QUERY_LIMITS } from '../../../../../src/constants.js';
 
-export const createStockAllocationService = (stockRepository, stockMovementRepository, batchRepository, productRepository, kvPool) => {
+export const createStockAllocationService = (stockRepository, stockMovementRepository, batchRepository, productRepository, kvPool, queryLimits) => {
+
+  const limits = queryLimits || { default: 20, max: 100, internal: 500 };
 
   const fetchStockEntries = async (tenantId, productIds) => {
     const stockMap = new Map();
@@ -11,7 +12,7 @@ export const createStockAllocationService = (stockRepository, stockMovementRepos
         // We use index 'product'
         const res = await stockRepository.query(tenantId, {
             filter: { product: pid },
-            limit: QUERY_LIMITS.INTERNAL
+            limit: limits.internal
         });
         if (isErr(res)) return res;
         stockMap.set(pid, res.value.items);
@@ -91,7 +92,7 @@ export const createStockAllocationService = (stockRepository, stockMovementRepos
           // Use query loop for safety
           const movesRes = await stockMovementRepository.query(tenantId, {
               filter: { reference: referenceId },
-              limit: QUERY_LIMITS.INTERNAL
+              limit: limits.internal
           });
           if (isErr(movesRes)) return movesRes;
 
@@ -147,7 +148,7 @@ export const createStockAllocationService = (stockRepository, stockMovementRepos
       return runTransaction(kvPool, async (atomic) => {
           const movesRes = await stockMovementRepository.query(tenantId, {
               filter: { reference: referenceId },
-              limit: QUERY_LIMITS.INTERNAL
+              limit: limits.internal
           });
           if (isErr(movesRes)) return movesRes;
           const movements = movesRes.value.items.filter(m => m.type === 'ALLOCATION');
@@ -197,7 +198,7 @@ export const createStockAllocationService = (stockRepository, stockMovementRepos
   const receiveStockRobust = async (tenantId, { productId, locationId, quantity, batchId, reason }) => {
       const finalBatchId = batchId || 'default';
       return runTransaction(kvPool, async (atomic) => {
-         const res = await stockRepository.queryByIndex(tenantId, 'product', productId, { limit: QUERY_LIMITS.MAX });
+         const res = await stockRepository.queryByIndex(tenantId, 'product', productId, { limit: limits.max });
          if (isErr(res)) return res;
 
          const existing = res.value.items.find(e => e.locationId === locationId && e.batchId === finalBatchId);

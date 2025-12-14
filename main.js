@@ -126,7 +126,8 @@ async function bootstrap() {
     manufacturing: ctx.get('domain.manufacturing'),
     procurement: ctx.get('domain.procurement'),
     crm: ctx.get('domain.communication'),
-    obs: ctx.get('infra.obs')
+    obs: ctx.get('infra.obs'),
+    config: ctx.get('config')
   });
 
   if (scheduler && typeof scheduler.registerHandler === 'function') {

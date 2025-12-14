@@ -45,7 +45,7 @@ export const createAccessControlContext = async (deps) => {
   });
 
   const listUsers = createListUsers({ userRepository });
-  const listRoles = createListRoles({ roleRepository });
+  const listRoles = createListRoles({ roleRepository, config });
   const createRole = createCreateRole({ roleRepository, obs, eventBus });
   const assignRole = createAssignRoleToUser({ userRepository, roleRepository, obs });
   const findUsersByRole = createFindUsersByRole({ userRepository });

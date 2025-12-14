@@ -50,7 +50,8 @@ export const createInventoryContext = async (deps) => {
   const batchRepository = createKVBatchRepository(persistence.kvPool);
 
   // Services
-  const stockAllocationService = createStockAllocationService(stockRepository, stockMovementRepository, batchRepository, productRepositoryCompatibility, persistence.kvPool);
+  const queryLimits = config.get('query.limits');
+  const stockAllocationService = createStockAllocationService(stockRepository, stockMovementRepository, batchRepository, productRepositoryCompatibility, persistence.kvPool, queryLimits);
   const inventoryAdjustmentService = createInventoryAdjustmentService(stockRepository, stockMovementRepository, batchRepository, productRepositoryCompatibility, persistence.kvPool);
 
   // Use Cases
@@ -121,7 +122,8 @@ export const createInventoryContext = async (deps) => {
 
   const getPickingList = createGetPickingList({
       stockMovementRepository,
-      registry
+      registry,
+      config
   });
 
   const executeProduction = {

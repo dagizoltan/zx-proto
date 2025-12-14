@@ -22,3 +22,9 @@ observability:
 
 cache:
   defaultTTL: 3600000
+
+query:
+  limits:
+    default: 20
+    max: 100
+    internal: 500

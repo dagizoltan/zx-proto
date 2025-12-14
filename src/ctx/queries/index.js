@@ -2,7 +2,7 @@ import { createGetCustomerProfile } from './application/use-cases/get-customer-p
 import { createGetDashboardStats } from './application/use-cases/get-dashboard-stats.js';
 
 export const createQueriesContext = async (deps) => {
-    const { registry, obs } = deps;
+    const { registry, obs, config } = deps;
 
     const getCustomerProfile = createGetCustomerProfile({
         registry,
@@ -10,7 +10,8 @@ export const createQueriesContext = async (deps) => {
     });
 
     const getDashboardStats = createGetDashboardStats({
-        registry
+        registry,
+        config
     });
 
     return {

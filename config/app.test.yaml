@@ -18,3 +18,9 @@ security:
 
 observability:
   logLevel: ERROR
+
+query:
+  limits:
+    default: 20
+    max: 100
+    internal: 500

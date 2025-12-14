@@ -1,7 +1,8 @@
 import { unwrap, isErr } from '../../../../../lib/trust/index.js';
-import { QUERY_LIMITS } from '../../../../../src/constants.js';
 
-export const createGetDashboardStats = ({ registry }) => {
+export const createGetDashboardStats = ({ registry, config }) => {
+  const limits = config ? config.get('query.limits') : { default: 20, max: 100, internal: 500 };
+
   const execute = async (tenantId) => {
     // Access Domains
     const ordersDomain = registry.get('domain.orders');
@@ -17,7 +18,7 @@ export const createGetDashboardStats = ({ registry }) => {
         try {
             // Try 'list' (New & Trust Standard)
             if (repo.list) {
-                const res = await repo.list(tenantId, { limit: QUERY_LIMITS.INTERNAL, ...options });
+                const res = await repo.list(tenantId, { limit: limits.internal, ...options });
                 if (res && typeof res.ok === 'boolean') {
                      if (isErr(res)) return [];
                      return res.value.items || res.value;
@@ -35,7 +36,7 @@ export const createGetDashboardStats = ({ registry }) => {
             }
             // Try 'query' (Some repos use query for list)
             if (repo.query) {
-                const res = await repo.query(tenantId, { limit: QUERY_LIMITS.INTERNAL, ...options });
+                const res = await repo.query(tenantId, { limit: limits.internal, ...options });
                 if (res && typeof res.ok === 'boolean') {
                      if (isErr(res)) return [];
                      return res.value.items || res.value;

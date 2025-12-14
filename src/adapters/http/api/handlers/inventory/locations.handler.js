@@ -1,6 +1,5 @@
 import { toApiLocation } from '../../transformers/inventory.transformer.js';
 import { unwrap } from '../../../../../../lib/trust/index.js';
-import { QUERY_LIMITS } from '../../../../../constants.js';
 
 export const listLocationsHandler = async (c) => {
     const tenantId = c.get('tenantId');
@@ -12,7 +11,7 @@ export const listLocationsHandler = async (c) => {
     let allLocations = [];
     for (const wh of warehouses) {
         // findByWarehouse -> queryByIndex
-        const locRes = await inventory.repositories.location.queryByIndex(tenantId, 'warehouse', wh.id, { limit: QUERY_LIMITS.INTERNAL });
+        const locRes = await inventory.repositories.location.queryByIndex(tenantId, 'warehouse', wh.id, { limit: c.ctx.get('config').get('query.limits.internal') });
         const locs = unwrap(locRes).items;
         allLocations = allLocations.concat(locs);
     }

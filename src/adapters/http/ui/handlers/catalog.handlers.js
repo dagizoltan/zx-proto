@@ -10,7 +10,6 @@ import { CreatePriceListPage } from '../pages/ims/catalog/create-price-list-page
 import { PriceListDetailPage } from '../pages/ims/catalog/price-list-detail-page.jsx';
 import { ProductDetailPage } from '../pages/ims/product-detail-page.jsx';
 import { unwrap, isErr } from '../../../../../lib/trust/index.js'; // 5 levels
-import { QUERY_LIMITS } from '../../../../../src/constants.js';
 
 // Products
 export const listProductsHandler = async (c) => {
@@ -69,8 +68,8 @@ export const createProductPageHandler = async (c) => {
     const tenantId = c.get('tenantId');
     const catalog = c.ctx.get('domain.catalog');
 
-    const catRes = await catalog.useCases.listCategories.execute(tenantId, { limit: QUERY_LIMITS.INTERNAL });
-    const plRes = await catalog.useCases.listPriceLists.execute(tenantId, { limit: QUERY_LIMITS.INTERNAL });
+    const catRes = await catalog.useCases.listCategories.execute(tenantId, { limit: c.ctx.get('config').get('query.limits.internal') });
+    const plRes = await catalog.useCases.listPriceLists.execute(tenantId, { limit: c.ctx.get('config').get('query.limits.internal') });
 
     const categories = unwrap(catRes).items;
     const priceLists = unwrap(plRes).items;
@@ -105,8 +104,8 @@ export const createProductHandler = async (c) => {
         return c.redirect('/ims/catalog/products');
     } catch (e) {
         // Fetch cats/pls again for render
-        const catRes = await catalog.useCases.listCategories.execute(tenantId, { limit: QUERY_LIMITS.INTERNAL });
-        const plRes = await catalog.useCases.listPriceLists.execute(tenantId, { limit: QUERY_LIMITS.INTERNAL });
+        const catRes = await catalog.useCases.listCategories.execute(tenantId, { limit: c.ctx.get('config').get('query.limits.internal') });
+        const plRes = await catalog.useCases.listPriceLists.execute(tenantId, { limit: c.ctx.get('config').get('query.limits.internal') });
         const categories = unwrap(catRes).items;
         const priceLists = unwrap(plRes).items;
 
@@ -138,7 +137,7 @@ export const productDetailHandler = async (c) => {
 
   const [moveRes, stockRes] = await Promise.all([
     inventory.useCases.listStockMovements.execute(tenantId, productId, { limit: 20, cursor }),
-    inventory.repositories.stock.queryByIndex(tenantId, 'product', productId, { limit: QUERY_LIMITS.INTERNAL })
+    inventory.repositories.stock.queryByIndex(tenantId, 'product', productId, { limit: c.ctx.get('config').get('query.limits.internal') })
   ]);
 
   const moveData = unwrap(moveRes); // { items, nextCursor }
@@ -186,7 +185,7 @@ export const createCategoryPageHandler = async (c) => {
     const tenantId = c.get('tenantId');
     const catalog = c.ctx.get('domain.catalog');
 
-    const res = await catalog.useCases.listCategories.execute(tenantId, { limit: QUERY_LIMITS.INTERNAL });
+    const res = await catalog.useCases.listCategories.execute(tenantId, { limit: c.ctx.get('config').get('query.limits.internal') });
     const { items: categories } = unwrap(res);
 
     const html = await renderPage(CreateCategoryPage, {
