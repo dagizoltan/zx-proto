@@ -143,6 +143,43 @@ export const createInventoryContext = async (deps) => {
         execute: async (...args) => stockAllocationService.receiveStockBatch(...args)
     };
 
+    // --- COMPATIBILITY LAYERS (For Auto-Gateways) ---
+
+    // Orders expect `reserveStock(tenantId, items, orderId)` which maps to batch execution
+    const reserveStockCompat = {
+        execute: async (tenantId, items, orderId) => reserveStock.executeBatch(tenantId, items, orderId)
+    };
+
+    // Manufacturing expects flattened args for production
+    const executeProductionCompat = {
+        execute: async (tenantId, productionItems, consumptionItems, refId, userId) => {
+             return stockAllocationService.executeProduction(tenantId, {
+                produce: productionItems,
+                consume: consumptionItems,
+                reason: refId,
+                userId: userId || null
+             });
+        }
+    };
+
+    // Procurement expects `receiveStock(tenantId, items, refId)` to map to batch
+    const receiveStockCompat = {
+        execute: async (tenantId, items, refId) => {
+            return stockAllocationService.receiveStockBatch(tenantId, {
+                items,
+                reason: refId
+            });
+        }
+    };
+
+    const confirmShipmentCompat = {
+        execute: async (tenantId, orderId, items) => confirmStockShipment.execute(tenantId, orderId, items)
+    };
+
+    const releaseStockCompat = {
+        execute: async (tenantId, orderId) => cancelStockReservation.execute(tenantId, orderId)
+    };
+
     // Helper for permission checks
     const checkUserPermission = async (tenantId, userId, action) => {
         // accessControlGateway is now a proxy to useCases
@@ -168,18 +205,21 @@ export const createInventoryContext = async (deps) => {
             checkAvailability,
             getProduct,
             getProductsBatch,
-            reserveStock,
+            // Use compatibility wrappers for auto-gateway consumers
+            reserveStock: reserveStockCompat,
             listAllProducts,
-            receiveStock,
+            receiveStock: receiveStockCompat,
             consumeStock,
             moveStock,
-            confirmStockShipment,
-            cancelStockReservation,
+            confirmStockShipment: confirmShipmentCompat,
+            confirmShipment: confirmShipmentCompat, // alias for Orders
+            cancelStockReservation, // kept for internal/explicit usage
+            releaseStock: releaseStockCompat, // alias for Orders
             listStockMovements,
             createWarehouse,
             createLocation,
             getPickingList,
-            executeProduction,
+            executeProduction: executeProductionCompat,
             receiveStockRobust,
             receiveStockBatch
         })

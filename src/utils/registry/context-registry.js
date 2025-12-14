@@ -136,9 +136,11 @@ export const createContextRegistry = () => {
       if (!has(depName)) {
         await initializeContext(depName);
       }
-      // We don't need to manually map them to keys anymore if the factory uses the new structure
-      // But for backward compat, we can still map.
-      // actually, the resolver utils use `deps.infra.persistence` etc.
+
+      // Map dependency to its short name (e.g., 'infra.persistence' -> 'persistence')
+      // This allows factories/resolver to use `deps.persistence`
+      const shortName = depName.split('.').pop();
+      resolvedDeps[shortName] = get(depName);
     }
 
     // Create context instance
