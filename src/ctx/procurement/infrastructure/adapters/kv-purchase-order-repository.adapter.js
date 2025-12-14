@@ -6,7 +6,7 @@ export const createKVPurchaseOrderRepositoryAdapter = (kvPool) => {
   const baseRepo = createRepository(kvPool, 'purchase_orders', [
     useSchema(PurchaseOrderSchema),
     useIndexing({
-        'supplier': (po) => po.supplierId,
+        'supplierId': (po) => po.supplierId, // Renamed from 'supplier'
         'status': (po) => po.status
     })
   ]);
@@ -39,7 +39,10 @@ export const createKVPurchaseOrderRepositoryAdapter = (kvPool) => {
       return Ok({ ...result.value, items: purchaseOrderMapper.toDomainList(result.value.items) });
     },
     queryByIndex: async (tenantId, indexName, value, options) => {
-      const result = await baseRepo.queryByIndex(tenantId, indexName, value, options);
+      // Compatibility wrapper
+      const filter = {};
+      filter[indexName] = value;
+      const result = await baseRepo.query(tenantId, { filter, ...options });
       if (isErr(result)) return result;
       return Ok({ ...result.value, items: purchaseOrderMapper.toDomainList(result.value.items) });
     },

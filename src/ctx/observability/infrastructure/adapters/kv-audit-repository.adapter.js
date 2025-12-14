@@ -6,9 +6,9 @@ export const createKVAuditRepository = (kvPool) => {
     const baseRepo = createRepository(kvPool, 'audit_logs', [
         useSchema(AuditLogSchema),
         useIndexing({
-            'user': (l) => l.userId,
+            'userId': (l) => l.userId, // Renamed from user
             'resource': (l) => l.resource,
-            'timestamp_desc': (l) => l.timestamp
+            'timestamp': (l) => l.timestamp // Renamed from timestamp_desc
         })
     ]);
 
@@ -40,7 +40,10 @@ export const createKVAuditRepository = (kvPool) => {
             return Ok({ ...result.value, items: auditLogMapper.toDomainList(result.value.items) });
         },
         queryByIndex: async (tenantId, indexName, value, options) => {
-            const result = await baseRepo.queryByIndex(tenantId, indexName, value, options);
+            // Compatibility wrapper
+            const filter = {};
+            filter[indexName] = value;
+            const result = await baseRepo.query(tenantId, { filter, ...options });
             if (isErr(result)) return result;
             return Ok({ ...result.value, items: auditLogMapper.toDomainList(result.value.items) });
         },

@@ -7,7 +7,7 @@ export const createKVScheduledTaskRepository = (kvPool) => {
         useSchema(ScheduledTaskSchema),
         useIndexing({
             'enabled': (t) => t.enabled ? 'true' : 'false',
-            'handler': (t) => t.handlerKey
+            'handlerKey': (t) => t.handlerKey // Renamed from 'handler'
         })
     ]);
 
@@ -40,7 +40,10 @@ export const createKVScheduledTaskRepository = (kvPool) => {
             return Ok({ ...result.value, items: scheduledTaskMapper.toDomainList(result.value.items) });
         },
         queryByIndex: async (tenantId, indexName, value, options) => {
-            const result = await baseRepo.queryByIndex(tenantId, indexName, value, options);
+            // Compatibility wrapper
+            const filter = {};
+            filter[indexName] = value;
+            const result = await baseRepo.query(tenantId, { filter, ...options });
             if (isErr(result)) return result;
             return Ok({ ...result.value, items: scheduledTaskMapper.toDomainList(result.value.items) });
         },

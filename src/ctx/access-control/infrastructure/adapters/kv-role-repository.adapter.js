@@ -39,6 +39,12 @@ export const createKVRoleRepositoryAdapter = (kvPool) => {
       const result = await baseRepo.list(tenantId, options);
       if (isErr(result)) return result;
       return Ok({ ...result.value, items: roleMapper.toDomainList(result.value.items) });
+    },
+
+    query: async (tenantId, options) => {
+      const result = await baseRepo.query(tenantId, options);
+      if (isErr(result)) return result;
+      return Ok({ ...result.value, items: roleMapper.toDomainList(result.value.items) });
     }
   };
 };

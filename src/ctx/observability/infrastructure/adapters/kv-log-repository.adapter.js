@@ -7,7 +7,7 @@ export const createKVLogRepository = (kvPool) => {
     useSchema(LogSchema),
     useIndexing({
         'level': (l) => l.level.toLowerCase(),
-        'timestamp_desc': (l) => l.timestamp
+        'timestamp': (l) => l.timestamp // Renamed from 'timestamp_desc'
     })
   ]);
 
@@ -28,7 +28,6 @@ export const createKVLogRepository = (kvPool) => {
       return Ok(logMapper.toDomain(result.value));
     },
     list: async (tenantId, { limit, cursor, level } = {}) => {
-      // FIX: Map 'level' option to filter to use indexing and correct filtering logic
       let result;
       if (level) {
           result = await baseRepo.query(tenantId, { limit, cursor, filter: { level: level.toLowerCase() } });

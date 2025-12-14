@@ -30,7 +30,7 @@ export const createCreateShipment = ({ shipmentRepository, orderRepository, inve
         if (isErr(saveRes)) return saveRes;
 
         // 5. Update Order Status
-        const shipRes = await shipmentRepository.queryByIndex(tenantId, 'order', order.id);
+        const shipRes = await shipmentRepository.queryByIndex(tenantId, 'orderId', order.id);
         if (isErr(shipRes)) return shipRes;
 
         const allShipments = shipRes.value.items;

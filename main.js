@@ -50,7 +50,14 @@ async function bootstrap() {
   // 4. Register domain contexts
   console.log('🏗️  Registering domain contexts...');
   ctx
-    .registerDomain('access-control', createAccessControlContext, [
+    .registerDomain('access-control', async (deps) => {
+        return createAccessControlContext({
+            kvPool: deps.persistence.kvPool,
+            security: deps.security,
+            eventBus: deps.messaging.eventBus,
+            obs: deps.obs
+        });
+    }, [
       'infra.persistence',
       'infra.obs',
       'infra.security',
@@ -72,7 +79,14 @@ async function bootstrap() {
       'infra.messaging',
       'domain.access-control',
     ])
-    .registerDomain('orders', createOrdersContext, [
+    .registerDomain('orders', async (deps) => {
+        return createOrdersContext({
+            kvPool: deps.persistence.kvPool,
+            eventBus: deps.messaging.eventBus,
+            obs: deps.obs,
+            registry: deps.registry
+        });
+    }, [
       'infra.persistence',
       'infra.obs',
       'infra.messaging',
@@ -91,19 +105,38 @@ async function bootstrap() {
       'infra.messaging', // Added missing dependency
       'domain.inventory',
     ])
-    .registerDomain('procurement', createProcurementContext, [
+    .registerDomain('procurement', async (deps) => {
+        return createProcurementContext({
+            kvPool: deps.persistence.kvPool,
+            inventory: deps.inventory
+        });
+    }, [
         'infra.persistence',
         'domain.inventory'
     ])
-    .registerDomain('manufacturing', createManufacturingContext, [
+    .registerDomain('manufacturing', async (deps) => {
+        return createManufacturingContext({
+            kvPool: deps.persistence.kvPool,
+            inventory: deps.inventory
+        });
+    }, [
         'infra.persistence',
         'domain.inventory'
     ])
-    .registerDomain('system', createSystemContext, [
+    .registerDomain('system', async (deps) => {
+        return createSystemContext({
+            kvPool: deps.persistence.kvPool,
+            messaging: deps.messaging
+        });
+    }, [
         'infra.persistence',
         'infra.messaging'
     ])
-    .registerDomain('observability', createObservabilityContext, [
+    .registerDomain('observability', async (deps) => {
+        return createObservabilityContext({
+            kvPool: deps.persistence.kvPool
+        });
+    }, [
         'infra.persistence'
     ])
     .registerDomain('communication', async (deps) => {
@@ -117,14 +150,38 @@ async function bootstrap() {
         'infra.messaging',
         'domain.access-control'
     ])
-    .registerDomain('scheduler', createSchedulerContext, [
+    .registerDomain('scheduler', async (deps) => {
+        return createSchedulerContext({
+            kvPool: deps.persistence.kvPool,
+            registry: deps.registry,
+            eventBus: deps.messaging.eventBus
+        });
+    }, [
         'infra.persistence',
         'infra.messaging',
         'domain.system'
     ])
-    .registerDomain('queries', createQueriesContext, [
+    .registerDomain('queries', async (deps) => {
+        return createQueriesContext({
+            orderRepository: deps.orders.repositories.order,
+            shipmentRepository: deps.orders.repositories.shipment,
+            workOrderRepository: deps.manufacturing.repositories.workOrder,
+            poRepository: deps.procurement.repositories.purchaseOrder,
+            userRepository: deps['access-control'].repositories.user,
+            stockRepository: deps.inventory.repositories.stock,
+            productRepository: deps.catalog.repositories.product,
+            auditRepository: deps.observability.repositories.audit,
+            obs: deps.obs
+        });
+    }, [
+        'infra.obs',
         'domain.access-control',
-        'domain.orders'
+        'domain.orders',
+        'domain.inventory',
+        'domain.catalog',
+        'domain.manufacturing',
+        'domain.procurement',
+        'domain.observability'
     ]);
 
   // 5. Initialize all contexts (resolves dependency graph)

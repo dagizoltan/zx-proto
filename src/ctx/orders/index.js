@@ -11,13 +11,20 @@ import { createUpdateOrderStatus } from './application/use-cases/update-order-st
 import { createCreateShipment } from './application/use-cases/create-shipment.js';
 import { createListShipments } from './application/use-cases/list-shipments.js';
 
-export const createOrdersContext = async (deps) => {
-  const { persistence, registry, obs, messaging } = deps;
-  const { eventBus } = messaging;
+/**
+ * Orders Context Factory
+ *
+ * @param {Object} deps - Explicit DI
+ * @param {Object} deps.kvPool
+ * @param {Object} deps.eventBus
+ * @param {Object} deps.obs
+ * @param {Object} deps.registry - Keeping registry for gateways for now
+ */
+export const createOrdersContext = async ({ kvPool, eventBus, obs, registry }) => {
 
   // Adapters (Secondary Ports)
-  const orderRepository = createKVOrderRepositoryAdapter(persistence.kvPool);
-  const shipmentRepository = createKVShipmentRepositoryAdapter(persistence.kvPool);
+  const orderRepository = createKVOrderRepositoryAdapter(kvPool);
+  const shipmentRepository = createKVShipmentRepositoryAdapter(kvPool);
 
   // Gateways (Secondary Ports)
   const catalogGateway = createLocalCatalogGatewayAdapter(registry);

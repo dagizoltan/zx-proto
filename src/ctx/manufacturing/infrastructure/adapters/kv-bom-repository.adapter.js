@@ -6,7 +6,7 @@ export const createKVBOMRepositoryAdapter = (kvPool) => {
   const baseRepo = createRepository(kvPool, 'boms', [
     useSchema(BOMSchema),
     useIndexing({
-        'product': (b) => b.productId
+        'productId': (b) => b.productId // Renamed from 'product'
     })
   ]);
 
@@ -38,7 +38,10 @@ export const createKVBOMRepositoryAdapter = (kvPool) => {
       return Ok({ ...result.value, items: bomMapper.toDomainList(result.value.items) });
     },
     queryByIndex: async (tenantId, indexName, value, options) => {
-      const result = await baseRepo.queryByIndex(tenantId, indexName, value, options);
+      // Compatibility wrapper
+      const filter = {};
+      filter[indexName] = value;
+      const result = await baseRepo.query(tenantId, { filter, ...options });
       if (isErr(result)) return result;
       return Ok({ ...result.value, items: bomMapper.toDomainList(result.value.items) });
     },

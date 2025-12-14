@@ -6,7 +6,7 @@ export const createKVWorkOrderRepositoryAdapter = (kvPool) => {
   const baseRepo = createRepository(kvPool, 'work_orders', [
     useSchema(WorkOrderSchema),
     useIndexing({
-        'bom': (wo) => wo.bomId,
+        'bomId': (wo) => wo.bomId, // Renamed from 'bom'
         'status': (wo) => wo.status
     })
   ]);
@@ -44,7 +44,10 @@ export const createKVWorkOrderRepositoryAdapter = (kvPool) => {
         return Ok({ ...result.value, items: workOrderMapper.toDomainList(result.value.items) });
     },
     queryByIndex: async (tenantId, indexName, value, options) => {
-        const result = await baseRepo.queryByIndex(tenantId, indexName, value, options);
+        // Compatibility wrapper
+        const filter = {};
+        filter[indexName] = value;
+        const result = await baseRepo.query(tenantId, { filter, ...options });
         if (isErr(result)) return result;
         return Ok({ ...result.value, items: workOrderMapper.toDomainList(result.value.items) });
     }

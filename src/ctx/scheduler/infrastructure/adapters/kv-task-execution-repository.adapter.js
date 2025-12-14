@@ -6,9 +6,9 @@ export const createKVTaskExecutionRepository = (kvPool) => {
     const baseRepo = createRepository(kvPool, 'task_executions', [
         useSchema(TaskExecutionSchema),
         useIndexing({
-            'task': (e) => e.taskId,
+            'taskId': (e) => e.taskId, // Renamed from task
             'status': (e) => e.status,
-            'timestamp_desc': (e) => e.startedAt
+            'startedAt': (e) => e.startedAt // Renamed from timestamp_desc
         })
     ]);
 
@@ -40,7 +40,10 @@ export const createKVTaskExecutionRepository = (kvPool) => {
             return Ok({ ...result.value, items: taskExecutionMapper.toDomainList(result.value.items) });
         },
         queryByIndex: async (tenantId, indexName, value, options) => {
-            const result = await baseRepo.queryByIndex(tenantId, indexName, value, options);
+            // Compatibility wrapper
+            const filter = {};
+            filter[indexName] = value;
+            const result = await baseRepo.query(tenantId, { filter, ...options });
             if (isErr(result)) return result;
             return Ok({ ...result.value, items: taskExecutionMapper.toDomainList(result.value.items) });
         },

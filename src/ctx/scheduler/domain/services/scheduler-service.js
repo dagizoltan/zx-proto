@@ -15,7 +15,8 @@ export const createSchedulerService = ({ taskRepo, executionRepo, registry, even
 
   const syncDefinitions = async (tenantId, definitions) => {
     for (const def of definitions) {
-      const qRes = await taskRepo.queryByIndex(tenantId, 'handler', def.handlerKey);
+      // FIX: Use handlerKey
+      const qRes = await taskRepo.queryByIndex(tenantId, 'handlerKey', def.handlerKey);
       const existing = !isErr(qRes) && qRes.value.items.length > 0 ? qRes.value.items[0] : null;
 
       if (existing) {
@@ -105,6 +106,7 @@ export const createSchedulerService = ({ taskRepo, executionRepo, registry, even
   };
 
   const tick = async (tenantId = 'default') => {
+    // FIX: Query enabled tasks using 'enabled' index
     const qRes = await taskRepo.queryByIndex(tenantId, 'enabled', 'true');
     if (isErr(qRes)) return;
     const tasks = qRes.value.items;

@@ -3,11 +3,17 @@ import { createKVWorkOrderRepositoryAdapter } from './infrastructure/adapters/kv
 import { createCreateBOM, createListBOMs } from './application/use-cases/bom-use-cases.js';
 import { createCreateWorkOrder, createListWorkOrders, createCompleteWorkOrder } from './application/use-cases/wo-use-cases.js';
 
-export const createManufacturingContext = (deps) => {
-  const { persistence, inventory } = deps;
+/**
+ * Manufacturing Context Factory
+ *
+ * @param {Object} deps - Explicit DI
+ * @param {Object} deps.kvPool
+ * @param {Object} deps.inventory - Domain Context
+ */
+export const createManufacturingContext = ({ kvPool, inventory }) => {
 
-  const bomRepo = createKVBOMRepositoryAdapter(persistence.kvPool);
-  const woRepo = createKVWorkOrderRepositoryAdapter(persistence.kvPool);
+  const bomRepo = createKVBOMRepositoryAdapter(kvPool);
+  const woRepo = createKVWorkOrderRepositoryAdapter(kvPool);
 
   return {
     repositories: {

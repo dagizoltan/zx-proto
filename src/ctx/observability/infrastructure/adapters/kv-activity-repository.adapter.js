@@ -6,8 +6,8 @@ export const createKVActivityRepository = (kvPool) => {
   const baseRepo = createRepository(kvPool, 'activity_logs', [
     useSchema(ActivitySchema),
     useIndexing({
-        'timestamp_desc': (l) => l.timestamp,
-        'user': (a) => a.userId
+        'timestamp': (l) => l.timestamp, // Renamed from timestamp_desc
+        'userId': (a) => a.userId // Renamed from user
     })
   ]);
 

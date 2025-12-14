@@ -3,11 +3,17 @@ import { createKVPurchaseOrderRepositoryAdapter } from './infrastructure/adapter
 import { createCreateSupplier, createListSuppliers } from './application/use-cases/supplier-use-cases.js';
 import { createCreatePurchaseOrder, createListPurchaseOrders, createGetPurchaseOrder, createReceivePurchaseOrder } from './application/use-cases/po-use-cases.js';
 
-export const createProcurementContext = (deps) => {
-  const { persistence, inventory } = deps;
+/**
+ * Procurement Context Factory
+ *
+ * @param {Object} deps - Explicit DI
+ * @param {Object} deps.kvPool
+ * @param {Object} deps.inventory - Domain Context
+ */
+export const createProcurementContext = ({ kvPool, inventory }) => {
 
-  const supplierRepo = createKVSupplierRepositoryAdapter(persistence.kvPool);
-  const poRepo = createKVPurchaseOrderRepositoryAdapter(persistence.kvPool);
+  const supplierRepo = createKVSupplierRepositoryAdapter(kvPool);
+  const poRepo = createKVPurchaseOrderRepositoryAdapter(kvPool);
 
   return {
     repositories: {

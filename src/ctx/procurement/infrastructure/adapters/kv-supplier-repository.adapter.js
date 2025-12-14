@@ -7,7 +7,7 @@ export const createKVSupplierRepositoryAdapter = (kvPool) => {
     useSchema(SupplierSchema),
     useIndexing({
         'code': (s) => s.code,
-        'email': (s) => s.contactEmail
+        'contactEmail': (s) => s.contactEmail // Renamed from 'email'
     })
   ]);
 
@@ -39,7 +39,10 @@ export const createKVSupplierRepositoryAdapter = (kvPool) => {
       return Ok({ ...result.value, items: supplierMapper.toDomainList(result.value.items) });
     },
     queryByIndex: async (tenantId, indexName, value, options) => {
-      const result = await baseRepo.queryByIndex(tenantId, indexName, value, options);
+      // Compatibility wrapper
+      const filter = {};
+      filter[indexName] = value;
+      const result = await baseRepo.query(tenantId, { filter, ...options });
       if (isErr(result)) return result;
       return Ok({ ...result.value, items: supplierMapper.toDomainList(result.value.items) });
     },

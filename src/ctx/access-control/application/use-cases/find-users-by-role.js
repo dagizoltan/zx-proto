@@ -25,7 +25,7 @@ export const createFindUsersByRole = ({ userRepository }) => {
     // I'll update the Port IUserRepository to include `findByRole` or `queryByIndex`.
     // I'll update the Adapter to implement `findByRole` which calls `queryByIndex`.
 
-    return await userRepository.queryByIndex(tenantId, 'role', roleId, options);
+    return await userRepository.queryByIndex(tenantId, 'roleIds', roleId, options);
   };
   return { execute };
 };

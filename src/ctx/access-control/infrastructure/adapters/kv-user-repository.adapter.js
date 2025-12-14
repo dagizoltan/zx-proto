@@ -11,7 +11,7 @@ export const createKVUserRepositoryAdapter = (kvPool) => {
     useSchema(UserSchema),
     useIndexing({
       'email': (user) => user.email,
-      'role': (user) => user.roleIds
+      'roleIds': (user) => user.roleIds // Renamed from 'role'
     })
   ]);
 
@@ -40,8 +40,11 @@ export const createKVUserRepositoryAdapter = (kvPool) => {
     },
 
     findByEmail: async (tenantId, email) => {
-        // Using existing queryByIndex which returns { items: [], ... }
-        const result = await baseRepo.queryByIndex(tenantId, 'email', email);
+        // Use standard query
+        const result = await baseRepo.query(tenantId, {
+            filter: { email },
+            limit: 1
+        });
         if (isErr(result)) return result;
 
         const items = result.value.items;
@@ -56,9 +59,11 @@ export const createKVUserRepositoryAdapter = (kvPool) => {
       return Ok({ ...result.value, items: userMapper.toDomainList(result.value.items) });
     },
 
-    // Additional method needed for some use cases (findUsersByRole)
     queryByIndex: async (tenantId, indexName, value, options) => {
-        const result = await baseRepo.queryByIndex(tenantId, indexName, value, options);
+        // Compatibility wrapper
+        const filter = {};
+        filter[indexName] = value;
+        const result = await baseRepo.query(tenantId, { filter, ...options });
         if (isErr(result)) return result;
         return Ok({ ...result.value, items: userMapper.toDomainList(result.value.items) });
     },

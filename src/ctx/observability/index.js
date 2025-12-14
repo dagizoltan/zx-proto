@@ -5,8 +5,13 @@ import { createListLogs } from './application/use-cases/list-logs.js';
 import { createListActivityLogs } from './application/use-cases/list-activity-logs.js';
 import { createListAuditLogs } from './application/use-cases/list-audit-logs.js';
 
-export const createObservabilityContext = (deps) => {
-    const kvPool = deps.persistence.kvPool;
+/**
+ * Observability Context Factory
+ *
+ * @param {Object} deps - Explicit DI
+ * @param {Object} deps.kvPool
+ */
+export const createObservabilityContext = ({ kvPool }) => {
 
     const logRepo = createKVLogRepository(kvPool);
     const activityRepo = createKVActivityRepository(kvPool);

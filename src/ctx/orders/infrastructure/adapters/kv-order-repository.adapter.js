@@ -6,7 +6,7 @@ export const createKVOrderRepositoryAdapter = (kvPool) => {
   const baseRepo = createRepository(kvPool, 'orders', [
     useSchema(OrderSchema),
     useIndexing({
-      'customer': (order) => order.customerId,
+      'customerId': (order) => order.customerId, // Renamed from 'customer'
       'status': (order) => order.status
     })
   ]);

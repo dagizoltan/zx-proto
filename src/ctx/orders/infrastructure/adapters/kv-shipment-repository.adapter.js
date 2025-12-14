@@ -6,7 +6,7 @@ export const createKVShipmentRepositoryAdapter = (kvPool) => {
   const baseRepo = createRepository(kvPool, 'shipments', [
     useSchema(ShipmentSchema),
     useIndexing({
-      'order': (s) => s.orderId
+      'orderId': (s) => s.orderId // Renamed from 'order'
     })
   ]);
 
@@ -29,7 +29,10 @@ export const createKVShipmentRepositoryAdapter = (kvPool) => {
     },
 
     queryByIndex: async (tenantId, indexName, value, options) => {
-      const result = await baseRepo.queryByIndex(tenantId, indexName, value, options);
+      // Compatibility wrapper
+      const filter = {};
+      filter[indexName] = value;
+      const result = await baseRepo.query(tenantId, { filter, ...options });
       if (isErr(result)) return result;
       return Ok({
         ...result.value,
@@ -39,6 +42,16 @@ export const createKVShipmentRepositoryAdapter = (kvPool) => {
 
     list: async (tenantId, options) => {
       const result = await baseRepo.list(tenantId, options);
+      if (isErr(result)) return result;
+      return Ok({
+        ...result.value,
+        items: shipmentMapper.toDomainList(result.value.items)
+      });
+    },
+
+    // Add generic query support
+    query: async (tenantId, options) => {
+      const result = await baseRepo.query(tenantId, options);
       if (isErr(result)) return result;
       return Ok({
         ...result.value,
