@@ -91,7 +91,8 @@ async function bootstrap() {
     ])
     .registerDomain('communication', createCommunicationContext, [
         'infra.persistence',
-        'infra.messaging'
+        'infra.messaging',
+        'domain.access-control'
     ])
     .registerDomain('scheduler', createSchedulerContext, [
         'infra.persistence',

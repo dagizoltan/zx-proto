@@ -9,3 +9,4 @@ communicationRoutes.use('*', authMiddleware);
 communicationRoutes.get('/feed', handlers.listFeedHandler);
 communicationRoutes.get('/messages', handlers.listMessagesHandler);
 communicationRoutes.get('/notifications', handlers.listNotificationsHandler);
+communicationRoutes.get('/notifications/stream', handlers.sseHandler);

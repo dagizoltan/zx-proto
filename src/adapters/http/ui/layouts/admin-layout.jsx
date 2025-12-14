@@ -87,7 +87,7 @@ export const AdminLayout = ({ children, user, currentPath }) => {
           (function() {
              // 0. SSE Notifications
              if (window.EventSource) {
-               const evtSource = new EventSource('/api/system/notifications/stream');
+               const evtSource = new EventSource('/api/communication/notifications/stream');
                evtSource.onmessage = function(event) {
                  try {
                     // Skip ping

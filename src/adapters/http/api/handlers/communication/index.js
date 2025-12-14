@@ -20,3 +20,5 @@ export const listNotificationsHandler = async (c) => {
     const result = await notifications.list(c.get('tenantId'), { cursor, limit: limit ? parseInt(limit) : 50 });
     return c.json(result);
 };
+
+export * from './sse.handler.js';

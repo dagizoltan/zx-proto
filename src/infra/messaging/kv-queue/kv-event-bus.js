@@ -23,7 +23,16 @@ export const createEventBus = (kvPool) => {
     if (!handlers.has(eventType)) {
       handlers.set(eventType, []);
     }
-    handlers.get(eventType).push(handler);
+    const eventHandlers = handlers.get(eventType);
+    eventHandlers.push(handler);
+
+    // Return unsubscribe function
+    return () => {
+      const index = eventHandlers.indexOf(handler);
+      if (index > -1) {
+        eventHandlers.splice(index, 1);
+      }
+    };
   };
 
   const startListening = async () => {
@@ -34,7 +43,8 @@ export const createEventBus = (kvPool) => {
       kv.listenQueue(async (event) => {
         const eventHandlers = handlers.get(event.type) || [];
 
-        for (const handler of eventHandlers) {
+        // Clone array to avoid issues if handlers unsubscribe during execution
+        for (const handler of [...eventHandlers]) {
           try {
             await handler(event.payload);
           } catch (error) {

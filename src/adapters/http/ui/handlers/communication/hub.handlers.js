@@ -24,39 +24,8 @@ export const conversationsHandler = async (c) => {
     const { listConversations } = c.ctx.get('domain.communication').useCases;
     const { items } = await listConversations(tenantId, { limit: 20 });
 
-    // Convert to mutable objects for UI enrichment
-    const mutableItems = items.map(item => ({ ...item }));
-
-    // Enrich with Participant Names
-    const ac = c.ctx.get('domain.access-control');
-    if (mutableItems.length > 0 && ac) {
-        const userIds = new Set();
-        mutableItems.forEach(c => c.participantIds?.forEach(id => userIds.add(id)));
-        // Also senderId?
-
-        if (userIds.size > 0 && ac.repositories.user.findByIds) {
-             const usersRes = await ac.repositories.user.findByIds(tenantId, Array.from(userIds));
-             if (!isErr(usersRes)) {
-                 const userMap = new Map(usersRes.value.map(u => [u.id, u.name]));
-                 for (const conv of mutableItems) {
-                     conv.participants = (conv.participantIds || []).map(id => userMap.get(id) || id);
-
-                     // Try to guess Last Sender Name
-                     // Note: conv doesn't store lastSenderId, only lastMessagePreview.
-                     // Ideally we fetch the last message. But for MVP list:
-                     conv.lastSender = 'Someone'; // Placeholder until we join messages
-                 }
-             }
-        }
-    }
-
-    // Ensure participants array exists even if enrichment failed
-    mutableItems.forEach(c => {
-        if (!c.participants) c.participants = c.participantIds || [];
-    });
-
     return c.html(await renderPage(ConversationsPage, {
-        conversations: mutableItems,
+        conversations: items,
         layout: AdminLayout,
         title: 'Conversations - Communication',
         user: c.get('user')
@@ -71,28 +40,10 @@ export const conversationDetailHandler = async (c) => {
 
     if (!conversation) return c.text('Conversation not found', 404);
 
-    // Clone to allow modification
-    const mutableConversation = { ...conversation };
-
-    // Enrich with Participant Names
-    const ac = c.ctx.get('domain.access-control');
-    if (mutableConversation.participantIds?.length > 0 && ac && ac.repositories.user.findByIds) {
-        const usersRes = await ac.repositories.user.findByIds(tenantId, mutableConversation.participantIds);
-        if (!isErr(usersRes)) {
-            const userMap = new Map(usersRes.value.map(u => [u.id, u.name]));
-            mutableConversation.participants = mutableConversation.participantIds.map(id => userMap.get(id) || id);
-        }
-    }
-
-    // Ensure participants array exists
-    if (!mutableConversation.participants) {
-        mutableConversation.participants = mutableConversation.participantIds || [];
-    }
-
     return c.html(await renderPage(ConversationDetailPage, {
-        conversation: mutableConversation,
+        conversation: conversation,
         layout: AdminLayout,
-        title: `${mutableConversation.subject || 'Conversation'} - Communication`,
+        title: `${conversation.subject || 'Conversation'} - Communication`,
         user: c.get('user')
     }));
 };
@@ -101,9 +52,12 @@ export const createConversationPageHandler = async (c) => {
     const tenantId = c.get('tenantId');
     const ac = c.ctx.get('domain.access-control');
 
+    // This handler still directly accesses AC to list users for the "New Conversation" dropdown.
+    // This is acceptable as UI Composition, or we could create a specialized use case in Communication "getPotentialParticipants".
+    // For now, listing users is a generic AC function.
     let users = [];
-    if (ac && ac.repositories.user.list) {
-         const usersRes = await ac.repositories.user.list(tenantId, { limit: 100 });
+    if (ac && ac.useCases.listUsers) { // Changed from repositories.user.list to useCases.listUsers for better practice
+         const usersRes = await ac.useCases.listUsers(tenantId, { limit: 100 });
          if (!isErr(usersRes)) {
              users = usersRes.value.items;
          }

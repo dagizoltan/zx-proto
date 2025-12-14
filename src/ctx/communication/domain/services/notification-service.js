@@ -16,12 +16,9 @@ export const createNotificationService = ({ notificationRepo, eventBus }) => {
         const res = await notificationRepo.save(tenantId, notif);
         if (isErr(res)) return res;
 
-        // Note: EventBus usually handles publishing "Notification Created" events if needed for SSE.
-        // Assuming the caller or listener handles SSE via separate mechanism or we publish specific event.
-        // Legacy system might expect 'system.notification' event?
-        // Let's publish it if eventBus is present.
+        // Publish event for SSE
         if (eventBus) {
-             // await eventBus.publish('notification.created', notif);
+             await eventBus.publish('notification.created', notif);
         }
         return Ok(notif);
     };
