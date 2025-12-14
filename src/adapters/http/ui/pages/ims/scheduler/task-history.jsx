@@ -21,6 +21,7 @@ export const TaskHistoryPage = ({ history, tasks }) => {
                             <th class="p-4">Duration</th>
                             <th class="p-4">Status</th>
                             <th class="p-4">Logs</th>
+                            <th class="p-4">Actions</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
@@ -34,13 +35,16 @@ export const TaskHistoryPage = ({ history, tasks }) => {
                                 <td class="p-4">
                                     <span class={`badge ${
                                         exec.status === 'SUCCESS' ? 'badge-success' :
-                                        exec.status === 'FAILURE' ? 'badge-error' : 'badge-info'
+                                        exec.status === 'FAILED' ? 'badge-error' : 'badge-info'
                                     }`}>
                                         {exec.status}
                                     </span>
                                 </td>
                                 <td class="p-4 text-xs font-mono max-w-md truncate">
                                     {exec.error ? <span class="text-red-500">{exec.error}</span> : exec.logs[exec.logs.length - 1]}
+                                </td>
+                                <td class="p-4">
+                                    <a href={`/ims/scheduler/history/${exec.id}`} class="text-primary-600 hover:text-primary-900 font-medium text-sm">View</a>
                                 </td>
                             </tr>
                         ))}

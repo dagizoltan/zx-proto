@@ -96,7 +96,7 @@ export const TaskDetailPage = ({ task, history, error, success }) => {
                                     {history.map(run => {
                                         const duration = run.endTime ? ((new Date(run.endTime) - new Date(run.startTime))/1000).toFixed(1) + 's' : '-';
                                         const badgeClass = run.status === 'SUCCESS' ? 'badge-success' :
-                                                           run.status === 'FAILURE' ? 'badge-danger' : 'badge-neutral';
+                                                           run.status === 'FAILED' ? 'badge-danger' : 'badge-neutral';
 
                                         return (
                                         <tr>

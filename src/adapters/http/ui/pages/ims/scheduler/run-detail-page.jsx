@@ -30,7 +30,7 @@ export const RunDetailPage = ({ run, task, error, success }) => {
                 <div class="stat-card">
                     <h3>Status</h3>
                     <div class="stat-value">
-                        <span class={`badge ${run.status === 'SUCCESS' ? 'badge-success' : run.status === 'FAILURE' ? 'badge-danger' : 'badge-neutral'}`} style="font-size: 1.5rem; padding: 0.5rem 1rem;">{run.status}</span>
+                        <span class={`badge ${run.status === 'SUCCESS' ? 'badge-success' : run.status === 'FAILED' ? 'badge-danger' : 'badge-neutral'}`} style="font-size: 1.5rem; padding: 0.5rem 1rem;">{run.status}</span>
                     </div>
                 </div>
 

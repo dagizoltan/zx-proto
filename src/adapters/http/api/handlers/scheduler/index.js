@@ -1,14 +1,14 @@
 
 export const listTasksHandler = async (c) => {
     const tenantId = c.get('tenantId') || 'default';
-    const scheduler = c.ctx.get('domain.scheduler').service;
+    const scheduler = c.ctx.get('domain.scheduler').services.scheduler;
     const tasks = await scheduler.listTasks(tenantId);
     return c.json({ data: tasks });
 };
 
 export const updateTaskHandler = async (c) => {
     const tenantId = c.get('tenantId') || 'default';
-    const scheduler = c.ctx.get('domain.scheduler').service;
+    const scheduler = c.ctx.get('domain.scheduler').services.scheduler;
     const id = c.req.param('id');
     const body = await c.req.json();
 
@@ -27,7 +27,7 @@ export const updateTaskHandler = async (c) => {
 
 export const runTaskHandler = async (c) => {
     const tenantId = c.get('tenantId') || 'default';
-    const scheduler = c.ctx.get('domain.scheduler').service;
+    const scheduler = c.ctx.get('domain.scheduler').services.scheduler;
     const id = c.req.param('id');
 
     try {
@@ -40,14 +40,14 @@ export const runTaskHandler = async (c) => {
 
 export const listHistoryHandler = async (c) => {
     const tenantId = c.get('tenantId') || 'default';
-    const scheduler = c.ctx.get('domain.scheduler').service;
+    const scheduler = c.ctx.get('domain.scheduler').services.scheduler;
     const history = await scheduler.getHistory(tenantId);
     return c.json({ data: history });
 };
 
 export const getDashboardHandler = async (c) => {
     const tenantId = c.get('tenantId') || 'default';
-    const scheduler = c.ctx.get('domain.scheduler').service;
+    const scheduler = c.ctx.get('domain.scheduler').services.scheduler;
     const tasks = await scheduler.listTasks(tenantId);
     const history = await scheduler.getHistory(tenantId);
 

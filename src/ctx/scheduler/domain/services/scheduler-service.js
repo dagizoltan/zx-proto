@@ -69,7 +69,7 @@ export const createSchedulerService = ({ taskRepo, executionRepo, registry, even
         tenantId,
         taskId: task.id,
         handlerKey: task.handlerKey,
-        startedAt: new Date().toISOString(),
+        startTime: new Date().toISOString(),
         status: 'RUNNING',
         logs: [`Starting task ${task.name}`]
     };
@@ -88,7 +88,7 @@ export const createSchedulerService = ({ taskRepo, executionRepo, registry, even
 
         await executionRepo.save(tenantId, {
             ...execution,
-            completedAt: new Date().toISOString(),
+            endTime: new Date().toISOString(),
             status: 'SUCCESS',
             logs: logBuffer
         });
@@ -96,8 +96,8 @@ export const createSchedulerService = ({ taskRepo, executionRepo, registry, even
     } catch (error) {
         await executionRepo.save(tenantId, {
             ...execution,
-            completedAt: new Date().toISOString(),
-            status: 'FAILURE',
+            endTime: new Date().toISOString(),
+            status: 'FAILED',
             error: error.message,
             logs: [...logBuffer, `Error: ${error.message}`]
         });

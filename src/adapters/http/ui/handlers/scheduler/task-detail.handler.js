@@ -6,7 +6,7 @@ import { TaskDetailPage } from '../../pages/ims/scheduler/task-detail-page.jsx';
 // GET /ims/scheduler/tasks/:id
 export const taskDetailHandler = async (c) => {
     // FIX: Correct dependency resolution
-    const scheduler = c.ctx.get('domain.scheduler').service;
+    const scheduler = c.ctx.get('domain.scheduler').services.scheduler;
     const tenantId = c.get('tenantId') || 'default';
     const taskId = c.req.param('id');
     const error = c.req.query('error');
@@ -35,7 +35,7 @@ export const taskDetailHandler = async (c) => {
 // POST /ims/scheduler/tasks/:id
 export const updateTaskHandler = async (c) => {
     // FIX: Correct dependency resolution
-    const scheduler = c.ctx.get('domain.scheduler').service;
+    const scheduler = c.ctx.get('domain.scheduler').services.scheduler;
     const tenantId = c.get('tenantId') || 'default';
     const taskId = c.req.param('id');
 
@@ -62,7 +62,7 @@ export const updateTaskHandler = async (c) => {
 // POST /ims/scheduler/tasks/:id/run
 export const runTaskHandler = async (c) => {
     // FIX: Correct dependency resolution
-    const scheduler = c.ctx.get('domain.scheduler').service;
+    const scheduler = c.ctx.get('domain.scheduler').services.scheduler;
     const tenantId = c.get('tenantId') || 'default';
     const taskId = c.req.param('id');
 
