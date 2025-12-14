@@ -7,7 +7,7 @@ export const RolesPage = (props) => {
     <div>
       <div class="page-header">
         <h1>Roles</h1>
-        <a href="/ims/roles/new" class="btn btn-primary">Create Role</a>
+        <a href="/ims/access-control/roles/new" class="btn btn-primary">Create Role</a>
       </div>
 
       <div class="card p-0">
@@ -30,7 +30,7 @@ export const RolesPage = (props) => {
                                 {role.permissions && role.permissions.length > 0 ? JSON.stringify(role.permissions) : 'No specific permissions'}
                             </td>
                             <td>
-                                <a href={`/ims/roles/${role.id}`} class="btn btn-sm btn-secondary">View</a>
+                                <a href={`/ims/access-control/roles/${role.id}`} class="btn btn-sm btn-secondary">View</a>
                             </td>
                         </tr>
                     ))}

@@ -5,11 +5,11 @@ export const CreateUserPage = ({ user, roles }) => {
     <div class="create-user-page">
       <div class="header-actions">
         <h1>New User</h1>
-        <a href="/ims/users" class="btn-secondary">Cancel</a>
+        <a href="/ims/access-control/users" class="btn-secondary">Cancel</a>
       </div>
 
       <div class="card">
-        <form method="POST" action="/ims/users">
+        <form method="POST" action="/ims/access-control/users">
           <div class="form-group">
             <label>Full Name</label>
             <input type="text" name="name" required placeholder="John Doe" />

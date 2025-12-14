@@ -291,23 +291,30 @@ export const adminNavigation = {
     },
 
     {
-      id: 'system',
-      label: 'System',
+      id: 'access-control',
+      label: 'Access Control',
       items: [
         {
           id: 'users',
           label: 'Users',
-          href: '/ims/system/users',
+          href: '/ims/access-control/users',
           icon: 'User',
           roles: ['admin']
         },
         {
           id: 'roles',
           label: 'Roles',
-          href: '/ims/system/roles',
+          href: '/ims/access-control/roles',
           icon: 'Shield',
           roles: ['admin']
-        },
+        }
+      ]
+    },
+
+    {
+      id: 'system',
+      label: 'System',
+      items: [
         {
           id: 'settings',
           label: 'Settings',

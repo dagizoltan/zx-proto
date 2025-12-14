@@ -9,7 +9,7 @@ export const RoleDetailPage = ({ user, role }) => {
             <span class="entity-id">ID: {role.id}</span>
         </div>
         <div class="flex gap-2">
-            <a href="/ims/roles" class="btn btn-secondary">Back to List</a>
+            <a href="/ims/access-control/roles" class="btn btn-secondary">Back to List</a>
         </div>
       </div>
 
