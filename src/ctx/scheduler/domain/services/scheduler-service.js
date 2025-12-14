@@ -4,7 +4,7 @@ import { createTaskExecution } from '../entities/task-execution.js';
 import parser from 'cron-parser';
 import { isErr, unwrap } from '../../../../../lib/trust/index.js';
 
-export const createSchedulerService = ({ taskRepo, executionRepo, registry, eventBus }) => {
+export const createSchedulerService = ({ taskRepo, executionRepo, eventBus }) => {
   const logger = console;
 
   const handlers = new Map();

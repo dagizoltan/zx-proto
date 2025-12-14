@@ -1,27 +1,67 @@
-import { Ok, Err, isErr } from '../../../../../lib/trust/index.js';
+import { Ok, Err, isErr, unwrap } from '../../../../../lib/trust/index.js';
 
 /**
  * Adapter: Local Catalog Gateway
- * Wraps the local Catalog Context to implement ICatalogGateway.
+ * Wraps the local Catalog Context to implement ICatalogGateway
+ *
+ * @param {Object} catalogContext - The actual Catalog Context instance
  */
-export const createLocalCatalogGatewayAdapter = (registry) => {
+export const createLocalCatalogGatewayAdapter = (catalogContext) => {
   return {
+    getProducts: async (tenantId, productIds) => {
+      if (!catalogContext) {
+        return Err({ code: 'CATALOG_UNAVAILABLE', message: 'Catalog context not available' });
+      }
+
+      try {
+        // Optimization: Use repository direct access for batch retrieval if available
+        // to avoid N+1 N-Use-Case calls.
+        if (catalogContext.repositories && catalogContext.repositories.product) {
+             const products = await catalogContext.repositories.product.findByIds(tenantId, productIds);
+             return Ok(products);
+        }
+
+        // Fallback to loop if repo not exposed
+        const products = [];
+        for (const productId of productIds) {
+          const result = await catalogContext.useCases.getProduct.execute(tenantId, productId);
+          if (isErr(result)) {
+             return Err({
+              code: 'PRODUCT_NOT_FOUND',
+              message: `Product ${productId} not found`
+            });
+          }
+          products.push(result.value);
+        }
+        return Ok(products);
+      } catch (error) {
+        return Err({ code: 'CATALOG_ERROR', message: error.message });
+      }
+    },
+
     getProduct: async (tenantId, productId) => {
-        const cat = registry.get('domain.catalog');
-        if (!cat) throw new Error('Catalog domain not available');
-        return cat.useCases.getProduct.execute(tenantId, productId);
+      if (!catalogContext) {
+        return Err({ code: 'CATALOG_UNAVAILABLE', message: 'Catalog context not available' });
+      }
+
+      return await catalogContext.useCases.getProduct.execute(tenantId, productId);
     },
-    exists: async (tenantId, productId) => {
-        const cat = registry.get('domain.catalog');
-        if (!cat) throw new Error('Catalog domain not available');
-        const res = await cat.useCases.getProduct.execute(tenantId, productId);
-        return Ok(!isErr(res));
-    },
+
     list: async (tenantId, options) => {
-        const cat = registry.get('domain.catalog');
-        if (!cat) throw new Error('Catalog domain not available');
-        // FIX: Pass options as an object, not positional arguments
-        return cat.useCases.listProducts.execute(tenantId, options);
+       if (!catalogContext) {
+        return Err({ code: 'CATALOG_UNAVAILABLE', message: 'Catalog context not available' });
+      }
+
+      try {
+          if (catalogContext.repositories && catalogContext.repositories.product) {
+              return await catalogContext.repositories.product.query(tenantId, options);
+          }
+
+          return Err({ code: 'CATALOG_ERROR', message: 'Catalog repository not exposed' });
+
+      } catch (e) {
+          return Err({ code: 'CATALOG_ERROR', message: e.message });
+      }
     }
   };
 };

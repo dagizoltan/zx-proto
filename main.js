@@ -26,6 +26,13 @@ import { createSchedulerContext } from './src/ctx/scheduler/index.js';
 import { createCronAdapter } from './src/adapters/scheduler/cron-adapter.js';
 import { createTaskHandlers } from './src/adapters/scheduler/task-handlers.js';
 
+// Adapters
+import { createLocalCatalogGatewayAdapter as createInventoryCatalogGateway } from './src/ctx/inventory/infrastructure/adapters/local-catalog-gateway.adapter.js';
+import { createLocalAccessControlGatewayAdapter } from './src/ctx/inventory/infrastructure/adapters/local-access-control-gateway.adapter.js';
+import { createLocalCatalogGatewayAdapter as createOrdersCatalogGateway } from './src/ctx/orders/infrastructure/adapters/local-catalog-gateway.adapter.js';
+import { createLocalInventoryGatewayAdapter } from './src/ctx/orders/infrastructure/adapters/local-inventory-gateway.adapter.js';
+import { createLocalCustomerGatewayAdapter } from './src/ctx/orders/infrastructure/adapters/local-customer-gateway.adapter.js';
+
 async function bootstrap() {
   console.log('🚀 IMS Shopfront - Starting...\n');
 
@@ -63,36 +70,6 @@ async function bootstrap() {
       'infra.security',
       'infra.messaging',
     ])
-    .registerDomain('inventory', async (deps) => {
-        // Explicitly map the generic dependencies to the specific ones the context needs
-        // This acts as the Composition Root for this context
-        return createInventoryContext({
-            kvPool: deps.persistence.kvPool,
-            cache: deps.persistence.cache,
-            eventBus: deps.messaging.eventBus,
-            obs: deps.obs,
-            registry: deps.registry // Legacy support
-        });
-    }, [
-      'infra.persistence',
-      'infra.obs',
-      'infra.messaging',
-      'domain.access-control',
-    ])
-    .registerDomain('orders', async (deps) => {
-        return createOrdersContext({
-            kvPool: deps.persistence.kvPool,
-            eventBus: deps.messaging.eventBus,
-            obs: deps.obs,
-            registry: deps.registry
-        });
-    }, [
-      'infra.persistence',
-      'infra.obs',
-      'infra.messaging',
-      'domain.inventory',
-      'domain.access-control',
-    ])
     .registerDomain('catalog', async (deps) => {
         return createCatalogContext({
             kvPool: deps.persistence.kvPool,
@@ -102,8 +79,49 @@ async function bootstrap() {
     }, [
       'infra.persistence',
       'infra.obs',
-      'infra.messaging', // Added missing dependency
+      'infra.messaging'
+    ])
+    .registerDomain('inventory', async (deps) => {
+        // Resolve Gateways
+        const catalogGateway = createInventoryCatalogGateway(deps.catalog);
+        const accessControlGateway = createLocalAccessControlGatewayAdapter(deps['access-control']);
+
+        return createInventoryContext({
+            kvPool: deps.persistence.kvPool,
+            cache: deps.persistence.cache,
+            eventBus: deps.messaging.eventBus,
+            obs: deps.obs,
+            catalogGateway,
+            accessControlGateway
+        });
+    }, [
+      'infra.persistence',
+      'infra.obs',
+      'infra.messaging',
+      'domain.access-control',
+      'domain.catalog' // Add explicit dependency
+    ])
+    .registerDomain('orders', async (deps) => {
+        // Resolve Gateways
+        const catalogGateway = createOrdersCatalogGateway(deps.catalog);
+        const inventoryGateway = createLocalInventoryGatewayAdapter(deps.inventory);
+        const customerGateway = createLocalCustomerGatewayAdapter(deps['access-control']);
+
+        return createOrdersContext({
+            kvPool: deps.persistence.kvPool,
+            eventBus: deps.messaging.eventBus,
+            obs: deps.obs,
+            catalogGateway,
+            inventoryGateway,
+            customerGateway
+        });
+    }, [
+      'infra.persistence',
+      'infra.obs',
+      'infra.messaging',
       'domain.inventory',
+      'domain.access-control',
+      'domain.catalog' // Add explicit dependency
     ])
     .registerDomain('procurement', async (deps) => {
         return createProcurementContext({
@@ -153,7 +171,6 @@ async function bootstrap() {
     .registerDomain('scheduler', async (deps) => {
         return createSchedulerContext({
             kvPool: deps.persistence.kvPool,
-            registry: deps.registry,
             eventBus: deps.messaging.eventBus
         });
     }, [

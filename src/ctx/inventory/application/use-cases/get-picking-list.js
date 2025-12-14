@@ -1,15 +1,17 @@
 import { Ok, Err, isErr, unwrap } from '../../../../../lib/trust/index.js';
 
-export const createGetPickingList = ({ stockMovementRepository, registry }) => {
+export const createGetPickingList = ({
+    stockMovementRepository,
+    catalogGateway,
+    locationRepository,
+    batchRepository
+}) => {
     const execute = async (tenantId, orderId) => {
-        const catalog = registry.get('domain.catalog');
-        const inventory = registry.get('domain.inventory');
-
         // Resolvers for population
         const resolvers = {
-            product: (ids) => catalog.repositories.product.findByIds(tenantId, ids),
-            fromLocation: (ids) => inventory.repositories.location.findByIds(tenantId, ids),
-            batch: (ids) => inventory.repositories.batch.findByIds(tenantId, ids)
+            product: (ids) => catalogGateway.getProducts(tenantId, ids), // Using gateway which returns Result<Product[]>
+            fromLocation: (ids) => locationRepository.findByIds(tenantId, ids),
+            batch: (ids) => batchRepository.findByIds(tenantId, ids)
         };
 
         const moveRes = await stockMovementRepository.query(tenantId, {

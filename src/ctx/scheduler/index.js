@@ -9,10 +9,9 @@ import { schedulerTaskHandlers } from '../../adapters/scheduler/task-handlers.js
  *
  * @param {Object} deps - Explicit DI
  * @param {Object} deps.kvPool
- * @param {Object} deps.registry
  * @param {Object} deps.eventBus
  */
-export const createSchedulerContext = async ({ kvPool, registry, eventBus }) => {
+export const createSchedulerContext = async ({ kvPool, eventBus }) => {
 
   const taskRepo = createKVScheduledTaskRepository(kvPool);
   const executionRepo = createKVTaskExecutionRepository(kvPool);
@@ -20,7 +19,6 @@ export const createSchedulerContext = async ({ kvPool, registry, eventBus }) => 
   const service = createSchedulerService({
       taskRepo,
       executionRepo,
-      registry,
       eventBus
   });
 

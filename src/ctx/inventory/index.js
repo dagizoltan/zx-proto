@@ -24,8 +24,6 @@ import { createGetProductsBatch } from './application/use-cases/get-products-bat
 import { createGetPickingList } from './application/use-cases/get-picking-list.js';
 import { unwrap } from '../../../lib/trust/index.js';
 
-import { createLocalCatalogGatewayAdapter } from './infrastructure/adapters/local-catalog-gateway.adapter.js';
-
 /**
  * Inventory Context Factory
  *
@@ -34,18 +32,17 @@ import { createLocalCatalogGatewayAdapter } from './infrastructure/adapters/loca
  * @param {Object} deps.eventBus - Event Bus (infra.messaging)
  * @param {Object} deps.cache - Cache Service (infra.persistence)
  * @param {Object} deps.obs - Observability Service
- * @param {Object} deps.registry - Global Registry (Temporarily kept for lazy loading other contexts)
+ * @param {Object} deps.catalogGateway - Injected Catalog Gateway
+ * @param {Object} deps.accessControlGateway - Injected Access Control Gateway
  */
 export const createInventoryContext = async ({
     kvPool,
     eventBus,
     cache,
     obs,
-    registry
+    catalogGateway,
+    accessControlGateway
 }) => {
-
-  // Catalog Gateway
-  const catalogGateway = createLocalCatalogGatewayAdapter(registry);
 
   // Product Compat Repo
   const productRepositoryCompatibility = {
@@ -134,7 +131,9 @@ export const createInventoryContext = async ({
 
   const getPickingList = createGetPickingList({
       stockMovementRepository,
-      registry
+      catalogGateway,
+      locationRepository,
+      batchRepository
   });
 
   const executeProduction = {
@@ -150,8 +149,7 @@ export const createInventoryContext = async ({
   };
 
   const checkUserPermission = async (tenantId, userId, action) => {
-    const accessControl = registry.get('domain.access-control');
-    return unwrap(await accessControl.useCases.checkPermission.execute(tenantId, userId, 'inventory', action));
+    return unwrap(await accessControlGateway.checkPermission(tenantId, userId, 'inventory', action));
   };
 
   return {

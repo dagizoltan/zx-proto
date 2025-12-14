@@ -3,19 +3,20 @@ import { Ok, Err, isErr } from '../../../../../lib/trust/index.js';
 /**
  * Adapter: Local Catalog Gateway
  * Wraps the local Catalog Context to implement ICatalogGateway
+ *
+ * @param {Object} catalogContext - The actual Catalog Context instance
  */
-export const createLocalCatalogGatewayAdapter = (registry) => {
+export const createLocalCatalogGatewayAdapter = (catalogContext) => {
   return {
     getProducts: async (tenantId, productIds) => {
-      const catalog = registry.get('domain.catalog');
-      if (!catalog) {
+      if (!catalogContext) {
         return Err({ code: 'CATALOG_UNAVAILABLE', message: 'Catalog context not available' });
       }
 
       try {
         const products = [];
         for (const productId of productIds) {
-          const result = await catalog.useCases.getProduct.execute(tenantId, productId);
+          const result = await catalogContext.useCases.getProduct.execute(tenantId, productId);
           if (isErr(result)) {
             return Err({
               code: 'PRODUCT_NOT_FOUND',
@@ -31,12 +32,11 @@ export const createLocalCatalogGatewayAdapter = (registry) => {
     },
 
     getProduct: async (tenantId, productId) => {
-      const catalog = registry.get('domain.catalog');
-      if (!catalog) {
+      if (!catalogContext) {
         return Err({ code: 'CATALOG_UNAVAILABLE', message: 'Catalog context not available' });
       }
 
-      return await catalog.useCases.getProduct.execute(tenantId, productId);
+      return await catalogContext.useCases.getProduct.execute(tenantId, productId);
     }
   };
 };
