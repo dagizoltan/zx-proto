@@ -79,9 +79,16 @@ async function bootstrap() {
       'domain.inventory',
       'domain.access-control',
     ])
-    .registerDomain('catalog', createCatalogContext, [
+    .registerDomain('catalog', async (deps) => {
+        return createCatalogContext({
+            kvPool: deps.persistence.kvPool,
+            eventBus: deps.messaging.eventBus,
+            obs: deps.obs
+        });
+    }, [
       'infra.persistence',
       'infra.obs',
+      'infra.messaging', // Added missing dependency
       'domain.inventory',
     ])
     .registerDomain('procurement', createProcurementContext, [
@@ -99,7 +106,13 @@ async function bootstrap() {
     .registerDomain('observability', createObservabilityContext, [
         'infra.persistence'
     ])
-    .registerDomain('communication', createCommunicationContext, [
+    .registerDomain('communication', async (deps) => {
+        return createCommunicationContext({
+            kvPool: deps.persistence.kvPool,
+            eventBus: deps.messaging.eventBus,
+            accessControl: deps['access-control']
+        });
+    }, [
         'infra.persistence',
         'infra.messaging',
         'domain.access-control'

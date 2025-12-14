@@ -12,14 +12,20 @@ import { createListCategories } from './application/use-cases/list-categories.js
 import { createCreatePriceList } from './application/use-cases/create-price-list.js';
 import { createListPriceLists } from './application/use-cases/list-price-lists.js';
 
-export const createCatalogContext = async (deps) => {
-    const { inventory, obs, messaging, persistence } = deps;
-    const { eventBus } = messaging || {};
+/**
+ * Catalog Context Factory
+ *
+ * @param {Object} deps - Explicit Dependency Injection
+ * @param {Object} deps.kvPool - KV Connection Pool
+ * @param {Object} deps.eventBus - Event Bus
+ * @param {Object} deps.obs - Observability Service
+ */
+export const createCatalogContext = async ({ kvPool, eventBus, obs }) => {
 
     // Adapters (Catalog owns its data now)
-    const productRepository = createKVProductRepositoryAdapter(persistence.kvPool);
-    const categoryRepository = createKVCategoryRepositoryAdapter(persistence.kvPool);
-    const priceListRepository = createKVPriceListRepositoryAdapter(persistence.kvPool);
+    const productRepository = createKVProductRepositoryAdapter(kvPool);
+    const categoryRepository = createKVCategoryRepositoryAdapter(kvPool);
+    const priceListRepository = createKVPriceListRepositoryAdapter(kvPool);
 
     // Domain Services
     const pricingService = createPricingService();

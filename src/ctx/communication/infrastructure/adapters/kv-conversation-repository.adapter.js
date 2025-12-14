@@ -6,7 +6,7 @@ export const createKVConversationRepository = (kvPool) => {
   const baseRepo = createRepository(kvPool, 'conversations', [
     useSchema(ConversationSchema),
     useIndexing({
-        'updatedAt_desc': (c) => c.updatedAt
+        'updatedAt': (c) => c.updatedAt // Renamed from 'updatedAt_desc'
     })
   ]);
 

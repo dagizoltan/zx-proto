@@ -6,9 +6,10 @@ export const createKVNotificationRepository = (kvPool) => {
   const baseRepo = createRepository(kvPool, 'notifications', [
     useSchema(NotificationSchema),
     useIndexing({
-        'user': (n) => n.userId,
-        'user_read': (n) => n.userId && n.read !== undefined ? `${n.userId}:${n.read}` : undefined,
-        'date': (n) => n.createdAt
+        'userId': (n) => n.userId, // Renamed from 'user'
+        'createdAt': (n) => n.createdAt // Renamed from 'date'
+        // 'user_read': removed as complex keys are less useful with memory scanning fallback,
+        // can use filter: { userId: '...', read: false }
     })
   ]);
 
@@ -40,7 +41,10 @@ export const createKVNotificationRepository = (kvPool) => {
       return Ok({ ...result.value, items: notificationMapper.toDomainList(result.value.items) });
     },
     queryByIndex: async (tenantId, indexName, value, options) => {
-      const result = await baseRepo.queryByIndex(tenantId, indexName, value, options);
+      // Compatibility wrapper
+      const filter = {};
+      filter[indexName] = value;
+      const result = await baseRepo.query(tenantId, { filter, ...options });
       if (isErr(result)) return result;
       return Ok({ ...result.value, items: notificationMapper.toDomainList(result.value.items) });
     },

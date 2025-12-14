@@ -14,17 +14,15 @@ import { createPostFeedItem } from './application/use-cases/post-feed-item.js';
 import { createSendMessage } from './application/use-cases/send-message.js';
 import { createSubscribeNotifications } from './application/use-cases/subscribe-notifications.js';
 
-export const createCommunicationContext = (deps) => {
-    // The dependency registry splits by '.' and takes the last part.
-    // So 'domain.access-control' becomes 'access-control' (with hyphen).
-    // But we are destructuring with camelCase `accessControl`.
-    // We need to access it via string key or rename it.
-
-    const { persistence, messaging } = deps;
-    const accessControl = deps['access-control'];
-
-    const { kvPool } = persistence;
-    const { eventBus } = messaging;
+/**
+ * Communication Context Factory
+ *
+ * @param {Object} deps - Explicit DI
+ * @param {Object} deps.kvPool
+ * @param {Object} deps.eventBus
+ * @param {Object} deps.accessControl - Domain Context (Access Control)
+ */
+export const createCommunicationContext = ({ kvPool, eventBus, accessControl }) => {
 
     const feedRepo = createKVFeedRepository(kvPool);
     const notificationRepo = createKVNotificationRepository(kvPool);

@@ -12,8 +12,8 @@ export const createKVProductRepositoryAdapter = (kvPool) => {
     useIndexing({
         'sku': (p) => p.sku,
         'status': (p) => p.status,
-        'category': (p) => p.categoryId,
-        'parent': (p) => p.parentId
+        'categoryId': (p) => p.categoryId, // Renamed from 'category'
+        'parentId': (p) => p.parentId      // Renamed from 'parent'
     })
   ]);
 
@@ -36,7 +36,11 @@ export const createKVProductRepositoryAdapter = (kvPool) => {
     },
 
     findBySku: async (tenantId, sku) => {
-        const result = await baseRepo.queryByIndex(tenantId, 'sku', sku);
+        // Use query engine
+        const result = await baseRepo.query(tenantId, {
+            filter: { sku },
+            limit: 1
+        });
         if (isErr(result)) return result;
         const items = result.value.items;
         if (items.length === 0) return Ok(null);
@@ -50,20 +54,21 @@ export const createKVProductRepositoryAdapter = (kvPool) => {
     },
 
     search: async (tenantId, term) => {
-        const result = await baseRepo.list(tenantId, { limit: 100 });
+        // Use query engine with 'search' filter if implemented, or loop scan
+        // lib/trust supports 'search' filter via memory scanning
+        const result = await baseRepo.query(tenantId, {
+            filter: { search: term },
+            limit: 100,
+            searchFields: ['name', 'sku']
+        });
         if (isErr(result)) return result;
-
-        const termLower = term.toLowerCase();
-        const filtered = result.value.items.filter(p =>
-            (p.name && p.name.toLowerCase().includes(termLower)) ||
-            (p.sku && p.sku.toLowerCase().includes(termLower))
-        );
-
-        return Ok(productMapper.toDomainList(filtered));
+        return Ok(productMapper.toDomainList(result.value.items));
     },
 
     findByCategory: async (tenantId, categoryId) => {
-        const result = await baseRepo.queryByIndex(tenantId, 'category', categoryId);
+        const result = await baseRepo.query(tenantId, {
+            filter: { categoryId }
+        });
         if (isErr(result)) return result;
         return Ok(productMapper.toDomainList(result.value.items));
     },
@@ -74,13 +79,9 @@ export const createKVProductRepositoryAdapter = (kvPool) => {
         return Ok(productMapper.toDomainList(result.value));
     },
 
-    // Support query for advanced filtering (inventory uses it)
     query: async (tenantId, options) => {
-         // Map options.filter to KV query if possible, or filter in memory
-         const result = await baseRepo.list(tenantId, options);
+         const result = await baseRepo.query(tenantId, options);
          if (isErr(result)) return result;
-         // Basic implementation: return all (filtering happens in use case or memory if repo doesn't support complex query)
-         // Trust repo might support 'filter' in query?
          return Ok({ ...result.value, items: productMapper.toDomainList(result.value.items) });
     }
   };
