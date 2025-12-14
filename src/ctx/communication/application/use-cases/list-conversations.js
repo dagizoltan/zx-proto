@@ -5,7 +5,8 @@ export const createListConversations = ({ conversationRepository, identityAdapte
         const res = await conversationRepository.query(tenantId, options);
         if (isErr(res)) return { items: [] };
 
-        const items = res.value.items;
+        // Clone items to avoid "object is not extensible" error
+        const items = res.value.items.map(item => ({ ...item }));
 
         // Enrichment
         if (identityAdapter && items.length > 0) {

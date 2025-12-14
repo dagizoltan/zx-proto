@@ -5,11 +5,15 @@ export const createGetConversation = ({ conversationRepository, messageRepositor
         const res = await conversationRepository.findById(tenantId, id);
         if (isErr(res)) return null;
 
-        const conversation = res.value;
-        if (!conversation) return null;
+        const rawConversation = res.value;
+        if (!rawConversation) return null;
+
+        // Clone conversation to allow mutation
+        const conversation = { ...rawConversation };
 
         const msgsRes = await messageRepository.queryByIndex(tenantId, 'conversation', id, { limit: 100 });
-        const messages = isErr(msgsRes) ? [] : msgsRes.value.items;
+        // Clone messages as well
+        const messages = isErr(msgsRes) ? [] : msgsRes.value.items.map(m => ({ ...m }));
 
         // Enrichment
         if (identityAdapter && conversation.participantIds?.length > 0) {
