@@ -105,6 +105,37 @@ export const createContextRegistry = () => {
     isInitialized = true;
   };
 
+  // Validate context structure
+  const validateContext = (fullName, context) => {
+    if (!context || typeof context !== 'object') {
+        throw new Error(`Context ${fullName} must return an object`);
+    }
+
+    // Infrastructure Contexts: Relaxed Validation
+    if (fullName.startsWith('infra.')) {
+        return;
+    }
+
+    // Domain Contexts: Strict Validation
+    // 1. Check Name
+    const shortName = fullName.split('.').pop();
+    if (context.name && context.name !== shortName) {
+        console.warn(`⚠️  Context name mismatch: Registered as '${shortName}', instance has '${context.name}'`);
+    }
+
+    // 2. Check Standard Structure (must have at least one standard component)
+    const hasStructure =
+        (context.useCases && Object.keys(context.useCases).length > 0) ||
+        (context.services && Object.keys(context.services).length > 0) ||
+        (context.repositories && Object.keys(context.repositories).length > 0);
+
+    if (!hasStructure) {
+         // Some contexts like 'queries' might only have useCases, which is fine.
+         // But if it has NONE of these, it's suspicious for a Domain context.
+         console.warn(`⚠️  Context ${fullName} appears empty (no useCases, services, or repositories exposed).`);
+    }
+  };
+
   // Initialize a single context
   const initializeContext = async (fullName) => {
     if (has(fullName)) {
@@ -152,9 +183,7 @@ export const createContextRegistry = () => {
         });
 
         // Validate context
-        if (!contextInstance) {
-            throw new Error(`Factory for ${fullName} returned null or undefined`);
-        }
+        validateContext(fullName, contextInstance);
 
         set(fullName, contextInstance);
         initOrder.push(fullName);
