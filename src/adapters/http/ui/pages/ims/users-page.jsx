@@ -9,7 +9,7 @@ export const UsersPage = (props) => {
     <div>
       <div class="page-header">
         <h1>Users</h1>
-        <a href="/ims/users/new" class="btn btn-primary">New User</a>
+        <a href="/ims/access-control/users/new" class="btn btn-primary">New User</a>
       </div>
 
       <div class="card p-0">
@@ -39,7 +39,7 @@ export const UsersPage = (props) => {
                                 ) : <span class="text-muted">No roles</span>}
                             </td>
                             <td>
-                                <a href={`/ims/users/${user.id}`} class="btn btn-sm btn-secondary" style="margin-right: 0.25rem;">View</a>
+                                <a href={`/ims/access-control/users/${user.id}`} class="btn btn-sm btn-secondary" style="margin-right: 0.25rem;">View</a>
                                 <button
                                   class="btn btn-sm btn-secondary open-role-modal"
                                   data-user-id={user.id}

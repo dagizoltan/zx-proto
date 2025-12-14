@@ -8,14 +8,14 @@ export const CreateRolePage = ({ user }) => {
       </div>
 
       <div class="card">
-        <form method="POST" action="/ims/roles">
+        <form method="POST" action="/ims/access-control/roles">
             <div class="form-group mb-4">
                 <label>Role Name</label>
                 <input type="text" name="name" required placeholder="e.g. Warehouse Manager" />
             </div>
 
             <div class="flex justify-end gap-2">
-                <a href="/ims/roles" class="btn btn-secondary">Cancel</a>
+                <a href="/ims/access-control/roles" class="btn btn-secondary">Cancel</a>
                 <button type="submit" class="btn btn-primary">Create Role</button>
             </div>
         </form>
