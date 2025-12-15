@@ -25,3 +25,15 @@ export const toApiProduct = (product) => {
       total: result.total // if available
     };
   };
+
+  export const toApiCategory = (category) => {
+    return {
+      id: category.id,
+      name: category.name,
+      description: category.description,
+      parentId: category.parentId,
+      active: category.active,
+      createdAt: category.createdAt,
+      updatedAt: category.updatedAt
+    };
+  };
