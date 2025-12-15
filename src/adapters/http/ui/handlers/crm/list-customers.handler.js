@@ -22,7 +22,7 @@ export const listCustomersHandler = async (c) => {
         filter.search = q;
     }
 
-    const res = await ac.useCases.queryUsers.execute(tenantId, {
+    const res = await ac.useCases.listUsers.execute(tenantId, {
         limit: 50,
         cursor,
         filter,

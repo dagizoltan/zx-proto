@@ -21,7 +21,7 @@ export const createCreateWorkOrder = ({ woRepository, bomRepository }) => {
 
 export const createListWorkOrders = ({ woRepository }) => {
   const execute = async (tenantId, options) => {
-    return await woRepository.list(tenantId, options);
+    return await woRepository.query(tenantId, options);
   };
 
   return { execute };

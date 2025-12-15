@@ -10,7 +10,7 @@ export const listPurchaseOrdersHandler = async (c) => {
     const cursor = c.req.query('cursor');
     const q = c.req.query('q');
 
-    const res = await procurement.useCases.queryPurchaseOrders.execute(tenantId, {
+    const res = await procurement.useCases.listPurchaseOrders.execute(tenantId, {
         limit: 50,
         cursor,
         filter: { search: q },

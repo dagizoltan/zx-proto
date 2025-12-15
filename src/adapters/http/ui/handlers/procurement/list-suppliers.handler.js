@@ -10,7 +10,7 @@ export const listSuppliersHandler = async (c) => {
     const cursor = c.req.query('cursor');
     const q = c.req.query('q');
 
-    const res = await procurement.useCases.querySuppliers.execute(tenantId, {
+    const res = await procurement.useCases.listSuppliers.execute(tenantId, {
         limit: 50,
         cursor,
         filter: { search: q },
