@@ -10,10 +10,11 @@ export const listWorkOrdersHandler = async (c) => {
     const cursor = c.req.query('cursor');
     const q = c.req.query('q');
 
-    const res = await manufacturing.useCases.queryWorkOrders.execute(tenantId, {
+    const res = await manufacturing.useCases.listWorkOrders.execute(tenantId, {
         limit: 50,
         cursor,
-        search: q
+        filter: { search: q },
+        searchFields: ['code']
     });
 
     const { items: workOrders, nextCursor } = unwrap(res);

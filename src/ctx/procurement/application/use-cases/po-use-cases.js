@@ -21,7 +21,7 @@ export const createCreatePurchaseOrder = ({ poRepository }) => {
 
 export const createListPurchaseOrders = ({ poRepository }) => {
   const execute = async (tenantId, options) => {
-    const res = await poRepository.list(tenantId, options);
+    const res = await poRepository.query(tenantId, options);
     return res;
   };
 
