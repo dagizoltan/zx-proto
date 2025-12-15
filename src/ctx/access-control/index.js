@@ -9,17 +9,17 @@ import { createListRoles } from './application/use-cases/list-roles.js';
 import { createCreateRole } from './application/use-cases/create-role.js';
 import { createAssignRoleToUser } from './application/use-cases/assign-role.js';
 import { createFindUsersByRole } from './application/use-cases/find-users-by-role.js';
+import { createGetUser } from './application/use-cases/get-user.js';
+import { resolveDependencies } from '../../utils/registry/dependency-resolver.js';
+import { createContextBuilder } from '../../utils/registry/context-builder.js';
 
-/**
- * Access Control Context Factory
- *
- * @param {Object} deps - Explicit DI
- * @param {Object} deps.kvPool
- * @param {Object} deps.security
- * @param {Object} deps.eventBus
- * @param {Object} deps.obs
- */
-export const createAccessControlContext = async ({ kvPool, security, eventBus, obs }) => {
+export const createAccessControlContext = async (deps) => {
+  const { kvPool, security, eventBus, obs } = resolveDependencies(deps, {
+    kvPool: ['persistence.kvPool', 'kvPool'],
+    security: ['infra.security', 'security'],
+    eventBus: ['messaging.eventBus', 'eventBus'],
+    obs: ['infra.obs', 'obs']
+  });
 
   // Adapters (Infrastructure)
   const userRepository = createKVUserRepositoryAdapter(kvPool);
@@ -52,20 +52,20 @@ export const createAccessControlContext = async ({ kvPool, security, eventBus, o
   const createRole = createCreateRole({ roleRepository, obs, eventBus });
   const assignRole = createAssignRoleToUser({ userRepository, roleRepository, obs });
   const findUsersByRole = createFindUsersByRole({ userRepository });
+  const getUser = createGetUser({ userRepository });
 
-  return {
-    name: 'access-control',
+  // Alias for compatibility with orders context which expects getCustomer
+  const getCustomer = getUser;
 
-    repositories: {
+  return createContextBuilder('access-control')
+    .withRepositories({
       user: userRepository,
       role: roleRepository,
-    },
-
-    services: {
+    })
+    .withServices({
       auth: authService,
-    },
-
-    useCases: {
+    })
+    .withUseCases({
       loginUser,
       registerUser,
       checkPermission,
@@ -74,6 +74,19 @@ export const createAccessControlContext = async ({ kvPool, security, eventBus, o
       createRole,
       assignRole,
       findUsersByRole,
-    },
-  };
+      getUser,
+      getCustomer
+    })
+    .build();
+};
+
+export const AccessControlContext = {
+    name: 'access-control',
+    dependencies: [
+        'infra.persistence',
+        'infra.obs',
+        'infra.security',
+        'infra.messaging'
+    ],
+    factory: createAccessControlContext
 };

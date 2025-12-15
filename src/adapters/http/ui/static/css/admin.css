@@ -487,15 +487,14 @@ dialog::backdrop {
 
 /* Toast Notifications */
 #toast-container {
-  position: fixed;
-  top: var(--space-4);
-  right: var(--space-4);
-  z-index: 9999;
+  /* Positioned relatively inside sidebar footer now */
+  position: relative;
+  z-index: 99;
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
-  max-width: 350px;
   width: 100%;
+  margin-bottom: var(--space-4); /* Space between toasts and user info */
 }
 
 .toast {

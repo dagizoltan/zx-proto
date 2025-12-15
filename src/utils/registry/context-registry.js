@@ -10,18 +10,37 @@ export const createContextRegistry = () => {
   const initOrder = [];
   let isInitialized = false;
 
-  // Register infra component
-  const registerInfra = (name, factory, deps = []) => {
-    factories.set(`infra.${name}`, factory);
-    dependencies.set(`infra.${name}`, deps);
-    return registry;
+  // New Generic Register Method
+  const register = (contextDefinition) => {
+      const { name, factory, dependencies: deps = [] } = contextDefinition;
+
+      // Determine type based on name prefix or definition property
+      // Convention: 'infra.xxx' or 'xxx' (defaults to domain if not specified?)
+      // Current system distinguishes infra vs domain in structure object.
+
+      let type = 'domain';
+      let cleanName = name;
+
+      if (name.startsWith('infra.')) {
+          type = 'infra';
+          cleanName = name.replace('infra.', '');
+      }
+
+      const fullName = `${type}.${cleanName}`;
+
+      factories.set(fullName, factory);
+      dependencies.set(fullName, deps);
+
+      return registry;
   };
 
-  // Register domain context
+  // Legacy Support
+  const registerInfra = (name, factory, deps = []) => {
+    return register({ name: `infra.${name}`, factory, dependencies: deps });
+  };
+
   const registerDomain = (name, factory, deps = []) => {
-    factories.set(`domain.${name}`, factory);
-    dependencies.set(`domain.${name}`, deps);
-    return registry;
+    return register({ name, factory, dependencies: deps });
   };
 
   // Get from structure
@@ -33,7 +52,8 @@ export const createContextRegistry = () => {
       if (value && typeof value === 'object' && key in value) {
         value = value[key];
       } else {
-        throw new Error(`Context path not found: ${path}`);
+        // Return undefined instead of throwing to allow safer checks
+        return undefined;
       }
     }
 
@@ -42,12 +62,8 @@ export const createContextRegistry = () => {
 
   // Check if path exists
   const has = (path) => {
-    try {
-      get(path);
-      return true;
-    } catch {
-      return false;
-    }
+      const val = get(path);
+      return val !== undefined;
   };
 
   // Set value in structure
@@ -89,6 +105,37 @@ export const createContextRegistry = () => {
     isInitialized = true;
   };
 
+  // Validate context structure
+  const validateContext = (fullName, context) => {
+    if (!context || typeof context !== 'object') {
+        throw new Error(`Context ${fullName} must return an object`);
+    }
+
+    // Infrastructure Contexts: Relaxed Validation
+    if (fullName.startsWith('infra.')) {
+        return;
+    }
+
+    // Domain Contexts: Strict Validation
+    // 1. Check Name
+    const shortName = fullName.split('.').pop();
+    if (context.name && context.name !== shortName) {
+        console.warn(`⚠️  Context name mismatch: Registered as '${shortName}', instance has '${context.name}'`);
+    }
+
+    // 2. Check Standard Structure (must have at least one standard component)
+    const hasStructure =
+        (context.useCases && Object.keys(context.useCases).length > 0) ||
+        (context.services && Object.keys(context.services).length > 0) ||
+        (context.repositories && Object.keys(context.repositories).length > 0);
+
+    if (!hasStructure) {
+         // Some contexts like 'queries' might only have useCases, which is fine.
+         // But if it has NONE of these, it's suspicious for a Domain context.
+         console.warn(`⚠️  Context ${fullName} appears empty (no useCases, services, or repositories exposed).`);
+    }
+  };
+
   // Initialize a single context
   const initializeContext = async (fullName) => {
     if (has(fullName)) {
@@ -103,25 +150,51 @@ export const createContextRegistry = () => {
     const deps = dependencies.get(fullName) || [];
 
     // Resolve dependencies first
-    const resolvedDeps = {};
+    // We pass the ENTIRE registry structure to the factory via `deps` + `registry`
+    // But traditionally we resolved specific dependencies.
+    // The new factories expect `deps` to contain the resolved dependency objects.
+
+    // We will provide a flattened map of requested dependencies AND the whole structure for advanced usage
+    const resolvedDeps = {
+        // Provide direct access to the full structure for cross-context lookups (like autoGateway)
+        infra: structure.infra,
+        domain: structure.domain,
+        ...structure // Spread full structure (config, infra, domain)
+    };
+
+    // We also verify that declared dependencies are initialized
     for (const depName of deps) {
       if (!has(depName)) {
         await initializeContext(depName);
       }
-      resolvedDeps[depName.split('.').pop()] = get(depName);
+
+      // Map dependency to its short name (e.g., 'infra.persistence' -> 'persistence')
+      // This allows factories/resolver to use `deps.persistence`
+      const shortName = depName.split('.').pop();
+      resolvedDeps[shortName] = get(depName);
     }
 
-    // Create context instance with resolved dependencies and registry
-    const contextInstance = await factory({
-      ...resolvedDeps,
-      config: structure.config,
-      registry, // Pass registry for cross-context access
-    });
+    // Create context instance
+    try {
+        const contextInstance = await factory({
+            ...resolvedDeps,
+            config: structure.config,
+            registry,
+        });
 
-    set(fullName, contextInstance);
-    initOrder.push(fullName);
+        // Validate context
+        validateContext(fullName, contextInstance);
 
-    return contextInstance;
+        set(fullName, contextInstance);
+        initOrder.push(fullName);
+
+        return contextInstance;
+    } catch (error) {
+        console.error(`❌ Failed to initialize ${fullName}`);
+        console.error(`   Dependencies: ${deps.join(', ')}`);
+        console.error(`   Error: ${error.message}`);
+        throw error;
+    }
   };
 
   // Build dependency graph
@@ -194,6 +267,7 @@ export const createContextRegistry = () => {
   };
 
   const registry = {
+    register,
     registerInfra,
     registerDomain,
     get,

@@ -1,17 +1,18 @@
-
 import { createSchedulerService } from './domain/services/scheduler-service.js';
 import { createKVScheduledTaskRepository } from './infrastructure/adapters/kv-scheduled-task-repository.adapter.js';
 import { createKVTaskExecutionRepository } from './infrastructure/adapters/kv-task-execution-repository.adapter.js';
-import { schedulerTaskHandlers } from '../../adapters/scheduler/task-handlers.js';
+import { resolveDependencies } from '../../utils/registry/dependency-resolver.js';
+import { createContextBuilder } from '../../utils/registry/context-builder.js';
 
-/**
- * Scheduler Context Factory
- *
- * @param {Object} deps - Explicit DI
- * @param {Object} deps.kvPool
- * @param {Object} deps.eventBus
- */
-export const createSchedulerContext = async ({ kvPool, eventBus }) => {
+import { autoGateway } from '../../utils/registry/gateway-factory.js';
+
+export const createSchedulerContext = async (deps) => {
+  const { kvPool, eventBus } = resolveDependencies(deps, {
+    kvPool: ['persistence.kvPool', 'kvPool'],
+    eventBus: ['messaging.eventBus', 'eventBus']
+  });
+
+  const crmGateway = autoGateway(deps, 'communication');
 
   const taskRepo = createKVScheduledTaskRepository(kvPool);
   const executionRepo = createKVTaskExecutionRepository(kvPool);
@@ -19,32 +20,34 @@ export const createSchedulerContext = async ({ kvPool, eventBus }) => {
   const service = createSchedulerService({
       taskRepo,
       executionRepo,
-      eventBus
+      eventBus,
+      crm: crmGateway
   });
 
-  if (schedulerTaskHandlers) {
-      for (const [key, handler] of Object.entries(schedulerTaskHandlers)) {
-          service.registerHandler(key, handler);
-      }
-  }
+  // Note: Handlers and Definitions are now loaded in bootstrap phase to keep context pure
 
-  const definitions = Object.keys(schedulerTaskHandlers || {}).map(key => ({
-      handlerKey: key,
-      name: key.replace(/-/g, ' ').toUpperCase(),
-      description: 'System Task',
-      defaultSchedule: '0 0 * * *'
-  }));
-
-  await service.syncDefinitions('default', definitions);
-
-  return {
-    name: 'scheduler',
-    repositories: {
+  return createContextBuilder('scheduler')
+    .withRepositories({
         tasks: taskRepo,
         executions: executionRepo
-    },
-    services: {
+    })
+    .withServices({
         scheduler: service
-    }
-  };
+    })
+    // Expose service directly on context for backward compatibility/bootstrap access
+    .withProps({
+        scheduler: service
+    })
+    .build();
+};
+
+export const SchedulerContext = {
+    name: 'scheduler',
+    dependencies: [
+        'infra.persistence',
+        'infra.messaging',
+        'domain.system',
+        'domain.communication'
+    ],
+    factory: createSchedulerContext
 };
