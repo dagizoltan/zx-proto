@@ -113,7 +113,7 @@ export const CatalogContext = {
     name: 'catalog',
     dependencies: [
         'infra.persistence',
-        'observability',
+        'domain.observability',
         'infra.messaging'
     ],
     factory: createCatalogContext

@@ -84,7 +84,7 @@ export const AccessControlContext = {
     name: 'access-control',
     dependencies: [
         'infra.persistence',
-        'observability',
+        'domain.observability',
         'infra.security',
         'infra.messaging'
     ],

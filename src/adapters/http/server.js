@@ -22,7 +22,7 @@ export const createServer = (ctx) => {
 
     // Fix #10: Distributed Tracing propagation
     const traceId = c.req.header('x-trace-id') || crypto.randomUUID();
-    const obs = c.ctx.get('observability').obs;
+    const obs = c.ctx.get('domain.observability').obs;
 
     c.set('traceId', traceId);
     c.header('x-trace-id', traceId); // Echo back

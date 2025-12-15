@@ -62,7 +62,7 @@ export const createApp = async (options = {}) => {
   console.log('⚙️  Initializing contexts...');
   await registry.initialize(config);
 
-  const obs = registry.get('observability').obs;
+  const obs = registry.get('domain.observability').obs;
   await obs.success('All contexts initialized', {
     contexts: registry.list(),
     initOrder: registry.getInitOrder(),

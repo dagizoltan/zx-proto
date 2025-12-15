@@ -56,7 +56,7 @@ export const createQueriesContext = async (deps) => {
 export const QueriesContext = {
     name: 'queries',
     dependencies: [
-        'observability',
+        'domain.observability',
         'domain.access-control',
         'domain.orders',
         'domain.inventory',

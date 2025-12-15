@@ -5,7 +5,7 @@ export const loginHandler = async (c) => {
     const tenantId = c.get('tenantId');
 
     const accessControl = c.ctx.get('domain.access-control');
-    const obs = c.ctx.get('observability').obs;
+    const obs = c.ctx.get('domain.observability').obs;
 
     try {
       const result = unwrap(await accessControl.useCases.loginUser.execute(tenantId, email, password));

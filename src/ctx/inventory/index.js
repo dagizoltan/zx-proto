@@ -233,7 +233,7 @@ export const InventoryContext = {
     name: 'inventory',
     dependencies: [
         'infra.persistence',
-        'observability',
+        'domain.observability',
         'infra.messaging',
         'domain.access-control',
         'domain.catalog'

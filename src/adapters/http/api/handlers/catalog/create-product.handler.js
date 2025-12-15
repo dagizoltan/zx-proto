@@ -4,7 +4,7 @@ import { unwrap } from '../../../../../../lib/trust/index.js';
 export const createProductHandler = async (c) => {
     const tenantId = c.get('tenantId');
     const catalog = c.ctx.get('domain.catalog'); // Was inventory, now catalog is correct context for createProduct
-    const obs = c.ctx.get('observability').obs;
+    const obs = c.ctx.get('domain.observability').obs;
 
     // Validated data comes from middleware
     const data = c.get('validatedData');

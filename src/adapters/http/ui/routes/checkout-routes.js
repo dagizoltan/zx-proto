@@ -52,7 +52,7 @@ checkoutRoutes.post('/', async (c) => {
   const tenantId = c.get('tenantId');
   const orders = c.ctx.get('domain.orders');
   const cache = c.ctx.get('infra.persistence').cache;
-  const obs = c.ctx.get('observability').obs;
+  const obs = c.ctx.get('domain.observability').obs;
 
   const formData = await c.req.parseBody();
   const action = formData.action;

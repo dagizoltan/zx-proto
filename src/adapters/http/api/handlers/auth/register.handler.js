@@ -5,7 +5,7 @@ export const registerHandler = async (c) => {
     const tenantId = c.get('tenantId');
 
     const accessControl = c.ctx.get('domain.access-control');
-    const obs = c.ctx.get('observability').obs;
+    const obs = c.ctx.get('domain.observability').obs;
 
     try {
       const user = unwrap(await accessControl.useCases.registerUser.execute(tenantId, {
