@@ -4,7 +4,7 @@ export const createPasswordHasher = (config) => {
   const saltRounds = config.get('security.password.saltRounds') || 10;
 
   const hash = async (password) => {
-    return await bcrypt.hash(password);
+    return await bcrypt.hash(password, saltRounds);
   };
 
   const compare = async (password, hash) => {

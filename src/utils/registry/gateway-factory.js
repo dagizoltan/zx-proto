@@ -6,7 +6,8 @@
  *
  * @param {Object} deps - The dependencies object (flat or nested)
  * @param {String} contextName - The name of the context to proxy (e.g., 'catalog')
- * @returns {Proxy|null} A proxy object or null if context not found
+ * @returns {Proxy} A proxy object
+ * @throws {Error} If context not found
  */
 export const autoGateway = (deps, contextName) => {
   // Try to find the context in dependencies
@@ -15,8 +16,7 @@ export const autoGateway = (deps, contextName) => {
   const context = deps[contextName] || deps[`domain.${contextName}`];
 
   if (!context) {
-    console.warn(`[AutoGateway] Context '${contextName}' not found in dependencies.`);
-    return null;
+    throw new Error(`Required context '${contextName}' not found in dependencies`);
   }
 
   // Return a Proxy that delegates to the context
