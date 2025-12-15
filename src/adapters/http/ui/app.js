@@ -1,10 +1,6 @@
 import { Hono } from 'hono';
 import { serveStatic } from 'hono/middleware.ts';
-import { indexRoutes } from './routes/index-routes.js';
-import { productsRoutes } from './routes/products-routes.js';
-import { productDetailRoutes } from './routes/product-detail-routes.js';
 import { imsRoutes } from './routes/ims-routes.js';
-import { checkoutRoutes } from './routes/checkout-routes.js';
 import { authRoutes } from './routes/auth-routes.js';
 
 export const createUIApp = () => {
@@ -35,12 +31,8 @@ export const createUIApp = () => {
     await next();
   });
 
-  // Mount routes
-  ui.route('/', indexRoutes);
-  ui.route('/products', productsRoutes);
-  ui.route('/product', productDetailRoutes);
+
   ui.route('/ims', imsRoutes);
-  ui.route('/checkout', checkoutRoutes);
   ui.route('/', authRoutes);
 
   return ui;
