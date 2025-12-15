@@ -22,7 +22,7 @@ export const createServer = (ctx) => {
 
     // Fix #10: Distributed Tracing propagation
     const traceId = c.req.header('x-trace-id') || crypto.randomUUID();
-    const obs = c.ctx.get('infra.obs');
+    const obs = c.ctx.get('observability').obs;
 
     c.set('traceId', traceId);
     c.header('x-trace-id', traceId); // Echo back
@@ -30,6 +30,18 @@ export const createServer = (ctx) => {
     await next();
 
     const duration = performance.now() - start;
+
+    // Request/Response Metadata Logging
+    await obs.info('HTTP Request', {
+        type: 'http_request',
+        method: c.req.method,
+        path: c.req.path,
+        status: c.res.status,
+        duration,
+        traceId,
+        ip: c.req.header('x-forwarded-for') || c.req.header('host')
+    });
+
     await obs.metric('http.request.duration', duration, {
       method: c.req.method,
       path: c.req.path,

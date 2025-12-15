@@ -2,7 +2,6 @@ import { createContextRegistry } from '@src/utils/registry/context-registry.js';
 import { createConfigService } from '@src/utils/config/config-service.js';
 import { createPersistenceContext } from '@src/infra/persistence/index.js';
 import { createMessagingContext } from '@src/infra/messaging/index.js';
-import { createObsContext } from '@src/infra/obs/index.js';
 import { createSecurityContext } from '@src/infra/security/index.js';
 import { createAccessControlContext } from '@src/ctx/access-control/index.js';
 import { createInventoryContext } from '@src/ctx/inventory/index.js';
@@ -52,16 +51,15 @@ const run = async () => {
     ctx
         .registerInfra('persistence', createPersistenceContext, [])
         .registerInfra('messaging', createMessagingContext, ['infra.persistence'])
-        .registerInfra('obs', createObsContext, ['infra.persistence', 'infra.messaging'])
         .registerInfra('security', createSecurityContext, [])
-        .registerDomain('access-control', createAccessControlContext, ['infra.persistence', 'infra.obs', 'infra.security', 'infra.messaging'])
-        .registerDomain('inventory', createInventoryContext, ['infra.persistence', 'infra.obs', 'infra.messaging', 'domain.access-control'])
-        .registerDomain('orders', createOrdersContext, ['infra.persistence', 'infra.obs', 'infra.messaging', 'domain.inventory', 'domain.access-control'])
-        .registerDomain('catalog', createCatalogContext, ['infra.persistence', 'infra.obs', 'domain.inventory'])
+        .registerDomain('observability', createObservabilityContext, ['infra.persistence', 'infra.messaging'])
+        .registerDomain('access-control', createAccessControlContext, ['infra.persistence', 'observability', 'infra.security', 'infra.messaging'])
+        .registerDomain('inventory', createInventoryContext, ['infra.persistence', 'observability', 'infra.messaging', 'domain.access-control'])
+        .registerDomain('orders', createOrdersContext, ['infra.persistence', 'observability', 'infra.messaging', 'domain.inventory', 'domain.access-control'])
+        .registerDomain('catalog', createCatalogContext, ['infra.persistence', 'observability', 'domain.inventory'])
         .registerDomain('procurement', createProcurementContext, ['infra.persistence', 'domain.inventory'])
         .registerDomain('manufacturing', createManufacturingContext, ['infra.persistence', 'domain.inventory'])
         .registerDomain('system', createSystemContext, ['infra.persistence', 'infra.messaging'])
-        .registerDomain('observability', createObservabilityContext, ['infra.persistence'])
         .registerDomain('communication', createCommunicationContext, ['infra.persistence', 'infra.messaging'])
         .registerDomain('scheduler', createSchedulerContext, ['infra.persistence', 'infra.messaging', 'domain.system'])
         .registerDomain('queries', createQueriesContext, ['domain.access-control', 'domain.orders']);

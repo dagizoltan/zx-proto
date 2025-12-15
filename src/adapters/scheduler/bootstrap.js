@@ -4,7 +4,7 @@ import { createTaskHandlers } from '../../adapters/scheduler/task-handlers.js';
 export const bootstrapScheduler = async (ctx) => {
   const schedulerCtx = ctx.get('domain.scheduler');
   const scheduler = schedulerCtx?.services?.scheduler || schedulerCtx?.scheduler || schedulerCtx?.service;
-  const obs = ctx.get('infra.obs');
+  const obs = ctx.get('observability').obs;
 
   if (!scheduler) {
     if (obs) await obs.warn('⚠️ Scheduler service not available or invalid. Scheduled tasks disabled.');
@@ -21,7 +21,7 @@ export const bootstrapScheduler = async (ctx) => {
     manufacturing: ctx.get('domain.manufacturing'),
     procurement: ctx.get('domain.procurement'),
     crm: ctx.get('domain.communication'),
-    obs: ctx.get('infra.obs')
+    obs: ctx.get('observability').obs
   });
 
   if (typeof scheduler.registerHandler === 'function') {

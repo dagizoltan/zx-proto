@@ -8,24 +8,12 @@ const LOG_LEVELS = {
   AUDIT: 6,
 };
 
-export function createObs(configOrPool, minLevelArg = 'INFO', eventBusArg = null) {
-  // Support legacy signature (kvPool, minLevel, eventBus) for backward compatibility if any callers remain
-  let kvPool, minLevel, eventBus, repositories;
-
-  if (arguments.length > 1 || (configOrPool && configOrPool.withConnection)) {
-     // Legacy signature
-     kvPool = configOrPool;
-     minLevel = minLevelArg || 'INFO';
-     eventBus = eventBusArg || null;
-     console.warn('Using legacy createObs signature. Repositories will not be used.');
-  } else {
-     // New signature object
-     ({ kvPool, minLevel = 'INFO', eventBus, repositories } = configOrPool);
-  }
-
+export function createObsService({ repositories, minLevel = 'INFO', eventBus }) {
   const minLevelValue = LOG_LEVELS[minLevel] ?? LOG_LEVELS['INFO'];
 
   const log = async (level, message, metadata = {}) => {
+    // Basic level check for standard logs
+    // For AUDIT and ACTIVITY, they are high priority, but let's check anyway.
     if ((LOG_LEVELS[level] ?? -1) < minLevelValue) return;
 
     const logEntry = {
@@ -39,37 +27,71 @@ export function createObs(configOrPool, minLevelArg = 'INFO', eventBusArg = null
 
     console.log(`[${logEntry.level}] ${logEntry.message}`, metadata);
 
-    if (level === 'AUDIT' && eventBus) {
-        eventBus.publish('system.audit_log', {
-            message,
-            metadata,
-            timestamp: logEntry.timestamp
-        }).catch(e => console.error('Failed to publish audit event', e));
+    // Special Handling for Audit and Activity
+    if (level === 'AUDIT') {
+        if (eventBus) {
+            eventBus.publish('system.audit_log', {
+                message,
+                metadata,
+                timestamp: logEntry.timestamp
+            }).catch(e => console.error('Failed to publish audit event', e));
+        }
+        if (repositories?.audit) {
+            try {
+                // Map log entry to audit entry structure if different
+                // AuditSchema expects: userId, resource, action, details, tenantId
+                // We assume metadata contains these.
+                const auditEntry = {
+                    id: logEntry.id,
+                    tenantId: metadata.tenantId || 'default',
+                    userId: metadata.userId || 'system',
+                    resource: metadata.resource || 'system',
+                    action: metadata.action || 'log',
+                    details: { message, ...metadata },
+                    timestamp: logEntry.timestamp
+                };
+                await repositories.audit.save(auditEntry.tenantId, auditEntry);
+            } catch (e) {
+                console.error('Failed to save audit log', e);
+            }
+        }
     }
 
-    if (repositories?.log) {
+    if (level === 'ACTIVITY') {
+        if (repositories?.activity) {
+            try {
+                // ActivitySchema expects: userId, action, details, tenantId
+                const activityEntry = {
+                    id: logEntry.id,
+                    tenantId: metadata.tenantId || 'default',
+                    userId: metadata.userId || 'system',
+                    action: metadata.action || 'log',
+                    details: { message, ...metadata },
+                    timestamp: logEntry.timestamp
+                };
+                await repositories.activity.save(activityEntry.tenantId, activityEntry);
+            } catch (e) {
+                console.error('Failed to save activity log', e);
+            }
+        }
+    }
+
+    // Always save to main log repository as well?
+    // User asked for "proper request - responselog".
+    // Usually audit/activity are separate.
+    // I will save EVERYTHING to the main log repository (filtered by level) if it exists.
+    // EXCEPT maybe if I want to save space?
+    // But for debugging, having everything in one stream is nice.
+    // However, if I save AUDIT to audit repo AND log repo, I double storage.
+    // Let's assume generic log repo is for system logs (INFO, WARN, ERROR, TRACE).
+    // AUDIT and ACTIVITY go to their specialized repos.
+
+    if (level !== 'AUDIT' && level !== 'ACTIVITY' && repositories?.log) {
         try {
-            // Use tenantId from metadata, or 'default' if not present (Trust layer needs tenantId)
             const tenantId = metadata.tenantId || 'default';
             await repositories.log.save(tenantId, logEntry);
         } catch (e) {
             console.error('Failed to save log to Trust Repository', e);
-        }
-    } else if (kvPool) {
-        // Fallback to raw KV if no repo provided
-        try {
-          await kvPool.withConnection(async (kv) => {
-            let key;
-            const tenantId = metadata.tenantId;
-            if (tenantId) {
-                key = ['tenants', tenantId, 'logs', level.toLowerCase(), logEntry.timestamp, logEntry.trace_id];
-            } else {
-                key = ['logs', level.toLowerCase(), logEntry.timestamp, logEntry.trace_id];
-            }
-            await kv.set(key, logEntry, { expireIn: 30 * 24 * 60 * 60 * 1000 });
-          });
-        } catch (e) {
-          console.error('Failed to write log to KV', e);
         }
     }
   };
@@ -89,18 +111,6 @@ export function createObs(configOrPool, minLevelArg = 'INFO', eventBusArg = null
             await repositories.metric.save(tenantId, metricEntry);
         } catch (e) {
              console.error('Failed to save metric to Trust Repository', e);
-        }
-    } else if (kvPool) {
-        try {
-          await kvPool.withConnection(async (kv) => {
-            await kv.set(
-              ['metrics', name, metricEntry.timestamp],
-              metricEntry,
-              { expireIn: 7 * 24 * 60 * 60 * 1000 }
-            );
-          });
-        } catch (e) {
-          console.error('Failed to write metric to KV', e);
         }
     }
   };
@@ -130,10 +140,6 @@ export function createObs(configOrPool, minLevelArg = 'INFO', eventBusArg = null
           try {
                await repositories.trace.save('default', entry);
           } catch (e) { console.error('Failed to save trace', e); }
-      } else if (kvPool) {
-          await kvPool.withConnection(async (kv) => {
-            await kv.set(['traces', traceId], entry, { expireIn: 24 * 60 * 60 * 1000 });
-          });
       }
 
       return result;
@@ -153,10 +159,6 @@ export function createObs(configOrPool, minLevelArg = 'INFO', eventBusArg = null
            try {
                await repositories.trace.save('default', entry);
           } catch (e) { console.error('Failed to save trace', e); }
-      } else if (kvPool) {
-          await kvPool.withConnection(async (kv) => {
-            await kv.set(['traces', traceId], entry, { expireIn: 24 * 60 * 60 * 1000 });
-          });
       }
 
       throw error;

@@ -16,7 +16,7 @@ export const createOrdersContext = async (deps) => {
   const { kvPool, eventBus, obs } = resolveDependencies(deps, {
     kvPool: ['persistence.kvPool', 'kvPool'],
     eventBus: ['messaging.eventBus', 'eventBus'],
-    obs: ['infra.obs', 'obs']
+    obs: ['observability.obs']
   });
 
   const catalogGateway = autoGateway(deps, 'catalog');
@@ -99,7 +99,7 @@ export const OrdersContext = {
     name: 'orders',
     dependencies: [
         'infra.persistence',
-        'infra.obs',
+        'observability',
         'infra.messaging',
         'domain.inventory',
         'domain.access-control',

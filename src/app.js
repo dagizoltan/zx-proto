@@ -6,7 +6,6 @@ import { bootstrapScheduler } from './adapters/scheduler/bootstrap.js';
 // Infrastructure Contexts
 import { PersistenceContext } from './infra/persistence/index.js';
 import { MessagingContext } from './infra/messaging/index.js';
-import { ObsContext } from './infra/obs/index.js';
 import { SecurityContext } from './infra/security/index.js';
 import { RealtimeContext } from './infra/realtime/index.js';
 
@@ -40,7 +39,6 @@ export const createApp = async (options = {}) => {
       // Infrastructure
       PersistenceContext,
       MessagingContext,
-      ObsContext,
       SecurityContext,
       RealtimeContext,
 
@@ -64,7 +62,7 @@ export const createApp = async (options = {}) => {
   console.log('⚙️  Initializing contexts...');
   await registry.initialize(config);
 
-  const obs = registry.get('infra.obs');
+  const obs = registry.get('observability').obs;
   await obs.success('All contexts initialized', {
     contexts: registry.list(),
     initOrder: registry.getInitOrder(),

@@ -25,7 +25,7 @@ export const createQueriesContext = async (deps) => {
         stockRepository: ['inventory.repositories.stock', 'domain.inventory.repositories.stock'],
         productRepository: ['catalog.repositories.product', 'domain.catalog.repositories.product'],
         auditRepository: ['observability.repositories.audit', 'domain.observability.repositories.audit'],
-        obs: ['infra.obs', 'obs']
+        obs: ['observability.obs']
     });
 
     const getCustomerProfile = createGetCustomerProfile({
@@ -56,7 +56,7 @@ export const createQueriesContext = async (deps) => {
 export const QueriesContext = {
     name: 'queries',
     dependencies: [
-        'infra.obs',
+        'observability',
         'domain.access-control',
         'domain.orders',
         'domain.inventory',

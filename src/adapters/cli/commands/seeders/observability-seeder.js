@@ -4,7 +4,7 @@ import { faker } from './utils.js';
 export const seedObservability = async (ctx, tenantId) => {
     console.log('🌱 Seeding Observability Logs...');
 
-    const obs = ctx.get('infra.obs');
+    const obs = ctx.get('observability').obs;
 
     // Generate a burst of logs
     for(let i=0; i<20; i++) {

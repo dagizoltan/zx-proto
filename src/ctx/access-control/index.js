@@ -18,7 +18,7 @@ export const createAccessControlContext = async (deps) => {
     kvPool: ['persistence.kvPool', 'kvPool'],
     security: ['infra.security', 'security'],
     eventBus: ['messaging.eventBus', 'eventBus'],
-    obs: ['infra.obs', 'obs']
+    obs: ['observability.obs']
   });
 
   // Adapters (Infrastructure)
@@ -84,7 +84,7 @@ export const AccessControlContext = {
     name: 'access-control',
     dependencies: [
         'infra.persistence',
-        'infra.obs',
+        'observability',
         'infra.security',
         'infra.messaging'
     ],

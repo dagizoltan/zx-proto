@@ -7,7 +7,7 @@ export const authMiddleware = async (c, next) => {
 
   const token = authHeader.substring(7);
   const security = c.ctx.get('infra.security');
-  const obs = c.ctx.get('infra.obs');
+  const obs = c.ctx.get('observability').obs;
 
   try {
     const payload = await security.jwtProvider.verify(token);

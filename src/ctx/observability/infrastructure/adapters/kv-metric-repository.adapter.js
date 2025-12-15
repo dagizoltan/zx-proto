@@ -1,7 +1,7 @@
 import { createRepository } from '../../../../../lib/trust/repo.js';
 import { useSchema } from '../../../../../lib/trust/middleware/schema.js';
 import { useIndexing } from '../../../../../lib/trust/middleware/indexing.js';
-import { MetricSchema } from './schemas/obs.schemas.js';
+import { MetricSchema } from '../persistence/schemas/obs.schemas.js';
 
 export const createKVMetricRepository = (kv) => {
     return createRepository(

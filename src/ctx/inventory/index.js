@@ -33,7 +33,7 @@ export const createInventoryContext = async (deps) => {
         kvPool: ['persistence.kvPool', 'kvPool'],
         eventBus: ['messaging.eventBus', 'eventBus'],
         cache: ['persistence.cache', 'cache'],
-        obs: ['infra.obs', 'obs']
+        obs: ['observability.obs']
     });
 
     const catalogGateway = autoGateway(deps, 'catalog');
@@ -233,7 +233,7 @@ export const InventoryContext = {
     name: 'inventory',
     dependencies: [
         'infra.persistence',
-        'infra.obs',
+        'observability',
         'infra.messaging',
         'domain.access-control',
         'domain.catalog'

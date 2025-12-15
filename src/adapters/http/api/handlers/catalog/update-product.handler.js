@@ -5,7 +5,7 @@ export const updateProductHandler = async (c) => {
     const id = c.req.param('id');
     const tenantId = c.get('tenantId');
     const inventory = c.ctx.get('domain.inventory');
-    const obs = c.ctx.get('infra.obs');
+    const obs = c.ctx.get('observability').obs;
 
     // Validated data from middleware
     const data = c.get('validatedData');

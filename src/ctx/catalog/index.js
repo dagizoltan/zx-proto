@@ -20,7 +20,7 @@ export const createCatalogContext = async (deps) => {
     const { kvPool, eventBus, obs } = resolveDependencies(deps, {
         kvPool: ['persistence.kvPool', 'kvPool'],
         eventBus: ['messaging.eventBus', 'eventBus'],
-        obs: ['infra.obs', 'obs']
+        obs: ['observability.obs']
     });
 
     // Adapters (Catalog owns its data now)
@@ -113,7 +113,7 @@ export const CatalogContext = {
     name: 'catalog',
     dependencies: [
         'infra.persistence',
-        'infra.obs',
+        'observability',
         'infra.messaging'
     ],
     factory: createCatalogContext
