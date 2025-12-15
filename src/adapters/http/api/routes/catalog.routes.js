@@ -5,7 +5,8 @@ import { roleCheckMiddleware } from '../middleware/rbac-middleware.js';
 import {
   createProductSchema,
   updateProductSchema,
-  listProductsQuerySchema
+  listProductsQuerySchema,
+  createCategorySchema
 } from '../validators/catalog.validator.js';
 import {
   listProductsHandler,
@@ -14,6 +15,7 @@ import {
   updateProductHandler,
   deleteProductHandler,
   listCategoriesHandler,
+  createCategoryHandler,
   listPriceListsHandler
 } from '../handlers/catalog/index.js';
 
@@ -60,6 +62,14 @@ catalogRoutes.delete(
 
 // Categories
 catalogRoutes.get('/categories', listCategoriesHandler);
+
+catalogRoutes.post(
+  '/categories',
+  authMiddleware,
+  roleCheckMiddleware(['admin', 'manager']),
+  validateRequest(createCategorySchema),
+  createCategoryHandler
+);
 
 // Price Lists
 catalogRoutes.get('/price-lists', listPriceListsHandler);

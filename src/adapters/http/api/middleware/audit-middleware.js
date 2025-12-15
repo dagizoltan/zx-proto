@@ -8,10 +8,10 @@ export const auditMiddleware = async (c, next) => {
   try {
     const user = c.get('user');
     const tenantId = c.get('tenantId');
-    const system = c.ctx.get('domain.system');
+    const observability = c.ctx.get('domain.observability');
 
     // Only audit authenticated requests within a tenant context
-    if (!user || !tenantId || !system) return;
+    if (!user || !tenantId || !observability) return;
 
     const method = c.req.method;
     const path = c.req.path;
@@ -51,7 +51,7 @@ export const auditMiddleware = async (c, next) => {
     });
 
     // Save asynchronously
-    system.repositories.audit.save(tenantId, log).catch(err => {
+    observability.repositories.audit.save(tenantId, log).catch(err => {
       console.error('Failed to save audit log', err);
     });
 
