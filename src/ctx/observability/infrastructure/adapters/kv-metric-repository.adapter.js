@@ -9,15 +9,9 @@ export const createKVMetricRepository = (kv) => {
         'metrics',
         [
             useSchema(MetricSchema),
-            useIndexing((metric) => {
-                const indexes = [];
-                if (metric.timestamp) {
-                    indexes.push({ key: ['metrics_by_date', metric.timestamp], value: metric.id });
-                }
-                if (metric.name) {
-                    indexes.push({ key: ['metrics_by_name', metric.name], value: metric.id });
-                }
-                return indexes;
+            useIndexing({
+                'timestamp': (metric) => metric.timestamp,
+                'name': (metric) => metric.name
             })
         ]
     );

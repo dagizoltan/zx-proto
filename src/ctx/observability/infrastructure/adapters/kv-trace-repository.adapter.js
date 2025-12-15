@@ -9,15 +9,9 @@ export const createKVTraceRepository = (kv) => {
         'traces',
         [
             useSchema(TraceSchema),
-            useIndexing((trace) => {
-                const indexes = [];
-                if (trace.timestamp) {
-                    indexes.push({ key: ['traces_by_date', trace.timestamp], value: trace.id });
-                }
-                if (trace.traceId) {
-                    indexes.push({ key: ['traces_by_id', trace.traceId], value: trace.id });
-                }
-                return indexes;
+            useIndexing({
+                'timestamp': (trace) => trace.timestamp,
+                'traceId': (trace) => trace.traceId
             })
         ]
     );
