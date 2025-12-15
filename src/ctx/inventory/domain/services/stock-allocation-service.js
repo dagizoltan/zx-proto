@@ -1,17 +1,25 @@
 import { Ok, Err, isErr, runTransaction } from '../../../../../lib/trust/index.js';
 import { allocateStock, consumeStock, releaseStock } from '../entities/stock-entry.js';
+import { ErrorCodes } from '../../../../utils/error-codes.js';
 
 export const createStockAllocationService = (stockRepository, stockMovementRepository, batchRepository, productRepository, kvPool) => {
 
   const fetchStockEntries = async (tenantId, productIds) => {
     const stockMap = new Map();
     for (const pid of productIds) {
-        const res = await stockRepository.query(tenantId, {
-            filter: { productId: pid },
-            limit: 10000
-        });
-        if (isErr(res)) return res;
-        stockMap.set(pid, res.value.items);
+        let allItems = [];
+        let cursor = null;
+        do {
+             const res = await stockRepository.query(tenantId, {
+                filter: { productId: pid },
+                limit: 100,
+                cursor
+            });
+            if (isErr(res)) return res;
+            allItems = allItems.concat(res.value.items);
+            cursor = res.value.nextCursor;
+        } while (cursor);
+        stockMap.set(pid, allItems);
     }
     return Ok(stockMap);
   };
@@ -38,11 +46,18 @@ export const createStockAllocationService = (stockRepository, stockMovementRepos
             let availableTotal = entries.reduce((sum, e) => sum + (e.quantity - e.reservedQuantity), 0);
 
             if (availableTotal < remaining) {
-                return Err({ code: 'INSUFFICIENT_STOCK', message: `Insufficient stock for ${req.productId}` });
+                return Err({ code: ErrorCodes.INSUFFICIENT_STOCK, message: `Insufficient stock for ${req.productId}` });
             }
 
             for (const entry of entries) {
                 if (remaining <= 0) break;
+
+                // Optimistic Locking Check: Ensure version matches
+                // Note: The repository `save` method will also check `_versionstamp` or `version`.
+                // Here we rely on the Entity to increment the version, and we pass the original version to `save` logic if needed.
+                // However, `save` checks `entry._versionstamp` (or `entry.version` if we modified `repo.js`, but we haven't).
+                // The `repo.js` uses `data._versionstamp` as the expected version.
+                // So if we pass `newEntry` which has `_versionstamp` copied from `entry`, it works.
 
                 // DOMAIN REFACTOR: Delegate logic to Entity
                 const result = allocateStock(entry, remaining);
@@ -51,6 +66,13 @@ export const createStockAllocationService = (stockRepository, stockMovementRepos
                 const { entry: newEntry, taken } = result.value;
 
                 if (taken > 0) {
+                     // Check version explicitly if required by business logic,
+                     // though `repo.save` handles it via `_versionstamp`.
+                     // If we want to enforce application level versioning:
+                     if (entry.version !== undefined && newEntry.version !== entry.version + 1) {
+                         return Err({ code: ErrorCodes.CONFLICT, message: 'Stock version mismatch' });
+                     }
+
                      const saveRes = await stockRepository.save(tenantId, newEntry, { atomic });
                      if (isErr(saveRes)) return saveRes;
 
@@ -81,13 +103,21 @@ export const createStockAllocationService = (stockRepository, stockMovementRepos
   };
 
   const commit = async (tenantId, referenceId, itemsToShip = null) => {
-      const movesRes = await stockMovementRepository.query(tenantId, {
-          filter: { referenceId: referenceId },
-          limit: 10000
-      });
-      if (isErr(movesRes)) return movesRes;
+      // Pagination for stock movements
+      let movements = [];
+      let cursor = null;
+      do {
+          const movesRes = await stockMovementRepository.query(tenantId, {
+              filter: { referenceId: referenceId },
+              limit: 100,
+              cursor
+          });
+          if (isErr(movesRes)) return movesRes;
+          const items = movesRes.value.items.filter(m => m.type === 'ALLOCATION');
+          movements = movements.concat(items);
+          cursor = movesRes.value.nextCursor;
+      } while (cursor);
 
-      const movements = movesRes.value.items.filter(m => m.type === 'ALLOCATION');
       if (movements.length === 0) return Ok(true);
 
       return runTransaction(kvPool, async (atomic) => {
@@ -136,12 +166,19 @@ export const createStockAllocationService = (stockRepository, stockMovementRepos
   };
 
   const release = async (tenantId, referenceId) => {
-      const movesRes = await stockMovementRepository.query(tenantId, {
-          filter: { referenceId: referenceId },
-          limit: 10000
-      });
-      if (isErr(movesRes)) return movesRes;
-      const movements = movesRes.value.items.filter(m => m.type === 'ALLOCATION');
+      let movements = [];
+      let cursor = null;
+      do {
+          const movesRes = await stockMovementRepository.query(tenantId, {
+              filter: { referenceId: referenceId },
+              limit: 100,
+              cursor
+          });
+          if (isErr(movesRes)) return movesRes;
+          const items = movesRes.value.items.filter(m => m.type === 'ALLOCATION');
+          movements = movements.concat(items);
+          cursor = movesRes.value.nextCursor;
+      } while (cursor);
 
       return runTransaction(kvPool, async (atomic) => {
           const productIds = [...new Set(movements.map(m => m.productId))];
@@ -191,13 +228,27 @@ export const createStockAllocationService = (stockRepository, stockMovementRepos
       const finalBatchId = batchId || 'default';
       return runTransaction(kvPool, async (atomic) => {
          // Re-fetch existing entries
-         const res = await stockRepository.query(tenantId, { filter: { productId }, limit: 1000 });
-         if (isErr(res)) return res;
-
-         const existing = res.value.items.find(e => e.locationId === locationId && e.batchId === finalBatchId);
+         // Pagination for robustness
+         let existing = null;
+         let cursor = null;
+         do {
+             const res = await stockRepository.query(tenantId, { filter: { productId }, limit: 100, cursor });
+             if (isErr(res)) return res;
+             const found = res.value.items.find(e => e.locationId === locationId && e.batchId === finalBatchId);
+             if (found) {
+                 existing = found;
+                 break;
+             }
+             cursor = res.value.nextCursor;
+         } while (cursor);
 
          if (existing) {
-             const newValue = { ...existing, quantity: existing.quantity + quantity, updatedAt: new Date().toISOString() };
+             const newValue = {
+                 ...existing,
+                 quantity: existing.quantity + quantity,
+                 version: (existing.version || 0) + 1,
+                 updatedAt: new Date().toISOString()
+             };
              await stockRepository.save(tenantId, newValue, { atomic });
          } else {
              const newEntry = {
@@ -208,6 +259,7 @@ export const createStockAllocationService = (stockRepository, stockMovementRepos
                   batchId: finalBatchId,
                   quantity: quantity,
                   reservedQuantity: 0,
+                  version: 1,
                   updatedAt: new Date().toISOString()
              };
              await stockRepository.save(tenantId, newEntry, { atomic });
@@ -246,14 +298,13 @@ export const createStockAllocationService = (stockRepository, stockMovementRepos
                   if (remaining <= 0) break;
                   if (e.quantity <= 0) continue;
 
-                  // Production consumption is akin to allocation+commit instantly, or just reducing quantity.
-                  // Since we are consuming raw materials, we reduce Quantity.
-                  // We can use consumeStock (even though it reduces reserved too).
-                  // But here we are consuming Available stock directly without reservation step.
-                  // Let's keep manual logic for this specific "Production" use case OR add a specific entity method `consumeAvailable`.
-
                   const take = Math.min(e.quantity, remaining);
-                  const newValue = { ...e, quantity: e.quantity - take, updatedAt: new Date().toISOString() };
+                  const newValue = {
+                      ...e,
+                      quantity: e.quantity - take,
+                      version: (e.version || 0) + 1,
+                      updatedAt: new Date().toISOString()
+                  };
 
                   await stockRepository.save(tenantId, newValue, { atomic });
 
@@ -271,7 +322,7 @@ export const createStockAllocationService = (stockRepository, stockMovementRepos
                   await stockMovementRepository.save(tenantId, m, { atomic });
                   remaining -= take;
               }
-              if (remaining > 0) return Err({ code: 'INSUFFICIENT_STOCK', message: `Not enough ${item.productId}` });
+              if (remaining > 0) return Err({ code: ErrorCodes.INSUFFICIENT_STOCK, message: `Not enough ${item.productId}` });
           }
 
           const pEntries = stockMap.get(produce.productId) || [];
@@ -279,7 +330,12 @@ export const createStockAllocationService = (stockRepository, stockMovementRepos
           const existing = pEntries.find(e => e.locationId === produce.locationId && e.batchId === batchId);
 
           if (existing) {
-               const newValue = { ...existing, quantity: existing.quantity + produce.quantity, updatedAt: new Date().toISOString() };
+               const newValue = {
+                   ...existing,
+                   quantity: existing.quantity + produce.quantity,
+                   version: (existing.version || 0) + 1,
+                   updatedAt: new Date().toISOString()
+               };
                await stockRepository.save(tenantId, newValue, { atomic });
           } else {
                const newEntry = {
@@ -290,6 +346,7 @@ export const createStockAllocationService = (stockRepository, stockMovementRepos
                   batchId,
                   quantity: produce.quantity,
                   reservedQuantity: 0,
+                  version: 1,
                   updatedAt: new Date().toISOString()
                };
                await stockRepository.save(tenantId, newEntry, { atomic });
@@ -326,7 +383,12 @@ export const createStockAllocationService = (stockRepository, stockMovementRepos
               const existing = entries.find(e => e.locationId === locationId && e.batchId === finalBatchId);
 
               if (existing) {
-                  const newValue = { ...existing, quantity: existing.quantity + quantity, updatedAt: new Date().toISOString() };
+                  const newValue = {
+                      ...existing,
+                      quantity: existing.quantity + quantity,
+                      version: (existing.version || 0) + 1,
+                      updatedAt: new Date().toISOString()
+                  };
                   await stockRepository.save(tenantId, newValue, { atomic });
               } else {
                   const newEntry = {
@@ -337,6 +399,7 @@ export const createStockAllocationService = (stockRepository, stockMovementRepos
                       batchId: finalBatchId,
                       quantity,
                       reservedQuantity: 0,
+                      version: 1,
                       updatedAt: new Date().toISOString()
                   };
                   await stockRepository.save(tenantId, newEntry, { atomic });

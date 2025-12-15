@@ -1,3 +1,6 @@
+import { isErr } from '../../../../lib/trust/index.js';
+import { ErrorCodes } from '../../../utils/error-codes.js';
+
 export const tenantMiddleware = async (c, next) => {
   const host = c.req.header('host') || '';
   let tenantId = 'default';
@@ -38,11 +41,27 @@ export const tenantMiddleware = async (c, next) => {
       // We need access to the user repository
       const accessControl = c.ctx.get('domain.access-control');
       if (accessControl && accessControl.repositories && accessControl.repositories.user) {
-         const user = await accessControl.repositories.user.findById(tenantId, payload.id);
+         // The user ID in the token must exist in the context of the requested tenantId.
+         // If a user belongs to Tenant A, but tries to access Tenant B with that token,
+         // findById(Tenant B, UserId) will fail (return NOT_FOUND or null).
+         const userRes = await accessControl.repositories.user.findById(tenantId, payload.id);
+
+         // Handle Result type properly
+         if (isErr(userRes)) {
+            // Propagate unexpected errors? Or just treat as not found?
+             // If NOT_FOUND, it means user doesn't exist in tenant.
+             if (userRes.error.code === ErrorCodes.NOT_FOUND) {
+                 return c.json({ error: 'Unauthorized: User does not belong to this tenant' }, 403);
+             }
+             // For other errors (DB down), we might want to fail safe or log.
+             // Let's return 403 to be safe.
+             return c.json({ error: 'Unauthorized: Unable to verify tenant access' }, 403);
+         }
+
+         const user = userRes.value;
 
          if (!user) {
-             // User has a valid token but does not exist in this tenant.
-             // This indicates a cross-tenant access attempt (Spoofing).
+             // Should be covered by isErr check if repo returns Result, but just in case.
              return c.json({ error: 'Unauthorized: User does not belong to this tenant' }, 403);
          }
       }

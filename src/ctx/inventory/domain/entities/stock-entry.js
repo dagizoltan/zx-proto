@@ -1,4 +1,5 @@
 import { Ok, Err } from '../../../../../lib/trust/index.js';
+import { ErrorCodes } from '../../../../utils/error-codes.js';
 
 export const createStockEntry = ({
   id,
@@ -7,7 +8,8 @@ export const createStockEntry = ({
   locationId,
   quantity,
   reservedQuantity = 0,
-  batchId
+  batchId,
+  version = 0
 }) => ({
   id,
   tenantId,
@@ -16,6 +18,7 @@ export const createStockEntry = ({
   quantity,
   reservedQuantity,
   batchId,
+  version,
   updatedAt: new Date().toISOString(),
 });
 
@@ -41,6 +44,7 @@ export const allocateStock = (entry, amount) => {
     const newEntry = {
         ...entry,
         reservedQuantity: entry.reservedQuantity + take,
+        version: (entry.version || 0) + 1,
         updatedAt: new Date().toISOString()
     };
 
@@ -60,6 +64,7 @@ export const releaseStock = (entry, amount) => {
     const newEntry = {
         ...entry,
         reservedQuantity: entry.reservedQuantity - safeRelease,
+        version: (entry.version || 0) + 1,
         updatedAt: new Date().toISOString()
     };
 
@@ -79,11 +84,12 @@ export const consumeStock = (entry, amount) => {
         ...entry,
         quantity: entry.quantity - amount,
         reservedQuantity: entry.reservedQuantity - amount,
+        version: (entry.version || 0) + 1,
         updatedAt: new Date().toISOString()
     };
 
     if (newEntry.quantity < 0 || newEntry.reservedQuantity < 0) {
-        return Err({ code: 'INVARIANT_VIOLATION', message: 'Stock cannot be negative' });
+        return Err({ code: ErrorCodes.INVARIANT_VIOLATION, message: 'Stock cannot be negative' });
     }
 
     return Ok(newEntry);

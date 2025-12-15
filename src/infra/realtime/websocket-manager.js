@@ -1,6 +1,16 @@
 export const createWebSocketManager = (eventBus) => {
   const clients = new Map();
   const subscriptions = new Map();
+  let unsubscribeAll;
+
+  const initialize = () => {
+    unsubscribeAll = eventBus.subscribe('*', (event) => {
+      broadcast(event.type, event);
+    });
+  };
+
+  // Initialize immediately
+  initialize();
 
   const handleConnection = (ws, userId) => {
     const id = userId || `anon-${crypto.randomUUID()}`;
@@ -66,9 +76,11 @@ export const createWebSocketManager = (eventBus) => {
     }
   };
 
-  eventBus.subscribe('*', (event) => {
-    broadcast(event.type, event);
-  });
+  const shutdown = () => {
+    if (unsubscribeAll) unsubscribeAll();
+    clients.clear();
+    subscriptions.clear();
+  };
 
-  return { handleConnection, broadcast, sendToUser };
+  return { handleConnection, broadcast, sendToUser, shutdown };
 };
