@@ -11,8 +11,7 @@ import {
   listUsersHandler,
   assignRolesHandler,
   listRolesHandler,
-  createRoleHandler,
-  listAuditLogsHandler
+  createRoleHandler
 } from '../handlers/system/index.js';
 
 export const systemRoutes = new Hono();
@@ -47,5 +46,3 @@ systemRoutes.post(
   createRoleHandler
 );
 
-// Audit Logs
-systemRoutes.get('/audit-logs', listAuditLogsHandler);

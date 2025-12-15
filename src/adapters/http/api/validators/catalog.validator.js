@@ -23,3 +23,10 @@ export const listProductsQuerySchema = z.object({
   minPrice: z.string().regex(/^\d+(\.\d{1,2})?$/).transform(Number).optional(),
   maxPrice: z.string().regex(/^\d+(\.\d{1,2})?$/).transform(Number).optional()
 });
+
+export const createCategorySchema = z.object({
+  name: z.string().min(1, "Name is required"),
+  parentId: z.string().optional(),
+  description: z.string().optional(),
+  active: z.boolean().default(true)
+});

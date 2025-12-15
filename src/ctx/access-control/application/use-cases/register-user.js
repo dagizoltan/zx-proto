@@ -5,9 +5,15 @@ import { Ok, Err, isErr } from '../../../../../lib/trust/index.js';
 export const createRegisterUser = ({ userRepository, authService, obs, eventBus }) => {
   const execute = async (tenantId, { email, password, name }) => {
     try {
-        // 1. Domain Validation & Entity Creation
-        // Note: Password hashing is infrastructure, but required for entity creation.
-        // We do it before entity creation to ensure we have a valid hash.
+        // 1. Check uniqueness (I/O) first to avoid expensive hashing if not needed
+        const existingRes = await userRepository.findByEmail(tenantId, email);
+        if (isErr(existingRes)) return existingRes;
+
+        if (existingRes.value) {
+            return Err({ code: 'CONFLICT', message: 'User already exists' });
+        }
+
+        // 2. Domain Validation & Entity Creation
         const passwordHash = await authService.hashPassword(password);
 
         const user = createUser({
@@ -17,15 +23,6 @@ export const createRegisterUser = ({ userRepository, authService, obs, eventBus 
             name,
             roleIds: [],
         });
-
-        // 2. Check uniqueness (I/O)
-        // Using the new findByEmail method from the port
-        const existingRes = await userRepository.findByEmail(tenantId, user.email);
-        if (isErr(existingRes)) return existingRes;
-
-        if (existingRes.value) {
-            return Err({ code: 'CONFLICT', message: 'User already exists' });
-        }
 
         // 3. Save
         const saveRes = await userRepository.save(tenantId, user);
