@@ -33,24 +33,6 @@ Deno.test("Catalog - Catalog Use Cases", async (t) => {
           return Promise.resolve(Ok(mockProducts));
       }
     };
-    // Reusing mocks logic from ListProducts as SearchProducts wraps it
-    // But `createSearchProducts` does NOT accept categoryRepository to pass to ListProducts,
-    // so `createListProducts` inside `createSearchProducts` will be created with ONLY `productRepository`.
-    // The internal `createListProducts` call: `createListProducts({ productRepository })`.
-    // So `categoryRepository` will be undefined inside `createListProducts` closure.
-    // BUT `createListProducts` uses `categoryRepository` in `resolvers`.
-    // `const resolvers = { category: (ids) => categoryRepository.findByIds(tenantId, ids), };`
-    // If `categoryRepository` is missing, this arrow function will throw when called.
-    // However, `productRepository.query` only calls resolvers if it needs to populate.
-    // If we don't ask to populate, it might be fine.
-
-    // Let's verify if `createSearchProducts` handles this dependency injection correctly.
-    // In `catalog-use-cases.js`:
-    // `export const createSearchProducts = ({ productRepository }) => { return { execute: async ... { const uc = createListProducts({ productRepository }); ... } } }`
-    // It creates `ListProducts` with ONLY `productRepository`.
-    // Then `ListProducts` defines resolvers using `categoryRepository`.
-    // If `categoryRepository` is undefined, accessing it inside resolver function is fine until called.
-    // So as long as we don't trigger that resolver, it's fine.
 
     const useCase = createSearchProducts({ productRepository });
     const result = await useCase.execute(tenantId, "widget");

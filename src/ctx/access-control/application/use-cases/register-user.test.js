@@ -86,7 +86,5 @@ Deno.test("Access Control - Register User", async (t) => {
     const result = await useCase.execute(tenantId, input);
 
     assert(!result.ok);
-    // The exact error code depends on domain entity validation, but we assume it fails
-    // Checking if it's a domain error or generic
   });
 });
