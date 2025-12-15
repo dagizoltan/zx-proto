@@ -8,8 +8,10 @@ import { createKVPriceListRepositoryAdapter } from './infrastructure/adapters/kv
 import { createKVProductRepositoryAdapter } from './infrastructure/adapters/kv-product-repository.adapter.js';
 
 import { createCreateCategory } from './application/use-cases/create-category.js';
+import { createGetCategory } from './application/use-cases/get-category.js';
 import { createListCategories } from './application/use-cases/list-categories.js';
 import { createCreatePriceList } from './application/use-cases/create-price-list.js';
+import { createGetPriceList } from './application/use-cases/get-price-list.js';
 import { createListPriceLists } from './application/use-cases/list-price-lists.js';
 
 import { resolveDependencies } from '../../utils/registry/dependency-resolver.js';
@@ -76,8 +78,10 @@ export const createCatalogContext = async (deps) => {
     };
 
     const createCategory = createCreateCategory({ categoryRepository });
+    const getCategory = createGetCategory({ categoryRepository });
     const listCategories = createListCategories({ categoryRepository });
     const createPriceList = createCreatePriceList({ priceListRepository });
+    const getPriceList = createGetPriceList({ priceListRepository });
     const listPriceLists = createListPriceLists({ priceListRepository });
 
     const getFeaturedProducts = {
@@ -102,8 +106,10 @@ export const createCatalogContext = async (deps) => {
             getProduct,
             getProducts, // Added for batch support
             createCategory,
+            getCategory,
             listCategories,
             createPriceList,
+            getPriceList,
             listPriceLists
         })
         .build();

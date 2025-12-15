@@ -10,6 +10,8 @@ import { createCreateRole } from './application/use-cases/create-role.js';
 import { createAssignRoleToUser } from './application/use-cases/assign-role.js';
 import { createFindUsersByRole } from './application/use-cases/find-users-by-role.js';
 import { createGetUser } from './application/use-cases/get-user.js';
+import { createGetUsersBatch } from './application/use-cases/get-users-batch.js';
+import { createGetRole } from './application/use-cases/get-role.js';
 import { resolveDependencies } from '../../utils/registry/dependency-resolver.js';
 import { createContextBuilder } from '../../utils/registry/context-builder.js';
 
@@ -50,9 +52,11 @@ export const createAccessControlContext = async (deps) => {
   const listUsers = createListUsers({ userRepository });
   const listRoles = createListRoles({ roleRepository });
   const createRole = createCreateRole({ roleRepository, obs, eventBus });
+  const getRole = createGetRole({ roleRepository });
   const assignRole = createAssignRoleToUser({ userRepository, roleRepository, obs });
   const findUsersByRole = createFindUsersByRole({ userRepository });
   const getUser = createGetUser({ userRepository });
+  const getUsersBatch = createGetUsersBatch({ userRepository });
 
   // Alias for compatibility with orders context which expects getCustomer
   const getCustomer = getUser;
@@ -72,9 +76,11 @@ export const createAccessControlContext = async (deps) => {
       listUsers,
       listRoles,
       createRole,
+      getRole,
       assignRole,
       findUsersByRole,
       getUser,
+      getUsersBatch,
       getCustomer
     })
     .build();

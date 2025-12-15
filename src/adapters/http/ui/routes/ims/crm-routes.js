@@ -1,10 +1,13 @@
 import { Hono } from 'hono';
-import * as handlers from '../../handlers/crm.handlers.js';
+import { listCustomersHandler } from '../../handlers/crm/list-customers.handler.js';
+import { createCustomerPageHandler } from '../../handlers/crm/create-customer-page.handler.js';
+import { createCustomerHandler } from '../../handlers/crm/create-customer.handler.js';
+import { customerDetailHandler } from '../../handlers/crm/customer-detail.handler.js';
 
 export const crmRoutes = new Hono();
 
 // Customers
-crmRoutes.get('/customers', handlers.listCustomersHandler);
-crmRoutes.get('/customers/new', handlers.createCustomerPageHandler);
-crmRoutes.post('/customers', handlers.createCustomerHandler);
-crmRoutes.get('/customers/:id', handlers.customerDetailHandler);
+crmRoutes.get('/customers', listCustomersHandler);
+crmRoutes.get('/customers/new', createCustomerPageHandler);
+crmRoutes.post('/customers', createCustomerHandler);
+crmRoutes.get('/customers/:id', customerDetailHandler);

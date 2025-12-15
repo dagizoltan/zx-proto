@@ -1,17 +1,13 @@
-import { renderPage } from '../renderer.js';
-import { AdminLayout } from '../layouts/admin-layout.jsx';
-import { SettingsPage } from '../pages/ims/settings-page.jsx';
+import { renderPage } from '../../renderer.js';
+import { AdminLayout } from '../../layouts/admin-layout.jsx';
+import { SettingsPage } from '../../pages/ims/settings-page.jsx';
 
-// Settings
 export const settingsHandler = async (c) => {
   const user = c.get('user');
   const configService = c.ctx.get('config');
-  // configService might be undefined if not injected or 'config' key is wrong.
-  // Assuming 'config' is available in context.
 
   const config = configService ? configService.getAll() : {};
 
-  // Filter sensitive config
   const safeConfig = {};
   const sensitiveKeys = ['secret', 'key', 'password', 'token', 'credential'];
 

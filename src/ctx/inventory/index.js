@@ -10,6 +10,7 @@ import { createInventoryAdjustmentService } from './domain/services/inventory-ad
 import { createUpdateStock } from './application/use-cases/update-stock.js';
 import { createCheckAvailability } from './application/use-cases/check-availability.js';
 import { createGetProduct } from './application/use-cases/get-product.js';
+import { createGetStockByProduct } from './application/use-cases/get-stock-by-product.js';
 import { createReserveStock } from './application/use-cases/reserve-stock.js';
 import { createListAllProducts } from './application/use-cases/list-all-products.js';
 import { createReceiveStock } from './application/use-cases/receive-stock.js';
@@ -17,8 +18,14 @@ import { createMoveStock } from './application/use-cases/move-stock.js';
 import { createConfirmStockShipment } from './application/use-cases/confirm-stock-shipment.js';
 import { createCancelStockReservation } from './application/use-cases/cancel-stock-reservation.js';
 import { createListStockMovements } from './application/use-cases/list-stock-movements.js';
+import { createQueryStockMovements } from './application/use-cases/query-stock-movements.js';
 import { createCreateWarehouse } from './application/use-cases/create-warehouse.js';
+import { createListWarehouses } from './application/use-cases/list-warehouses.js';
+import { createGetWarehouse } from './application/use-cases/get-warehouse.js';
 import { createCreateLocation } from './application/use-cases/create-location.js';
+import { createListLocations } from './application/use-cases/list-locations.js';
+import { createListLocationsByWarehouse } from './application/use-cases/list-locations-by-warehouse.js';
+import { createGetLocation } from './application/use-cases/get-location.js';
 import { createConsumeStock } from './application/use-cases/consume-stock.js';
 import { createGetProductsBatch } from './application/use-cases/get-products-batch.js';
 import { createGetPickingList } from './application/use-cases/get-picking-list.js';
@@ -75,6 +82,10 @@ export const createInventoryContext = async (deps) => {
         productRepository: productRepositoryCompatibility,
     });
 
+    const getStockByProduct = createGetStockByProduct({
+        stockRepository
+    });
+
     const getProductsBatch = createGetProductsBatch({
         productRepository: productRepositoryCompatibility
     });
@@ -113,16 +124,30 @@ export const createInventoryContext = async (deps) => {
         stockMovementRepository
     });
 
+    const queryStockMovements = createQueryStockMovements({
+        stockMovementRepository,
+        catalogGateway,
+        locationRepository,
+        batchRepository
+    });
+
     const createWarehouse = createCreateWarehouse({
         warehouseRepository,
         eventBus
     });
+
+    const listWarehouses = createListWarehouses({ warehouseRepository });
+    const getWarehouse = createGetWarehouse({ warehouseRepository });
 
     const createLocation = createCreateLocation({
         locationRepository,
         warehouseRepository,
         eventBus
     });
+
+    const listLocations = createListLocations({ locationRepository, warehouseRepository });
+    const listLocationsByWarehouse = createListLocationsByWarehouse({ locationRepository });
+    const getLocation = createGetLocation({ locationRepository });
 
     const getPickingList = createGetPickingList({
         stockMovementRepository,
@@ -204,6 +229,7 @@ export const createInventoryContext = async (deps) => {
             updateStock,
             checkAvailability,
             getProduct,
+            getStockByProduct,
             getProductsBatch,
             // Use compatibility wrappers for auto-gateway consumers
             reserveStock: reserveStockCompat,
@@ -216,8 +242,14 @@ export const createInventoryContext = async (deps) => {
             cancelStockReservation, // kept for internal/explicit usage
             releaseStock: releaseStockCompat, // alias for Orders
             listStockMovements,
+            queryStockMovements,
             createWarehouse,
+            listWarehouses,
+            getWarehouse,
             createLocation,
+            listLocations,
+            listLocationsByWarehouse,
+            getLocation,
             getPickingList,
             executeProduction: executeProductionCompat,
             receiveStockRobust,
