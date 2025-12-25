@@ -1,4 +1,5 @@
 import { createEventBus } from './kv-queue/kv-event-bus.js';
+import { createOutboxWorker } from './worker/outbox-worker.js';
 import { resolveDependencies } from '../../utils/registry/dependency-resolver.js';
 
 export const createMessagingContext = async (deps) => {
@@ -7,10 +8,17 @@ export const createMessagingContext = async (deps) => {
   });
 
   const eventBus = createEventBus(kvPool);
+
+  // Start the Legacy Listener (for non-domain events if any)
   await eventBus.startListening();
 
+  // Start the Domain Event Outbox Worker (Centralized)
+  const outboxWorker = createOutboxWorker(kvPool, eventBus);
+  await outboxWorker.start();
+
   return {
-    eventBus
+    eventBus,
+    outboxWorker
   };
 };
 

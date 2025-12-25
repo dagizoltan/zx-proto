@@ -7,7 +7,6 @@ import { createOrderProcessManager } from './process-manager.js';
 
 import { createCreateShipment } from './application/use-cases/create-shipment.js';
 import { createListShipments } from './application/use-cases/list-shipments.js';
-import { createOutboxWorker } from '../../infra/messaging/worker/outbox-worker.js'; // Import Worker
 
 import { resolveDependencies } from '../../utils/registry/dependency-resolver.js';
 import { createContextBuilder } from '../../utils/registry/context-builder.js';
@@ -22,60 +21,26 @@ export const createOrdersContext = async (deps) => {
   });
 
   const catalogGateway = autoGateway(deps, 'catalog');
-  // Use `autoGateway` for inventory, but we might need the command bus if it's external?
-  // In the pure system, ProcessManager talks to Inventory Command Bus.
-  // Ideally, Inventory Command Bus is exposed via the Inventory Context or a Gateway.
-  // For now, we assume `inventoryGateway` is a legacy interface, BUT `OrderProcessManager` was refactored
-  // to take `inventoryCommandBus`.
-  // Wait, `OrderProcessManager` signature is `(commandBus, inventoryCommandBus)`.
-  // I need to get `inventoryCommandBus` from deps or construct it?
-  // `inventoryCommandBus` relies on `kvPool` and `eventStore` which are shared.
-  // So I can reconstruct it here easily.
 
   const inventoryCommandBus = createCommandBus(kvPool, eventStore);
-  // I need to register inventory handlers to it?
-  // Handlers are in `inventory` domain.
-  // Ideally, `InventoryContext` exposes its CommandBus.
-  // Since `InventoryContext` factory *returns* `commandBus` (I added this in previous step plan? No, `createCounterContext` returned it. `InventoryContext` didn't return it explicitly in `createInventoryContext`).
-  // Let's check `src/ctx/inventory/index.js`.
-
-  const catalogContext = deps.get('domain.catalog'); // Access other context?
-  // `resolveDependencies` gives services.
-
-  // Start the Outbox Worker to ensure events flow
-  const worker = createOutboxWorker(kvPool, eventBus);
-  worker.start();
-
-  // --- 1. Event Sourcing Setup ---
-  const commandBus = createCommandBus(kvPool, eventStore); // FIXED: Removed eventBus arg
-  const orderHandlers = createOrderHandlers();
-
-  // Register Handlers
-  Object.keys(orderHandlers).forEach(type => {
-      commandBus.registerHandler(type, orderHandlers[type]);
-  });
-
-  // RE-REGISTER INVENTORY HANDLERS LOCALLY FOR THE PROCESS MANAGER?
-  // Or assume the process manager dispatches to a bus that *has* them.
-  // If `inventoryCommandBus` is empty, it throws "Unknown command".
-  // I need to import `createInventoryHandlers` and register them here,
-  // OR get the actual Inventory Command Bus.
-  // Given the monolithic app structure, I can just register them again on a new bus instance sharing the same DB.
-  // This is "Context Mapping" via Shared Kernel (the infra).
-
-  // Dynamic import to avoid circular dependency if possible, but static is fine here.
   const { createInventoryHandlers } = await import('../inventory/domain/index.js');
   const inventoryHandlers = createInventoryHandlers();
   Object.keys(inventoryHandlers).forEach(type => {
       inventoryCommandBus.registerHandler(type, inventoryHandlers[type]);
   });
 
+  // REMOVED OutboxWorker instantiation (It is now in MessagingContext)
 
-  // Projector (Updates Read Model)
+  // --- 1. Event Sourcing Setup ---
+  const commandBus = createCommandBus(kvPool, eventStore);
+  const orderHandlers = createOrderHandlers();
+
+  Object.keys(orderHandlers).forEach(type => {
+      commandBus.registerHandler(type, orderHandlers[type]);
+  });
+
   const orderProjector = createOrderProjector(kvPool);
-
-  // Process Manager (Orchestrates Workflows)
-  const orderProcessManager = createOrderProcessManager(commandBus, inventoryCommandBus);
+  const orderProcessManager = createOrderProcessManager(commandBus, inventoryCommandBus); // Needs kvPool for idempotency
 
   // Wire up Subscriptions
   eventBus.subscribe('OrderInitialized', async (data) => {
@@ -94,7 +59,6 @@ export const createOrdersContext = async (deps) => {
   // --- 2. Adapters (Secondary Ports) ---
   const shipmentRepository = createKVShipmentRepositoryAdapter(kvPool);
 
-  // The "OrderRepository" is now just a Read DAO for the View
   const orderReadRepository = {
       findById: async (tenantId, id) => {
           const key = ['view', 'orders', tenantId, id];
@@ -145,10 +109,6 @@ export const createOrdersContext = async (deps) => {
       execute: async () => { throw new Error("Direct status update not supported. Use Events."); }
   };
 
-  // Legacy InventoryGateway for Shipment?
-  // createShipment uses inventoryGateway to check stock?
-  // Likely `createShipment` needs refactoring too, but out of scope for "Fix CommandBus".
-  // We keep the `autoGateway` for legacy support in Shipment.
   const inventoryGateway = autoGateway(deps, 'inventory');
 
   const createShipment = createCreateShipment({

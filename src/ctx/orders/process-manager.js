@@ -1,19 +1,37 @@
 
 import { OrderInitialized, ConfirmOrder, RejectOrder } from './domain.js';
 
-// Constants for Inventory Commands/Events (Ideally imported from shared lib or Inventory module)
+// Constants for Inventory Commands/Events
 const ReserveStock = 'ReserveStock';
 const StockReserved = 'StockReserved';
 const StockAllocationFailed = 'StockAllocationFailed';
 
-export const createOrderProcessManager = (commandBus, inventoryCommandBus) => {
+export const createOrderProcessManager = (commandBus, inventoryCommandBus, kvPool) => {
 
-    // State tracking?
-    // In a stateless function handler, we can't easily track saga state across events without a store.
-    // However, the events themselves carry the correlation ID (orderId).
+    // Idempotency: Check if we already processed this event for this saga step.
+    const isProcessed = async (eventId, step) => {
+        if (!kvPool) return false; // MVP fallback if no pool provided
+        const key = ['saga', 'order', eventId, step];
+        const res = await kvPool.withConnection(kv => kv.get(key));
+        return !!res.value;
+    };
+
+    const markProcessed = async (eventId, step) => {
+        if (!kvPool) return;
+        const key = ['saga', 'order', eventId, step];
+        await kvPool.withConnection(kv => kv.set(key, true, { expireIn: 1000 * 60 * 60 * 24 }));
+    };
 
     const handle = async (event) => {
-        const { type } = event;
+        const { type, id: eventId } = event;
+
+        // Step check depends on type
+        const step = type;
+
+        if (await isProcessed(eventId, step)) {
+            console.log(`[ProcessManager] Skipping duplicate event ${eventId} (${type})`);
+            return;
+        }
 
         if (type === OrderInitialized) {
             await handleOrderInitialized(event);
@@ -22,6 +40,8 @@ export const createOrderProcessManager = (commandBus, inventoryCommandBus) => {
         } else if (type === StockAllocationFailed) {
             await handleStockAllocationFailed(event);
         }
+
+        await markProcessed(eventId, step);
     };
 
     // 1. Order Started -> Command Inventory
@@ -31,32 +51,12 @@ export const createOrderProcessManager = (commandBus, inventoryCommandBus) => {
 
         console.log(`[ProcessManager] OrderInitialized ${orderId}. Requesting Stock.`);
 
-        // We need to issue a ReserveStock command for each item OR a batch.
-        // Our Inventory Domain currently supports `ReserveStock` per Product (Aggregate = ProductId).
-        // This implies we need a Saga that manages multiple products?
-        // OR we enhance Inventory to handle Batch Reservations?
-        // Given complexity, let's assume 1 Item for MVP, or we iterate.
-        // If we have multiple items, we'd need a multi-step saga or an "InventoryReservation" aggregate.
-
-        // Simplication for MVP: Iterate and fire commands.
-        // BUT, how do we know when ALL are reserved?
-        // We'd need to store "PendingReservations" state.
-
-        // For this Proof of Concept, let's assume single-item orders OR that we just fire one command per item
-        // and if ANY fail, we reject the order (Distributed Transaction problem).
-
-        // Better Approach for PoC: `InventoryContext` handles a list of items in a Batch Command?
-        // But our Aggregate is `ProductStock`.
-        // Let's stick to 1 item for simplicity of the PoC validation, or
-        // implement a "Reservation" aggregate in Inventory that coordinates product locks.
-
-        // Let's assume the Order only has 1 type of item for now to prove the flow.
         const item = items[0];
         if (!item) return;
 
         await inventoryCommandBus.execute({
             type: ReserveStock,
-            aggregateId: item.id || item.productId, // ProductID is the aggregate
+            aggregateId: item.id || item.productId,
             tenantId,
             payload: {
                 orderId,
