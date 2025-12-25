@@ -14,6 +14,7 @@ import { AccessControlContext } from './ctx/access-control/index.js';
 import { CatalogContext } from './ctx/catalog/index.js';
 import { InventoryContext } from './ctx/inventory/index.js';
 import { OrdersContext } from './ctx/orders/index.js';
+import { ShipmentsContext } from './ctx/shipments/index.js'; // NEW
 import { ProcurementContext } from './ctx/procurement/index.js';
 import { ManufacturingContext } from './ctx/manufacturing/index.js';
 import { SystemContext } from './ctx/system/index.js';
@@ -47,6 +48,7 @@ export const createApp = async (options = {}) => {
       CatalogContext,
       InventoryContext,
       OrdersContext,
+      ShipmentsContext, // Registered
       ProcurementContext,
       ManufacturingContext,
       SystemContext,
