@@ -1,5 +1,5 @@
 
-export const createEventStore = (kvPool) => {
+export const createEventStore = (kvPool, eventBus = null) => {
 
   // Helper to construct the stream key
   const getStreamKey = (tenantId, streamId) => ['events', tenantId, streamId];
@@ -49,6 +49,30 @@ export const createEventStore = (kvPool) => {
 
       if (!result.ok) {
         throw new Error('ConcurrencyError: Commit failed due to race condition');
+      }
+
+      // 5. Publish to EventBus (Side Effects)
+      // We do this AFTER a successful commit.
+      // Note: In a distributed system, this 'dual write' (DB + Bus) can be risky if the process crashes in between.
+      // Deno KV Queues allow atomic enqueueing WITH the write, but our eventBus abstraction might wrap that.
+      // If eventBus.publish uses `kv.enqueue` inside `kv.atomic()`, we should pass the atomicOp to it.
+      // But our current EventBus implementation takes `kvPool` and does its own tx.
+      // For this MVP, we will await the publish. If it fails, the event is saved but not published.
+      // A robust system (ADR-006/007) would use a "Transaction Outbox" or tail the log.
+      // Since we want "High Performance" and "Decoupling", firing to the bus is crucial.
+
+      if (eventBus) {
+        try {
+            // Fire and forget? Or await?
+            // Awaiting ensures we know it reached the bus, but adds latency.
+            // Fire and forget risks silent failure.
+            // We'll await to ensure the "Process Manager" will definitely get it.
+            await Promise.all(committedEvents.map(evt => eventBus.publish(evt.type, evt)));
+        } catch (e) {
+            console.error('Failed to publish events to bus after commit:', e);
+            // We do NOT revert the commit, as the source of truth (EventStore) is updated.
+            // This is a known "at least once" vs "at most once" trade-off area.
+        }
       }
 
       return committedEvents;
