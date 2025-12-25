@@ -1,5 +1,6 @@
 import { createKVPool } from './kv/kv-connection-pool.js';
 import { createCache } from './kv/kv-cache-adapter.js';
+import { createEventStore } from '../event-store/index.js';
 import { resolveDependencies } from '../../utils/registry/dependency-resolver.js';
 
 export const createPersistenceContext = async (deps) => {
@@ -11,9 +12,13 @@ export const createPersistenceContext = async (deps) => {
 
   const cache = createCache(kvPool);
 
+  // Initialize Event Store with the pool
+  const eventStore = createEventStore(kvPool);
+
   return {
     kvPool,
     cache,
+    eventStore,
     shutdown: async () => {
       await kvPool.close();
     }
