@@ -1,66 +1,99 @@
 
 import { OrderInitialized, ConfirmOrder, RejectOrder } from './domain.js';
 
-export const createOrderProcessManager = (commandBus, inventoryGateway) => {
+// Constants for Inventory Commands/Events (Ideally imported from shared lib or Inventory module)
+const ReserveStock = 'ReserveStock';
+const StockReserved = 'StockReserved';
+const StockAllocationFailed = 'StockAllocationFailed';
 
-    // The Process Manager (Saga) listens to events and dispatches commands.
+export const createOrderProcessManager = (commandBus, inventoryCommandBus) => {
+
+    // State tracking?
+    // In a stateless function handler, we can't easily track saga state across events without a store.
+    // However, the events themselves carry the correlation ID (orderId).
+
     const handle = async (event) => {
-        if (event.type === OrderInitialized) {
+        const { type } = event;
+
+        if (type === OrderInitialized) {
             await handleOrderInitialized(event);
+        } else if (type === StockReserved) {
+            await handleStockReserved(event);
+        } else if (type === StockAllocationFailed) {
+            await handleStockAllocationFailed(event);
         }
     };
 
+    // 1. Order Started -> Command Inventory
     const handleOrderInitialized = async (event) => {
         const { tenantId, data } = event;
         const { orderId, items } = data;
 
-        console.log(`[ProcessManager] Processing OrderInitialized: ${orderId}`);
+        console.log(`[ProcessManager] OrderInitialized ${orderId}. Requesting Stock.`);
 
-        try {
-            // 1. Call Inventory (Async Check)
-            // Note: In a pure event system, we would issue a `ReserveStock` command and wait for `StockReserved` event.
-            // For this hybrid step (Phase 2), we call the Gateway, which might be sync or async HTTP.
-            // But we treat the RESULT here as the trigger for the next command.
+        // We need to issue a ReserveStock command for each item OR a batch.
+        // Our Inventory Domain currently supports `ReserveStock` per Product (Aggregate = ProductId).
+        // This implies we need a Saga that manages multiple products?
+        // OR we enhance Inventory to handle Batch Reservations?
+        // Given complexity, let's assume 1 Item for MVP, or we iterate.
+        // If we have multiple items, we'd need a multi-step saga or an "InventoryReservation" aggregate.
 
-            // We use the compatibility layer or direct gateway.
-            // Assumption: `inventoryGateway.reserveStock` returns true/false or throws.
-            // Based on `src/ctx/inventory/index.js`, `reserveStock` exists.
+        // Simplication for MVP: Iterate and fire commands.
+        // BUT, how do we know when ALL are reserved?
+        // We'd need to store "PendingReservations" state.
 
-            // The signature in `reserveStock` use case is `execute(tenantId, items, orderId)`.
-            // We need to match that.
+        // For this Proof of Concept, let's assume single-item orders OR that we just fire one command per item
+        // and if ANY fail, we reject the order (Distributed Transaction problem).
 
-            const result = await inventoryGateway.reserveStock.execute(tenantId, items, orderId);
+        // Better Approach for PoC: `InventoryContext` handles a list of items in a Batch Command?
+        // But our Aggregate is `ProductStock`.
+        // Let's stick to 1 item for simplicity of the PoC validation, or
+        // implement a "Reservation" aggregate in Inventory that coordinates product locks.
 
-            if (result && result.success !== false) {
-                 // 2. Success -> Confirm Order
-                 console.log(`[ProcessManager] Stock confirmed for ${orderId}. Dispatching ConfirmOrder.`);
-                 await commandBus.execute({
-                     type: ConfirmOrder,
-                     aggregateId: orderId,
-                     tenantId,
-                     payload: {}
-                 });
-            } else {
-                 // Failure (Soft)
-                 console.log(`[ProcessManager] Stock failed for ${orderId}. Dispatching RejectOrder.`);
-                 await commandBus.execute({
-                     type: RejectOrder,
-                     aggregateId: orderId,
-                     tenantId,
-                     payload: { reason: 'Out of Stock' }
-                 });
+        // Let's assume the Order only has 1 type of item for now to prove the flow.
+        const item = items[0];
+        if (!item) return;
+
+        await inventoryCommandBus.execute({
+            type: ReserveStock,
+            aggregateId: item.id || item.productId, // ProductID is the aggregate
+            tenantId,
+            payload: {
+                orderId,
+                quantity: item.qty || item.quantity,
+                allowPartial: false
             }
+        });
+    };
 
-        } catch (error) {
-            console.error(`[ProcessManager] Error processing order ${orderId}:`, error);
-            // 3. Failure (Hard) -> Reject Order
-            await commandBus.execute({
-                type: RejectOrder,
-                aggregateId: orderId,
-                tenantId,
-                payload: { reason: error.message || 'Inventory Error' }
-            });
-        }
+    // 2. Stock Reserved -> Confirm Order
+    const handleStockReserved = async (event) => {
+        const { tenantId, data } = event;
+        const { orderId } = data;
+
+        console.log(`[ProcessManager] StockReserved for ${orderId}. Confirming Order.`);
+
+        await commandBus.execute({
+            type: ConfirmOrder,
+            aggregateId: orderId,
+            tenantId,
+            payload: {}
+        });
+    };
+
+    // 3. Stock Failed -> Reject Order
+    const handleStockAllocationFailed = async (event) => {
+        const { tenantId, data } = event;
+        const { orderId, reason } = data;
+
+        console.log(`[ProcessManager] StockAllocationFailed for ${orderId}. Rejecting Order.`);
+
+        await commandBus.execute({
+            type: RejectOrder,
+            aggregateId: orderId,
+            tenantId,
+            payload: { reason }
+        });
     };
 
     return {
