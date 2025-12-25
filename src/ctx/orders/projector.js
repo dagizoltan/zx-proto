@@ -6,8 +6,11 @@ export const createOrderProjector = (kvPool) => {
     // Key Scheme: ['view', 'orders', tenantId, orderId]
     const getViewKey = (tenantId, orderId) => ['view', 'orders', tenantId, orderId];
 
+    // Idempotency Key: ['processed', eventId]
+    const getProcessedKey = (eventId) => ['processed', eventId];
+
     const handle = async (event) => {
-        const { tenantId, data, type } = event;
+        const { tenantId, data, type, id: eventId } = event;
         // The event payload has orderId.
         const orderId = data.orderId;
 
@@ -17,6 +20,15 @@ export const createOrderProjector = (kvPool) => {
         }
 
         await kvPool.withConnection(async (kv) => {
+            const processedKey = getProcessedKey(eventId);
+            const processedRes = await kv.get(processedKey);
+
+            // ADR-007: Idempotency Check
+            if (processedRes.value) {
+                // Already processed
+                return;
+            }
+
             const key = getViewKey(tenantId, orderId);
             const currentRes = await kv.get(key);
             const currentDoc = currentRes.value || {};
@@ -54,7 +66,21 @@ export const createOrderProjector = (kvPool) => {
                     return; // Ignore unknown events
             }
 
-            await kv.set(key, update);
+            // Atomic Commit: Update View AND Mark Event as Processed
+            const atomic = kv.atomic();
+            atomic.check(currentRes);
+            atomic.set(key, update);
+            atomic.set(processedKey, true, { expireIn: 1000 * 60 * 60 * 24 * 7 }); // Expire after 7 days? Or keep forever?
+            // ADR-004 says Disposable Read Models.
+            // If we rebuild, we clear 'view' and 'processed'.
+
+            const res = await atomic.commit();
+            if (!res.ok) {
+                // Race condition on view update? Retry?
+                // For simplicity in MVP, we log.
+                // In production, we should throw to let Queue retry.
+                throw new Error("Failed to update view (concurrency)");
+            }
         });
     };
 

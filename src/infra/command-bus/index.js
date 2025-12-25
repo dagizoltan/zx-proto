@@ -1,5 +1,5 @@
 
-export const createCommandBus = (kvPool, eventStore, eventBus = null, handlers = {}) => {
+export const createCommandBus = (kvPool, eventStore, handlers = {}) => {
 
   const registerHandler = (commandType, handler) => {
     handlers[commandType] = handler;
@@ -17,12 +17,7 @@ export const createCommandBus = (kvPool, eventStore, eventBus = null, handlers =
       throw new Error(`Command ${type} missing aggregateId`);
     }
 
-    // Execution Context Wrapper
     const streamId = aggregateId;
-
-    // We execute the handler.
-    // The handler calls `commitEvents`.
-    // We want `commitEvents` to also publish to `eventBus`.
 
     return handler(
       // loadStream context
@@ -32,23 +27,14 @@ export const createCommandBus = (kvPool, eventStore, eventBus = null, handlers =
       },
       // commitEvents context
       async (eventsToCommit, expectedVersion) => {
-         // 1. Persist
+         // 1. Persist (and Enqueue via Outbox in EventStore)
          const committed = await eventStore.append(command.tenantId, streamId, eventsToCommit, expectedVersion);
 
-         // 2. Publish (Side Effect)
-         if (eventBus && committed.length > 0) {
-             // We fire and forget here to keep command latency low,
-             // OR we await to ensure at least the bus accepted it.
-             // Given "High Performance" requirement, let's await with a timeout or just await.
-             // `eventBus.publish` in `kv-queue` is fast (just a KV write).
-             try {
-                await Promise.all(committed.map(evt => eventBus.publish(evt.type, evt)));
-             } catch (err) {
-                console.error("Failed to publish events to bus", err);
-                // System design decision: Do we fail the command?
-                // No, persistence succeeded. We rely on a background sweeper/outbox in a full system.
-             }
-         }
+         // 2. No Manual Publish
+         // The EventStore.append now handles the Outbox enqueue.
+         // The Outbox Worker handles the dispatch to EventBus.
+         // This decouples Command Processing from Event Handling completely.
+
          return committed;
       },
       command

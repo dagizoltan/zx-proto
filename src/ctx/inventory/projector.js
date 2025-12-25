@@ -7,12 +7,16 @@ export const createInventoryProjector = (kvPool) => {
     // Value: { totalQuantity: number, reservedQuantity: number, availableQuantity: number, locations: { ... } }
 
     const handle = async (event) => {
-        const { tenantId, data, type } = event;
+        const { tenantId, data, type, id: eventId } = event;
         const productId = data.productId;
 
         if (!productId) return;
 
         await kvPool.withConnection(async (kv) => {
+            const processedKey = ['processed', eventId];
+            const processedRes = await kv.get(processedKey);
+            if (processedRes.value) return; // Idempotent check
+
             const key = ['view', 'inventory', tenantId, productId];
             const currentRes = await kv.get(key);
             const currentDoc = currentRes.value || {
@@ -73,7 +77,13 @@ export const createInventoryProjector = (kvPool) => {
             currentDoc.availableQuantity = currentDoc.totalQuantity - currentDoc.reservedQuantity;
             currentDoc.updatedAt = Date.now();
 
-            await kv.set(key, currentDoc);
+            const atomic = kv.atomic();
+            atomic.check(currentRes);
+            atomic.set(key, currentDoc);
+            atomic.set(processedKey, true, { expireIn: 1000 * 60 * 60 * 24 * 7 });
+
+            const res = await atomic.commit();
+            if (!res.ok) throw new Error("Failed to update inventory view (concurrency)");
         });
     };
 

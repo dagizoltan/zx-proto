@@ -6,6 +6,7 @@ import { createOrderHandlers, InitializeOrder } from "./domain.js";
 import { createOrderProjector } from "./projector.js";
 import { createOrderProcessManager } from "./process-manager.js";
 import { createInventoryHandlers, ReceiveStock, ReserveStock, StockReceived, StockReserved, StockAllocationFailed } from "../inventory/domain/index.js";
+import { createOutboxWorker } from "../../infra/messaging/worker/outbox-worker.js";
 
 // Mock Event Bus that routes to multiple subscribers
 const createEventBus = () => {
@@ -25,25 +26,29 @@ const createEventBus = () => {
     };
 };
 
+// Wait helper
+const wait = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
 Deno.test("Full System - Order -> Inventory -> Order", async () => {
     const kv = await Deno.openKv(":memory:");
     const pool = { withConnection: async (cb) => cb(kv) };
     const eventBus = createEventBus();
     const eventStore = createEventStore(pool);
+    const worker = createOutboxWorker(pool, eventBus);
+    await worker.start();
 
     // 1. Setup Order Context
-    const orderCommandBus = createCommandBus(pool, eventStore, eventBus);
+    const orderCommandBus = createCommandBus(pool, eventStore);
     const orderHandlers = createOrderHandlers();
     Object.keys(orderHandlers).forEach(k => orderCommandBus.registerHandler(k, orderHandlers[k]));
     const orderProjector = createOrderProjector(pool);
 
     // 2. Setup Inventory Context
-    const inventoryCommandBus = createCommandBus(pool, eventStore, eventBus); // Same store/bus for simplicity
+    const inventoryCommandBus = createCommandBus(pool, eventStore);
     const inventoryHandlers = createInventoryHandlers();
     Object.keys(inventoryHandlers).forEach(k => inventoryCommandBus.registerHandler(k, inventoryHandlers[k]));
 
     // 3. Setup Process Manager
-    // Passes both command buses so it can direct traffic
     const processManager = createOrderProcessManager(orderCommandBus, inventoryCommandBus);
 
     // 4. Wiring
@@ -53,7 +58,6 @@ Deno.test("Full System - Order -> Inventory -> Order", async () => {
             await processManager.handle(data);
         });
     }
-    // Listen to all relevant events
     ['OrderInitialized', 'StockReserved', 'StockAllocationFailed', 'OrderConfirmed', 'OrderRejected'].forEach(wire);
 
     // 5. Seed Inventory
@@ -80,11 +84,10 @@ Deno.test("Full System - Order -> Inventory -> Order", async () => {
     });
 
     // 7. Verification
-    // The chain: Initialize -> ProcessManager -> ReserveStock -> InventoryHandler -> StockReserved -> ProcessManager -> ConfirmOrder -> OrderHandler -> OrderConfirmed
+    await wait(200);
 
     // Check Event Stream for Order
     const orderHistory = await eventStore.readStream(tenantId, orderId);
-    // Should be [Initialized, Confirmed]
     assertEquals(orderHistory.length, 2);
     assertEquals(orderHistory[0].type, 'OrderInitialized');
     assertEquals(orderHistory[1].type, 'OrderConfirmed');
@@ -98,6 +101,7 @@ Deno.test("Full System - Order -> Inventory -> Order", async () => {
 
     // Check Read Model
     const view = (await kv.get(['view', 'orders', tenantId, orderId])).value;
+    assertExists(view);
     assertEquals(view.status, 'CONFIRMED');
 
     kv.close();
@@ -108,13 +112,15 @@ Deno.test("Full System - Out of Stock Flow", async () => {
     const pool = { withConnection: async (cb) => cb(kv) };
     const eventBus = createEventBus();
     const eventStore = createEventStore(pool);
+    const worker = createOutboxWorker(pool, eventBus);
+    await worker.start();
 
-    const orderCommandBus = createCommandBus(pool, eventStore, eventBus);
+    const orderCommandBus = createCommandBus(pool, eventStore);
     const orderHandlers = createOrderHandlers();
     Object.keys(orderHandlers).forEach(k => orderCommandBus.registerHandler(k, orderHandlers[k]));
     const orderProjector = createOrderProjector(pool);
 
-    const inventoryCommandBus = createCommandBus(pool, eventStore, eventBus);
+    const inventoryCommandBus = createCommandBus(pool, eventStore);
     const inventoryHandlers = createInventoryHandlers();
     Object.keys(inventoryHandlers).forEach(k => inventoryCommandBus.registerHandler(k, inventoryHandlers[k]));
 
@@ -140,6 +146,8 @@ Deno.test("Full System - Out of Stock Flow", async () => {
             items: [{ id: productId, qty: 1 }]
         }
     });
+
+    await wait(200);
 
     const orderHistory = await eventStore.readStream(tenantId, orderId);
     // [Initialized, Rejected]
