@@ -1,10 +1,10 @@
-import { createKVOrderRepositoryAdapter } from './infrastructure/adapters/kv-order-repository.adapter.js';
 import { createKVShipmentRepositoryAdapter } from './infrastructure/adapters/kv-shipment-repository.adapter.js';
 
-import { createCreateOrder } from './application/use-cases/create-order.js';
-import { createListOrders } from './application/use-cases/list-orders.js';
-import { createGetOrder } from './application/use-cases/get-order.js';
-import { createUpdateOrderStatus } from './application/use-cases/update-order-status.js';
+import { createCommandBus } from '../../infra/command-bus/index.js';
+import { createOrderHandlers, InitializeOrder } from './domain.js';
+import { createOrderProjector } from './projector.js';
+import { createOrderProcessManager } from './process-manager.js';
+
 import { createCreateShipment } from './application/use-cases/create-shipment.js';
 import { createListShipments } from './application/use-cases/list-shipments.js';
 
@@ -13,66 +13,107 @@ import { createContextBuilder } from '../../utils/registry/context-builder.js';
 import { autoGateway } from '../../utils/registry/gateway-factory.js';
 
 export const createOrdersContext = async (deps) => {
-  const { kvPool, eventBus, obs } = resolveDependencies(deps, {
+  const { kvPool, eventBus, obs, eventStore } = resolveDependencies(deps, {
     kvPool: ['persistence.kvPool', 'kvPool'],
     eventBus: ['messaging.eventBus', 'eventBus'],
+    eventStore: ['persistence.eventStore', 'eventStore'],
     obs: ['observability.obs']
   });
 
   const catalogGateway = autoGateway(deps, 'catalog');
-  const inventoryGateway = autoGateway(deps, 'inventory');
-  const customerGateway = autoGateway(deps, 'access-control');
 
-  // Helper to map customerGateway.getCustomer which might not exist on access-control
-  // Access Control has 'listUsers' and 'checkPermission' etc.
-  // It probably needs a 'getUser' or 'getCustomer'.
-  // Let's assume access-control has 'getUser' use case?
-  // Looking at access-control/index.js: useCases has listUsers, loginUser, etc. No getUser.
-  // Wait, I should fix access-control to have getUser or map it here.
-  // For now, I'll assume I need to add getUser to access-control or use listUsers?
-  // create-order.js calls `customerGateway.getCustomer(tenantId, userId)`.
-  // I will add `getUser` to access-control context to support this.
+  const inventoryCommandBus = createCommandBus(kvPool, eventStore);
+  const { createInventoryHandlers } = await import('../inventory/domain/index.js');
+  const inventoryHandlers = createInventoryHandlers();
+  Object.keys(inventoryHandlers).forEach(type => {
+      inventoryCommandBus.registerHandler(type, inventoryHandlers[type]);
+  });
 
-  // Custom adapter for customer gateway to bridge the gap if needed, or better, improve access-control.
-  // Since I can't easily edit access-control in this step (I already did), I will use a local adapter object here
-  // IF autoGateway fails.
-  // But wait, I can edit access-control again or just define the bridge here.
+  // REMOVED OutboxWorker instantiation (It is now in MessagingContext)
 
-  // Let's define a bridge for customerGateway if necessary.
-  // access-control has `userRepository` but it's internal.
-  // Maybe I should assume `getUser` will be added to access-control or `listUsers` can filter.
-  // Actually, I'll add `getUser` to access-control in a quick fix step or just map it here if I can access repo? No I can't.
+  // --- 1. Event Sourcing Setup ---
+  const commandBus = createCommandBus(kvPool, eventStore);
+  const orderHandlers = createOrderHandlers();
 
-  // Let's assume for now that I will add `getUser` to access-control.
-  // Refactor Note: I need to add `getUser` to AccessControl.
+  Object.keys(orderHandlers).forEach(type => {
+      commandBus.registerHandler(type, orderHandlers[type]);
+  });
 
-  // Adapters (Secondary Ports)
-  const orderRepository = createKVOrderRepositoryAdapter(kvPool);
+  const orderProjector = createOrderProjector(kvPool);
+  const orderProcessManager = createOrderProcessManager(commandBus, inventoryCommandBus); // Needs kvPool for idempotency
+
+  // Wire up Subscriptions
+  eventBus.subscribe('OrderInitialized', async (data) => {
+      await Promise.all([
+          orderProjector.handle(data),
+          orderProcessManager.handle(data)
+      ]);
+  });
+
+  eventBus.subscribe('StockReserved', async (data) => orderProcessManager.handle(data));
+  eventBus.subscribe('StockAllocationFailed', async (data) => orderProcessManager.handle(data));
+
+  eventBus.subscribe('OrderConfirmed', async (data) => orderProjector.handle(data));
+  eventBus.subscribe('OrderRejected', async (data) => orderProjector.handle(data));
+
+  // --- 2. Adapters (Secondary Ports) ---
   const shipmentRepository = createKVShipmentRepositoryAdapter(kvPool);
 
-  // Use Cases (Primary Ports)
-  const createOrder = createCreateOrder({
-    orderRepository,
-    catalogGateway,
-    inventoryGateway,
-    customerGateway, // This needs .getCustomer
-    obs,
-    eventBus
-  });
+  const orderReadRepository = {
+      findById: async (tenantId, id) => {
+          const key = ['view', 'orders', tenantId, id];
+          const res = await kvPool.withConnection(kv => kv.get(key));
+          return res.value;
+      },
+      list: async (tenantId, { limit = 10 } = {}) => {
+          return kvPool.withConnection(async kv => {
+              const iter = kv.list({ prefix: ['view', 'orders', tenantId] }, { limit });
+              const items = [];
+              for await (const entry of iter) items.push(entry.value);
+              return items;
+          });
+      },
+      save: async () => { throw new Error("Writes must go through CommandBus"); }
+  };
 
-  const listOrders = createListOrders({ orderRepository });
-  const getOrder = createGetOrder({ orderRepository });
+  // --- 3. Use Cases (Primary Ports) ---
 
-  const updateOrderStatus = createUpdateOrderStatus({
-    orderRepository,
-    inventoryGateway,
-    obs,
-    eventBus
-  });
+  const createOrder = {
+      execute: async (tenantId, orderData) => {
+          const orderId = crypto.randomUUID();
+
+          await commandBus.execute({
+              type: InitializeOrder,
+              aggregateId: orderId,
+              tenantId,
+              payload: {
+                  tenantId,
+                  customerId: orderData.customerId,
+                  items: orderData.items
+              }
+          });
+
+          return { id: orderId, status: 'PENDING', message: 'Order processing started' };
+      }
+  };
+
+  const listOrders = {
+      execute: async (tenantId, params) => orderReadRepository.list(tenantId, params)
+  };
+
+  const getOrder = {
+      execute: async (tenantId, id) => orderReadRepository.findById(tenantId, id)
+  };
+
+  const updateOrderStatus = {
+      execute: async () => { throw new Error("Direct status update not supported. Use Events."); }
+  };
+
+  const inventoryGateway = autoGateway(deps, 'inventory');
 
   const createShipment = createCreateShipment({
     shipmentRepository,
-    orderRepository,
+    orderRepository: orderReadRepository,
     inventoryGateway,
     eventBus
   });
@@ -81,7 +122,7 @@ export const createOrdersContext = async (deps) => {
 
   return createContextBuilder('orders')
     .withRepositories({
-      order: orderRepository,
+      order: orderReadRepository,
       shipment: shipmentRepository
     })
     .withUseCases({
